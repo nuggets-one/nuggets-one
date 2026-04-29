@@ -52,6 +52,10 @@ CREATE TABLE IF NOT EXISTS articles (
     CHECK (status IN ('draft','published')),
   published_at timestamptz,
   hero_thumb_url text,
+  hero_alt_text text,
+  hero_media_kind text CHECK (hero_media_kind IS NULL OR 
+    hero_media_kind IN ('image','youtube')),
+  hero_video_id text,
   hero_media_id uuid,
   tag_slugs text[] NOT NULL DEFAULT '{}',
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -93,7 +97,8 @@ CREATE TABLE IF NOT EXISTS article_media (
   article_id uuid NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
   kind text NOT NULL CHECK (kind IN ('image','youtube')),
   url text NOT NULL,
-  position integer NOT NULL DEFAULT 0,
+  video_id text,
+  sort_order integer NOT NULL DEFAULT 0,
   origin text NOT NULL DEFAULT 'manual'
     CHECK (origin IN ('manual','inline')),
   created_at timestamptz DEFAULT now()
@@ -122,6 +127,11 @@ CREATE TABLE IF NOT EXISTS user_notifications (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   article_id uuid REFERENCES articles(id) ON DELETE CASCADE,
   kind text NOT NULL CHECK (kind IN ('single','digest')),
+  content_stream text CHECK (content_stream IS NULL OR 
+    content_stream IN ('standard','pulse')),
+  title text,
+  body text,
+  is_read boolean NOT NULL DEFAULT false,
   batch_key text,
   read_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -173,6 +183,10 @@ CREATE INDEX IF NOT EXISTS idx_notification_prefs_pulse
 CREATE UNIQUE INDEX IF NOT EXISTS ux_user_notifications_user_article_single
   ON user_notifications (user_id, article_id)
   WHERE kind = 'single' AND article_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_user_notifications_inbox
+  ON user_notifications (user_id, created_at DESC)
+  WHERE is_read = false;
 
 -- RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;

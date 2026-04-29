@@ -207,6 +207,8 @@ function summarize(report: ReturnType<typeof emptyReport>): void {
 async function main(): Promise<number> {
   loadEnv();
 
+  const SKIP_DDL = process.argv.includes("--skip-ddl");
+
   const report = emptyReport();
 
   const databaseUrl = process.env.DATABASE_URL;
@@ -268,21 +270,27 @@ async function main(): Promise<number> {
 
   try {
     // --- Part A: DDL ---
-    const ddlSql = fs.readFileSync(DDL_PATH, "utf8");
-    logDdlGroups(ddlSql);
-    console.log("[DDL] Executing full schema.sql as a single query...");
-    try {
-      await pool.query(ddlSql);
-      report.ddlApplied = true;
-      console.log("[DDL] OK");
-    } catch (e) {
-      report.ddlApplied = false;
-      const msg = e instanceof Error ? e.message : String(e);
-      console.error("[DDL] FAILED:", msg);
-      report.tablesMissing = [...EXPECTED_TABLES];
-      writeReport(report);
-      summarize(report);
-      return 1;
+    if (!SKIP_DDL) {
+      const ddlSql = fs.readFileSync(DDL_PATH, "utf8");
+      logDdlGroups(ddlSql);
+      console.log("Applying DDL from schema.sql...");
+      try {
+        await pool.query(ddlSql);
+        report.ddlApplied = true;
+        console.log("[DDL] OK");
+      } catch (e) {
+        report.ddlApplied = false;
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("[DDL] FAILED:", msg);
+        report.tablesMissing = [...EXPECTED_TABLES];
+        writeReport(report);
+        summarize(report);
+        return 1;
+      }
+    } else {
+      console.log(
+        "Skipping DDL apply (--skip-ddl flag set) — running checks only"
+      );
     }
 
     const tblRes = await pool.query<{ table_name: string }>(
