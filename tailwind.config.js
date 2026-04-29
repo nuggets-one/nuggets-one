@@ -7,7 +7,29 @@ module.exports = {
     "./lib/**/*.{ts,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        bg: "var(--color-bg)",
+        surface: "var(--color-surface)",
+        "surface-raised": "var(--color-surface-raised)",
+        border: "var(--color-border)",
+        accent: "var(--color-accent)",
+        "accent-hover": "var(--color-accent-hover)",
+      },
+      textColor: {
+        primary: "var(--color-text-primary)",
+        muted: "var(--color-text-muted)",
+      },
+      borderColor: {
+        DEFAULT: "var(--color-border)",
+      },
+      ringColor: {
+        focus: "var(--color-focus-ring)",
+      },
+      fontFamily: {
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+      },
+    },
   },
   plugins: [require("@tailwindcss/typography")],
 };

@@ -1,22 +1,39 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
-import { Providers } from "./providers";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Nuggets",
-  description: "Nuggets",
+  description: "Curated knowledge, delivered fast.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="min-h-full flex flex-col">
-        {/* Analytics: wired in a later PR */}
-        <Providers>{children}</Providers>
+    <html
+      lang="en"
+      className={inter.variable}
+      suppressHydrationWarning
+    >
+      <body className="bg-bg text-primary font-sans antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
