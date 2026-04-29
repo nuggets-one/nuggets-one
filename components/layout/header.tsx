@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { HeaderSearch } from '@/components/layout/header-search'
+import { HeaderAuth } from '@/components/layout/header-auth'
 
 export function Header() {
   return (
@@ -16,13 +17,7 @@ export function Header() {
           </Suspense>
         </div>
 
-        {/* Auth placeholder — replaced in PR-12 */}
-        <Link
-          href="/login"
-          className="shrink-0 text-sm text-muted hover:text-primary transition-colors"
-        >
-          Sign in
-        </Link>
+        <HeaderAuth />
       </div>
     </header>
   )

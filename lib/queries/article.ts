@@ -80,9 +80,12 @@ export async function getArticleById(
 
   // Flatten nested tag join into TagSummary[]
   // TODO: replace with generated DB types in later PR
-  const raw = data as any
+  type ArticleWithTagJoin = Omit<ArticleDetail, 'tags'> & {
+    tags?: Array<{ tag: ArticleDetail['tags'][number] | null }>
+  }
+  const raw = data as unknown as ArticleWithTagJoin
   const tags = (raw.tags ?? [])
-    .map((entry: any) => entry.tag)
+    .map((entry) => entry.tag)
     .filter(Boolean)
 
   return {

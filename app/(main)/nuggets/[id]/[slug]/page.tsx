@@ -3,12 +3,16 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { getArticleById, getArticleMeta } from '@/lib/queries/article'
+import { isArticleBookmarked } from '@/lib/queries/bookmarks'
 import { ArticleBody } from '@/components/ui/article-body'
 import { ArticleDetailSkeleton } from '@/components/ui/article-detail-skeleton'
+import { BookmarkButton } from '@/components/ui/bookmark-button'
 import { cloudinaryLoader } from '@/lib/cloudinary'
+import { createClient } from '@/lib/supabase/server'
 
-// ISR fallback TTL — admin publish triggers revalidateTag('article:' + id) in PR-14
-export const revalidate = 300
+// Bookmark check requires cookies — serves dynamically per user.
+// ISR via revalidateTag('article:' + id) is deferred to PR-14 when PPR is added.
+export const dynamic = 'force-dynamic'
 
 type Params = {
   id: string
@@ -56,6 +60,15 @@ async function ArticleContent({ id, slug }: Params) {
   if (article.slug !== slug) {
     redirect(`/nuggets/${id}/${article.slug}`)
   }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const isAuthenticated = !!user
+  const bookmarked = isAuthenticated
+    ? await isArticleBookmarked(article.id)
+    : false
 
   const primaryTag = article.tag_slugs[0] ?? null
 
@@ -138,17 +151,25 @@ async function ArticleContent({ id, slug }: Params) {
           </div>
         ) : null}
 
-        {/* Source link */}
-        {article.source_url && (
-          <a
-            href={article.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-muted hover:text-primary transition-colors w-fit"
-          >
-            View source ↗
-          </a>
-        )}
+        {/* Actions row */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <BookmarkButton
+            articleId={article.id}
+            initialBookmarked={bookmarked}
+            isAuthenticated={isAuthenticated}
+            variant="detail"
+          />
+          {article.source_url && (
+            <a
+              href={article.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-muted hover:text-primary transition-colors"
+            >
+              View source ↗
+            </a>
+          )}
+        </div>
 
         {/* Branded author mark — no public profiles at PMF */}
         <div className="flex items-center gap-2 text-xs text-muted">

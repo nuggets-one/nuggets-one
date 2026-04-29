@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { cloudinaryLoader } from '@/lib/cloudinary'
+import { BookmarkButton } from '@/components/ui/bookmark-button'
 import type { ArticleCardProps } from '@/types/article'
 
 function idToHue(id: string): number {
@@ -35,9 +36,16 @@ function formatDate(iso: string): string {
 type Props = {
   article: ArticleCardProps
   priority?: boolean
+  isAuthenticated?: boolean
+  initialBookmarked?: boolean
 }
 
-export function ArticleCard({ article, priority = false }: Props) {
+export function ArticleCard({
+  article,
+  priority = false,
+  isAuthenticated = false,
+  initialBookmarked = false,
+}: Props) {
   const {
     id,
     slug,
@@ -122,6 +130,14 @@ export function ArticleCard({ article, priority = false }: Props) {
               View source ↗
             </a>
           )}
+          <div className="ml-auto">
+            <BookmarkButton
+              articleId={id}
+              initialBookmarked={initialBookmarked}
+              isAuthenticated={isAuthenticated}
+              variant="card"
+            />
+          </div>
         </div>
       </div>
     </article>

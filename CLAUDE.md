@@ -13,7 +13,7 @@ a legacy MongoDB/Express/Vite app (Project-Phoenix).
 4. docs/NUGGETS_V2_BUILD_EXECUTION.md — PR sequence, merge boundaries
 
 ## Current build position
-PR-05 — read models and query helpers
+PR-12 — Supabase Auth (email/password + Google OAuth) + proxy matcher
 Update this line after each PR merges.
 
 ---

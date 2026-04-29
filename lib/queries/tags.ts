@@ -1,12 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { TagSummary } from '@/types/article'
 
-/**
- * Official tags only — used for the chip rail filter on Home.
- * is_official = true means curated by admin; false tags never appear
- * on the public chip rail.
- * Results are stable — cache aggressively.
- */
 export async function listOfficialTags(): Promise<TagSummary[]> {
   const supabase = await createClient()
 

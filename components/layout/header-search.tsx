@@ -33,7 +33,7 @@ export function HeaderSearch() {
 
   const [inputValue, setInputValue] = useState(committedQ)
   const [suggestions, setSuggestions] = useState<SuggestionRow[]>([])
-  const [isOpen, setIsOpen] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -41,14 +41,12 @@ export function HeaderSearch() {
 
   const debouncedInput = useDebounce(inputValue, DEBOUNCE_MS)
 
-  useEffect(() => {
-    setInputValue(committedQ)
-  }, [committedQ])
+  const effectiveSuggestions =
+    debouncedInput.trim().length >= 2 ? suggestions : []
+  const isOpen = isFocused && effectiveSuggestions.length > 0
 
   useEffect(() => {
     if (debouncedInput.trim().length < 2) {
-      setSuggestions([])
-      setIsOpen(false)
       return
     }
 
@@ -59,7 +57,6 @@ export function HeaderSearch() {
       .then((data) => {
         if (cancelled) return
         setSuggestions(data.suggestions ?? [])
-        setIsOpen((data.suggestions ?? []).length > 0)
         setActiveIndex(-1)
       })
       .catch(() => {
@@ -72,7 +69,7 @@ export function HeaderSearch() {
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
+        setIsFocused(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -82,13 +79,14 @@ export function HeaderSearch() {
   const commitSearch = useCallback((value: string) => {
     const trimmed = value.trim()
     setCommittedQ(trimmed || null)
-    setIsOpen(false)
+    setInputValue(trimmed)
+    setIsFocused(false)
   }, [setCommittedQ])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Escape') {
       setInputValue(committedQ)
-      setIsOpen(false)
+      setIsFocused(false)
       inputRef.current?.blur()
       return
     }
@@ -97,7 +95,7 @@ export function HeaderSearch() {
       if (activeIndex >= 0 && suggestions[activeIndex]) {
         const s = suggestions[activeIndex]
         router.push(`/nuggets/${s.id}/${s.slug}`)
-        setIsOpen(false)
+        setIsFocused(false)
       } else {
         commitSearch(inputValue)
       }
@@ -136,15 +134,19 @@ export function HeaderSearch() {
           ref={inputRef}
           type="search"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={() => {
-            if (suggestions.length > 0) setIsOpen(true)
+          onChange={(e) => {
+            const next = e.target.value
+            setInputValue(next)
+            if (next.trim().length < 2) {
+              setSuggestions([])
+              setActiveIndex(-1)
+            }
           }}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
           placeholder="Search nuggets…"
           aria-label="Search nuggets"
           aria-autocomplete="list"
-          aria-expanded={isOpen}
           aria-activedescendant={activeIndex >= 0 ? `suggestion-${activeIndex}` : undefined}
           className="flex-1 bg-transparent text-sm text-primary placeholder:text-muted outline-none min-w-0 h-full"
         />
@@ -155,7 +157,7 @@ export function HeaderSearch() {
               setInputValue('')
               setCommittedQ(null)
               setSuggestions([])
-              setIsOpen(false)
+              setIsFocused(false)
               inputRef.current?.focus()
             }}
             aria-label="Clear search"
@@ -175,13 +177,13 @@ export function HeaderSearch() {
         )}
       </div>
 
-      {isOpen && suggestions.length > 0 && (
+      {isOpen && effectiveSuggestions.length > 0 && (
         <ul
           role="listbox"
           aria-label="Search suggestions"
           className="absolute top-full left-0 right-0 mt-1 z-50 bg-surface border border-border rounded-lg shadow-lg overflow-hidden"
         >
-          {suggestions.map((s, i) => (
+          {effectiveSuggestions.map((s, i) => (
             <li
               key={s.id}
               id={`suggestion-${i}`}
@@ -190,7 +192,7 @@ export function HeaderSearch() {
             >
               <Link
                 href={`/nuggets/${s.id}/${s.slug}`}
-                onClick={() => setIsOpen(false)}
+                onClick={() => setIsFocused(false)}
                 className={`flex flex-col gap-0.5 px-4 py-2.5 text-sm min-h-[44px] justify-center transition-colors ${
                   i === activeIndex
                     ? 'bg-surface-raised text-primary'

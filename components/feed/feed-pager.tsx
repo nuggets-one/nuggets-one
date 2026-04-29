@@ -10,9 +10,10 @@ type Props = {
   stream: ContentStream
   tags: string[]
   q: string
+  isAuthenticated?: boolean
 }
 
-export function FeedPager({ initialCursor, stream, tags, q }: Props) {
+export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = false }: Props) {
   const [cards, setCards] = useState<ArticleCardProps[]>([])
   const [cursor, setCursor] = useState<FeedCursor | null>(initialCursor)
   const [isLoading, setIsLoading] = useState(false)
@@ -74,7 +75,11 @@ export function FeedPager({ initialCursor, stream, tags, q }: Props) {
       {cards.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mt-4">
           {cards.map((article) => (
-            <ArticleCard key={article.id} article={article} />
+            <ArticleCard
+              key={article.id}
+              article={article}
+              isAuthenticated={isAuthenticated}
+            />
           ))}
         </div>
       )}
