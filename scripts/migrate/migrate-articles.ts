@@ -1,0 +1,274 @@
+// scripts/migrate/migrate-articles.ts
+// Migrates legacy Mongo articles → Postgres articles table
+// Run: npm run etl:articles [--dry-run] [--limit=100|--limit N]
+//
+// Field mapping (Migration Plan §3.2):
+//   isPublished (bool, ~98% presence) → status='published'|'draft'
+//   status (string, ~2% presence) → wins over isPublished if present
+//   contentStream 'both'|null|missing → 'standard'; 'pulse' → 'pulse'
+//   content → content_markdown
+//   sourceUrl / externalLinks[0] → source_url
+//   created_at derived from ObjectId timestamp (no createdAt field in docs)
+//   primaryMedia image → hero_thumb_url + article_media kind='image'
+//   primaryMedia video → hero_media_kind='youtube' + hero_video_id + article_media kind='youtube'
+//   hero_media_id → article_media.id (always set when media exists; null only if no media)
+//   tagIds embedded [{ slug, label }] → article_tags join rows + tag_slugs[]
+
+import { connectMongo, disconnectMongo } from './mongo-client'
+import { db } from './supabase-client'
+import { generateArticleSlug } from '../shared/slug'
+import mongoose from 'mongoose'
+import crypto from 'crypto'
+
+const isDryRun = process.argv.includes('--dry-run')
+
+function parseLimitFromArgv(argv: string[]): number | null {
+  const eqArg = argv.find((a) => a.startsWith('--limit='))
+  if (eqArg !== undefined) {
+    const n = parseInt(eqArg.split('=')[1], 10)
+    return Number.isFinite(n) && n > 0 ? n : null
+  }
+  const idx = argv.indexOf('--limit')
+  if (idx !== -1) {
+    const next = argv[idx + 1]
+    if (next !== undefined && !next.startsWith('-')) {
+      const n = parseInt(next, 10)
+      return Number.isFinite(n) && n > 0 ? n : null
+    }
+  }
+  return null
+}
+
+const LIMIT = parseLimitFromArgv(process.argv)
+
+// Legacy Mongo Article schema — strict:false absorbs all legacy field variants
+const ArticleSchema = new mongoose.Schema({
+  _id: mongoose.Schema.Types.ObjectId,
+  title: String,
+  excerpt: String,
+  content: String,
+  contentStream: String,
+  status: String,
+  isPublished: Boolean,
+  publishedAt: Date,
+  slug: String,
+  tags: [{ slug: String, label: String }],
+  sourceUrl: String,
+  externalLinks: [String],
+  primaryMedia: {
+    url: String,
+    alt: String,
+    type: String,   // 'image' | 'video'
+    videoId: String,
+  },
+}, { strict: false })
+
+const MongoArticle = mongoose.models.Article ||
+  mongoose.model('Article', ArticleSchema, 'articles')
+
+// Migration Plan §3.2: status wins if present; else fall back to isPublished boolean
+function mapStatus(doc: any): 'published' | 'draft' {
+  if (doc.status === 'published') return 'published'
+  if (doc.status === 'draft') return 'draft'
+  return doc.isPublished === true ? 'published' : 'draft'
+}
+
+// Blueprint §12.2: 'both'|null|undefined → 'standard'; 'pulse' → 'pulse'
+function mapContentStream(raw: string | null | undefined): 'standard' | 'pulse' {
+  return raw === 'pulse' ? 'pulse' : 'standard'
+}
+
+// Derive hero fields + article_media payload from primaryMedia
+// Blueprint §12.2a: hero_media_id must always be set when media exists
+function deriveMedia(primaryMedia: any): {
+  hero_thumb_url: string | null
+  hero_alt_text: string | null
+  hero_media_kind: 'image' | 'youtube' | null
+  hero_video_id: string | null
+  mediaRow: { url: string; kind: 'image' | 'youtube'; video_id: string | null } | null
+} {
+  if (!primaryMedia?.url) {
+    return { hero_thumb_url: null, hero_alt_text: null, hero_media_kind: null, hero_video_id: null, mediaRow: null }
+  }
+
+  if (primaryMedia.type === 'video' && primaryMedia.videoId) {
+    return {
+      hero_thumb_url: null,
+      hero_alt_text: primaryMedia.alt || null,
+      hero_media_kind: 'youtube',
+      hero_video_id: primaryMedia.videoId,
+      mediaRow: { url: primaryMedia.url, kind: 'youtube', video_id: primaryMedia.videoId },
+    }
+  }
+
+  return {
+    hero_thumb_url: primaryMedia.url,
+    hero_alt_text: primaryMedia.alt || null,
+    hero_media_kind: 'image',
+    hero_video_id: null,
+    mediaRow: { url: primaryMedia.url, kind: 'image', video_id: null },
+  }
+}
+
+// Derive created_at from ObjectId timestamp (Migration Plan §3.2: no createdAt field on docs)
+function objectIdToDate(id: mongoose.Types.ObjectId): string {
+  return new Date(parseInt(id.toString().slice(0, 8), 16) * 1000).toISOString()
+}
+
+/** Legacy externalLinks may be string[] or { url }[] (or mixed). */
+function firstExternalLinkUrl(links: unknown): string | null {
+  if (!Array.isArray(links) || links.length === 0) return null
+  const first = links[0]
+  if (typeof first === 'string') {
+    const t = first.trim()
+    return t || null
+  }
+  if (first && typeof first === 'object') {
+    const u = (first as { url?: string; href?: string; link?: string }).url
+      ?? (first as { href?: string }).href
+      ?? (first as { link?: string }).link
+    if (typeof u === 'string') {
+      const t = u.trim()
+      return t || null
+    }
+  }
+  return null
+}
+
+async function main() {
+  console.log(
+    `\n📦 Article migration ${isDryRun ? '[DRY RUN]' : '[LIVE]'}${LIMIT ? ` [LIMIT ${LIMIT}]` : ''}\n`
+  )
+
+  await connectMongo()
+
+  // Build tag slug → postgres id map for article_tags population
+  const { data: tagRows, error: tagFetchErr } = await db.from('tags').select('id, slug')
+  if (tagFetchErr) throw new Error(`Failed to fetch tags: ${tagFetchErr.message}`)
+  const tagSlugToId = new Map<string, string>(
+    (tagRows ?? []).map((r) => [r.slug as string, r.id as string])
+  )
+  console.log(`Loaded ${tagSlugToId.size} tags from Postgres\n`)
+
+  const query = MongoArticle.find({}).sort({ publishedAt: -1 }).lean()
+  if (LIMIT) query.limit(LIMIT)
+  const mongoArticles = await query
+
+  console.log(`Found ${mongoArticles.length} articles in Mongo`)
+
+  let inserted = 0
+  let skipped = 0
+  let errors = 0
+
+  for (const doc of mongoArticles) {
+    const title = (doc.title as string)?.trim()
+    if (!title) {
+      console.warn(`  ⚠ Skipping article with no title: ${doc._id}`)
+      skipped++
+      continue
+    }
+
+    const status = mapStatus(doc)
+    const content_stream = mapContentStream(doc.contentStream as string)
+    const published_at = doc.publishedAt
+      ? new Date(doc.publishedAt as Date).toISOString()
+      : null
+    const created_at = objectIdToDate(doc._id as mongoose.Types.ObjectId)
+
+    if (status === 'published' && !published_at) {
+      console.warn(`  ⚠ Published article missing publishedAt — skipping: ${title.slice(0, 60)}`)
+      skipped++
+      continue
+    }
+
+    // Normalize embedded tag slugs for tag_slugs[] and article_tags lookup
+    const tag_slugs: string[] = ((doc.tags as any[]) ?? [])
+      .map((t: any) => (t.slug as string)?.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+      .filter(Boolean)
+
+    // source_url: prefer sourceUrl, fall back to first externalLink
+    const source_url =
+      ((doc.sourceUrl as string) ?? '').trim() ||
+      firstExternalLinkUrl(doc.externalLinks) ||
+      null
+
+    const { hero_thumb_url, hero_alt_text, hero_media_kind, hero_video_id, mediaRow } =
+      deriveMedia(doc.primaryMedia)
+
+    const id = crypto.randomUUID()
+    const slug = generateArticleSlug(title, id)
+    const media_id = mediaRow ? crypto.randomUUID() : null
+
+    if (isDryRun) {
+      console.log(
+        `  [dry] ${status.toUpperCase()} | ${content_stream} | media=${mediaRow?.kind ?? 'none'} | tags=${tag_slugs.length} | ${title.slice(0, 55)}`
+      )
+      inserted++
+      continue
+    }
+
+    // Insert article (hero_media_id set upfront — no FK constraint on column)
+    const { error: articleErr } = await db.from('articles').insert({
+      id,
+      slug,
+      title,
+      excerpt: ((doc.excerpt as string) ?? '').trim() || null,
+      content_markdown: ((doc.content as string) ?? '').trim() || null,
+      content_stream,
+      status,
+      published_at,
+      created_at,
+      source_url,
+      hero_thumb_url,
+      hero_alt_text,
+      hero_media_kind,
+      hero_video_id,
+      hero_media_id: media_id,
+      tag_slugs,
+      legacy_mongo_id: String(doc._id),
+    })
+
+    if (articleErr) {
+      console.error(`  ✗ Article failed: ${title.slice(0, 55)} — ${articleErr.message}`)
+      errors++
+      continue
+    }
+
+    // Insert article_media row
+    if (mediaRow && media_id) {
+      const { error: mediaErr } = await db.from('article_media').insert({
+        id: media_id,
+        article_id: id,
+        kind: mediaRow.kind,
+        url: mediaRow.url,
+        video_id: mediaRow.video_id,
+        sort_order: 0,
+        origin: 'manual',
+      })
+      if (mediaErr) {
+        console.warn(`  ⚠ article_media insert failed for ${title.slice(0, 40)}: ${mediaErr.message}`)
+      }
+    }
+
+    // Insert article_tags join rows
+    for (const tagSlug of tag_slugs) {
+      const tagId = tagSlugToId.get(tagSlug)
+      if (!tagId) {
+        console.warn(`  ⚠ Tag not in Postgres: ${tagSlug} (article: ${title.slice(0, 40)})`)
+        continue
+      }
+      const { error: tagErr } = await db.from('article_tags').insert({ article_id: id, tag_id: tagId })
+      if (tagErr && !tagErr.message.includes('duplicate')) {
+        console.warn(`  ⚠ article_tags insert failed (${tagSlug}): ${tagErr.message}`)
+      }
+    }
+
+    console.log(`  ✓ [${content_stream}] ${title.slice(0, 60)}`)
+    inserted++
+  }
+
+  console.log(`\nDone. inserted=${inserted} skipped=${skipped} errors=${errors}`)
+  await disconnectMongo()
+}
+
+main().catch((e) => { console.error(e); process.exit(1) })
