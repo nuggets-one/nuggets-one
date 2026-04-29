@@ -1,0 +1,192 @@
+---
+description: Nuggets v2 — architectural rules, forbidden patterns, and 
+             implementation constraints. Apply to every task in this repo.
+alwaysApply: true
+---
+
+# Nuggets v2 — Cursor Rules
+
+## What this project is
+Greenfield Next.js 15 App Router application replacing a legacy 
+MongoDB/Express/Vite app. Stack: Next.js + Supabase (PostgreSQL + Auth) 
++ Vercel + Tailwind CSS.
+
+## Document precedence (when in doubt, consult in this order)
+1. NUGGETS_V2_MIGRATION_PLAN.md — Mongo→Postgres field mapping, ETL
+2. NUGGETS_V2_BLUEPRINT.md — schema, RSC boundaries, caching, routing
+3. NUGGETS_V2_PRODUCT_BEHAVIOR_AND_UI.md — user-visible behavior, copy
+4. NUGGETS_V2_BUILD_EXECUTION.md — PR sequence and merge boundaries
+
+---
+
+## ARCHITECTURE RULES
+
+### Server vs Client components
+- Default: every page and data loader is a Server Component
+- 'use client' only for: pagination scroll sentinel, bookmark toggle, 
+  theme toggle, search input, mobile sheet, forms with client validation
+- Never: 'use client' on a page that only reads data
+- Never: import cookies(), headers(), or server-only modules inside 
+  a 'use client' component
+
+### Data fetching
+- First page of feed: fetched on server, rendered as HTML
+- Pagination: fetch + useTransition — no TanStack Query anywhere
+- Bookmarks: one batched GET per feed page (max 24 IDs) — not per card
+- Never: useEffect to fetch data that could be a Server Component
+
+### URL state
+- stream, tags, q live in URL via nuqs — they are never in useState 
+  or context
+- nuqs NuqsAdapter mounts in app/(main)/layout.tsx ONLY — never in 
+  app/layout.tsx
+- Never: useEffect that mirrors searchParams into state
+
+### Routing
+- All internal links use next/link — never <a href> for internal routes
+- Detail route: /nuggets/[id]/[slug]
+- Bookmarks: /bookmarks (auth-gated — redirect to /login if no session)
+- Admin: /admin/** (gated by user.app_metadata.is_admin === true)
+
+---
+
+## SCHEMA RULES
+
+### Articles
+- status: 'draft' | 'published' only — no is_published column, ever
+- published_at: set once on first publish, never recomputed (DB trigger)
+- slug: generated at insert as slugify(title) + '-' + id.slice(0,6)
+  using scripts/shared/slug.ts — never use the npm slugify package
+- search_vector: GENERATED ALWAYS AS STORED — never a trigger or 
+  app-written field
+- tag_slugs: denormalized text[] — recomputed via SQL on every tag change,
+  never from in-memory list
+
+### Never add these columns to articles
+- is_published (removed — use status)
+- scheduled_for (deferred)
+- approval_status, approved_by, approved_at (deferred)  
+- access_tier, visibility (deferred)
+
+### Supabase clients
+- Browser: lib/supabase/client.ts (createBrowserClient)
+- Server: lib/supabase/server.ts (createServerClient + cookies)
+- Admin: lib/supabase/admin.ts (service role — has import 'server-only')
+- Never: import adminClient from anything except a module with 
+  import 'server-only' at the top
+
+---
+
+## FORBIDDEN PATTERNS
+
+### Packages — never install these
+framer-motion, mongoose (in web/), express, @tanstack/react-query,
+@tanstack/react-virtual, react-router-dom, redux, zustand, jotai,
+recoil, mobx, valtio, xstate, moment, date-fns, dayjs, luxon,
+styled-components, @emotion/styled, react-youtube, react-player,
+slugify (npm), bullmq, redis, web-push, react-modal, react-spring,
+auto-animate, @vercel/og, @sentry/react, @sentry/nextjs
+
+### Patterns — never write these
+- Modal-driven CRUD forms (admin uses route-level pages)
+- TanStack Query on any read path
+- Context providers above the card list that cause grid re-renders
+  on bookmark toggle, stream switch, or tag filter change
+- useEffect chains that sync URL params into useState or context
+- rehype-raw plugin (XSS risk)
+- Bookmark state in a context provider — it is local to each card
+- Full grid remount on filter change — filters drive RSC via URL
+- service role key outside lib/supabase/admin.ts
+- is_published anywhere in application TypeScript
+
+### Legacy patterns from Project-Phoenix — do not port
+- ArticleModal / ArticleDrawer — replaced by /nuggets/[id]/[slug]
+- FilterStateContext — replaced by nuqs URL state
+- useInfiniteArticles hook — replaced by fetch + useTransition
+- BookmarkCollection / CollectionSelector — replaced by flat /bookmarks
+- NewsCard grid/feed/masonry variants — single dense grid only
+- openArticle / expanded URL sync pattern — replaced by next/link
+
+---
+
+## COMPONENT RULES
+
+### Card component
+- ArticleCard is a Server Component shell
+- ArticleCardActions (bookmark, share) is a thin 'use client' island
+- Bookmark state is local to each card — never lifted to a parent 
+  context that wraps the grid
+- primary={true} on next/image only for index === 0 card (first card 
+  only — set in the Server Component, never in the pagination island)
+- No react-markdown in card components
+
+### Admin components
+- Admin uses route-level pages: /admin/articles/new, 
+  /admin/articles/[id]
+- No modal-driven forms in admin — server actions + route pages only
+- Confirmation dialogs (unpublish, delete) are the only allowed 
+  modals in admin
+- react-hook-form allowed in app/admin/** only
+
+### Empty and error states
+- All empty/error states use a single <StatusBlock> component
+- Never freestyle a one-off empty state layout
+
+---
+
+## PERFORMANCE RULES
+
+- Home route JS budget: ~85 KiB gzip max
+- Detail route JS budget: ~60 KiB gzip max  
+- First paint transfer: ~256 KiB Home / ~192 KiB detail
+- LCP target: ≤ 2.5s mobile cold load
+- CLS target: ≤ 0.1
+- Skeletons required on feed and detail — never blank white, 
+  never spinner-only
+- Every feed page loads with skeleton-first rendering
+
+---
+
+## NOTIFICATION RULES
+
+- Fan-out recipient query uses LEFT JOIN auth.users with COALESCE 
+  defaults — not a direct filter on notification_preferences 
+  (users without a row must still receive notifications)
+- Synchronous fan-out cap: 5,000 recipients per publish
+- Above cap: enqueue via /api/cron/notifications-fanout
+- No bell in header for anonymous users
+- Notification preferences: lazy-created on first bell open — 
+  no seed trigger on signup
+
+---
+
+## SEARCH RULES
+
+- Suggestion debounce: 180ms
+- Min query length for suggestions: 2 characters
+- Suggestion cap: 8 rows
+- q commits on Enter or explicit submit only
+- Selecting a suggestion navigates to detail — does not commit q
+- Escape closes suggestions, restores input to last committed q
+- stream param required on both suggest and search endpoints
+- No global cross-stream search
+
+---
+
+## DEFERRED — do not implement these
+- In-product draft preview (admins use Supabase Studio)
+- Scheduled publish (scheduled_for column)
+- Approval workflow
+- Push notifications / service worker / PWA
+- Sentry (Vercel logs only at launch)
+- Dynamic OG images (@vercel/og)
+- Public user profiles
+- Account deletion
+- Avatar uploads
+- Custom scroll restoration on Back
+- MobileSearchOverlay as separate component (single HeaderSearch expands)
+- Collections admin UI (Supabase Studio only until explicit later PR)
+- Virtualization (@tanstack/react-virtual)
+- AI/GenAI SDK in web app
+
+---
