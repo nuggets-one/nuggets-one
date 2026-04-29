@@ -1,0 +1,57 @@
+name: Spec Guards
+on: [push, pull_request]
+jobs:
+  grep-guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No is_published in app code
+        run: |
+          ! grep -rE "\bis_published\b" app/ components/ lib/ \
+            --include="*.ts" --include="*.tsx"
+
+      - name: No framer-motion
+        run: |
+          ! grep -rE "from ['\"]framer-motion['\"]" \
+            --include="*.ts" --include="*.tsx" \
+            app/ components/ lib/
+
+      - name: No rehype-raw
+        run: |
+          ! grep -rE "rehype-raw" \
+            --include="*.ts" --include="*.tsx" \
+            app/ components/ lib/
+
+      - name: No service_role outside admin client
+        run: |
+          ! grep -rE "SUPABASE_SERVICE_ROLE_KEY" \
+            --include="*.ts" --include="*.tsx" \
+            $(find app/ components/ lib/ -name "*.ts" -o -name "*.tsx" \
+            | grep -v "lib/supabase/admin.ts")
+
+      - name: No banned packages in dependencies
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            const banned = [
+              'framer-motion','mongoose','express',
+              '@tanstack/react-query','@tanstack/react-virtual',
+              'react-router-dom','redux','zustand','jotai','recoil',
+              'mobx','valtio','xstate','moment','date-fns','dayjs',
+              'luxon','styled-components','@emotion/styled','stitches',
+              'react-youtube','react-player','slugify','bullmq','redis',
+              'web-push','react-modal','react-spring','auto-animate',
+              '@vercel/og'
+            ];
+            const all = {
+              ...pkg.dependencies,
+              ...pkg.devDependencies
+            };
+            const found = banned.filter(b => all[b]);
+            if (found.length) {
+              console.error('BANNED PACKAGES FOUND:', found);
+              process.exit(1);
+            }
+            console.log('Package check passed — no banned packages found.');
+          "

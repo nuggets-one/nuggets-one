@@ -1,0 +1,17 @@
+{
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@dnd-kit/*"],
+            "importNames": [],
+            "message": "@dnd-kit is allowed in app/admin/** only"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,18 +1,30 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import { createRequire } from "node:module";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
+const require = createRequire(import.meta.url);
+const coreWebVitals = require("eslint-config-next/core-web-vitals");
+const typescript = require("eslint-config-next/typescript");
+
+const eslintConfig = [
+  {
+    ignores: ["tailwind.config.js", "postcss.config.js"],
+  },
+  ...coreWebVitals,
+  ...typescript,
+  {
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@dnd-kit/*"],
+              message: "@dnd-kit is allowed in app/admin/** only",
+            },
+          ],
+        },
+      ],
+    },
+  },
+];
 
 export default eslintConfig;
