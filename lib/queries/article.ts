@@ -1,6 +1,37 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import type { ArticleDetail } from '@/types/article'
+import type { ArticleDetail, ContentStream } from '@/types/article'
+
+export type SuggestionRow = {
+  id: string
+  slug: string
+  title: string
+  content_stream: ContentStream
+}
+
+export async function suggestArticles({
+  q,
+  stream,
+}: {
+  q: string
+  stream: ContentStream
+}): Promise<SuggestionRow[]> {
+  if (!q || q.trim().length < 2) return []
+
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('articles')
+    .select('id, slug, title, content_stream')
+    .eq('status', 'published')
+    .eq('content_stream', stream)
+    .ilike('title', `%${q.trim()}%`)
+    .order('published_at', { ascending: false })
+    .limit(6)
+
+  if (error || !data) return []
+  return data as SuggestionRow[]
+}
 
 const DETAIL_SELECT = `
   id,
@@ -58,6 +89,29 @@ export async function getArticleById(
     ...raw,
     tags,
   } as unknown as ArticleDetail
+}
+
+/**
+ * Lightweight fetch for generateMetadata — title, excerpt, OG image only.
+ * No content_markdown, no tag joins.
+ */
+export async function getArticleMeta(id: string): Promise<{
+  title: string
+  excerpt: string | null
+  hero_thumb_url: string | null
+  slug: string
+} | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('articles')
+    .select('title, excerpt, hero_thumb_url, slug')
+    .eq('id', id)
+    .eq('status', 'published')
+    .single()
+
+  if (error || !data) return null
+  return data
 }
 
 /**
