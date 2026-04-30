@@ -9,9 +9,23 @@ import type { ArticleFormDefaults } from '../new/page'
 export const dynamic = 'force-dynamic'
 
 type Props = { params: Promise<{ id: string }> }
+const PUBLISH_ERRORS: Record<string, string> = {
+  title_required: 'Add a title before publishing.',
+  body_required: 'Add content before publishing.',
+  stream_required: 'Select a stream before publishing.',
+  source_url_invalid: 'Source URL must be a valid http(s) link.',
+  publish_validation_failed: 'Article could not be published. Fix the required fields and retry.',
+}
 
-export default async function EditArticlePage({ params }: Props) {
+export default async function EditArticlePage({
+  params,
+  searchParams,
+}: Props & { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params
+  const resolvedSearchParams = (await searchParams) ?? {}
+  const errorCode = Array.isArray(resolvedSearchParams.error)
+    ? resolvedSearchParams.error[0]
+    : resolvedSearchParams.error
   const db = createAdminClient()
 
   const { data: article } = await db
@@ -48,6 +62,13 @@ export default async function EditArticlePage({ params }: Props) {
           {article.status as string}
         </span>
       </div>
+
+      {errorCode && (
+        // Audit S6-F3 decision: publish validation errors are user-visible and code-driven.
+        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          {PUBLISH_ERRORS[errorCode] ?? PUBLISH_ERRORS.publish_validation_failed}
+        </p>
+      )}
 
       <div className="flex gap-2 mb-8 pb-6 border-b border-border">
         {isPublished ? (

@@ -6,7 +6,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateArticle, revalidateOfficialTags } from '@/lib/cache'
 import { generateArticleSlug } from '@shared/slug'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
+import { normalizePublishPayload } from '@/lib/validation/publish-article'
 import type { ContentStream } from '@/types/article'
+import { ZodError } from 'zod'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -107,9 +109,29 @@ export async function publishArticleAction(formData: FormData) {
 
   const { data: existing } = await db
     .from('articles')
-    .select('published_at, content_stream, title')
+    .select('published_at, content_stream, title, content_markdown, source_url, excerpt')
     .eq('id', id)
     .single()
+
+  if (!existing) throw new Error('Article not found')
+
+  let publishPayload: ReturnType<typeof normalizePublishPayload>
+  try {
+    // Audit S6-F3 decision: enforce full publish contract from server-side source of truth.
+    publishPayload = normalizePublishPayload({
+      title: existing.title as string,
+      content_markdown: existing.content_markdown as string | null,
+      content_stream: existing.content_stream as string | null,
+      source_url: existing.source_url as string | null,
+      excerpt: existing.excerpt as string | null,
+    })
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const code = error.issues[0]?.message ?? 'publish_validation_failed'
+      redirect(`/admin/articles/${id}?error=${encodeURIComponent(code)}`)
+    }
+    throw error
+  }
 
   // Blueprint §15.1: published_at set once on first publish — never overwritten
   const published_at = (existing?.published_at as string | null) ?? new Date().toISOString()
@@ -117,23 +139,22 @@ export async function publishArticleAction(formData: FormData) {
   const { error } = await db.from('articles').update({
     status: 'published',
     published_at,
+    excerpt: publishPayload.excerpt,
   }).eq('id', id)
 
   if (error) throw new Error(error.message)
 
   revalidateArticle(id)
 
-  // Fan-out must never block the publish response
-  try {
-    if (existing?.content_stream && existing?.title) {
-      await fanOutOnPublish({
-        articleId: id,
-        stream: existing.content_stream as 'standard' | 'pulse',
-        title: existing.title,
-      })
-    }
-  } catch (fanOutError) {
-    console.error('[publishArticleAction] fan-out error:', fanOutError)
+  // Audit S6-F10 decision: decouple fan-out from publish response path.
+  if (publishPayload.content_stream && publishPayload.title) {
+    void fanOutOnPublish({
+      articleId: id,
+      stream: publishPayload.content_stream as 'standard' | 'pulse',
+      title: publishPayload.title,
+    }).catch((fanOutError) => {
+      console.error('[publishArticleAction] fan-out error:', fanOutError)
+    })
   }
 
   redirect(`/admin/articles/${id}`)
