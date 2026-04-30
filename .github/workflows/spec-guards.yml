@@ -5,6 +5,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install ETL workspace dependencies
+        run: npm --prefix scripts/migrate ci
 
       - name: No is_published in app code
         run: |
@@ -56,3 +66,12 @@ jobs:
             }
             console.log('Package check passed — no banned packages found.');
           "
+
+      - name: Audit S2-F7 banned import check
+        run: npm run check:banned-imports
+
+      - name: Build app for budget checks
+        run: npm run build
+
+      - name: Audit S2-F3 bundle budget check
+        run: npm run check:bundle-budget

@@ -1,0 +1,22 @@
+{
+  "name": "nuggets-v3-migrate",
+  "private": true,
+  "scripts": {
+    "etl:tags": "tsx migrate-tags.ts",
+    "etl:articles": "tsx migrate-articles.ts",
+    "etl:collections": "tsx migrate-collections.ts",
+    "test:handoff": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "jsdom": "^29.1.1",
+    "mongoose": "^9.6.1",
+    "pg": "^8.20.0",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^28.0.1",
+    "@types/mongoose": "^5.11.96",
+    "@types/pg": "^8.20.0"
+  }
+}

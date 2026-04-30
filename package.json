@@ -6,11 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "etl:tags": "npm --prefix scripts/migrate run etl:tags",
+    "etl:articles": "npm --prefix scripts/migrate run etl:articles",
+    "etl:collections": "npm --prefix scripts/migrate run etl:collections",
+    "validate:og": "node scripts/validate-og.mjs",
+    "check:banned-imports": "node scripts/check-banned-imports.mjs",
+    "check:bundle-budget": "node scripts/check-bundle-budget.mjs",
+    "test:handoff": "npm --prefix scripts/migrate run test:handoff"
   },
   "dependencies": {
+    "@next/third-parties": "^16.2.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "autoprefixer": "^10.5.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.503.0",
@@ -29,14 +39,10 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^20",
-    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "dotenv": "^17.4.2",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.4",
-    "pg": "^8.20.0",
-    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

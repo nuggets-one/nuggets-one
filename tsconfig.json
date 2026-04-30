@@ -31,5 +31,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "scripts/validate"]
+  "exclude": ["node_modules", "scripts/validate", "scripts/migrate"]
 }
