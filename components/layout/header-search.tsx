@@ -7,7 +7,7 @@ import Link from 'next/link'
 import type { ContentStream } from '@/types/article'
 import type { SuggestionRow } from '@/lib/queries/article'
 
-const DEBOUNCE_MS = 300
+const DEBOUNCE_MS = 180
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)

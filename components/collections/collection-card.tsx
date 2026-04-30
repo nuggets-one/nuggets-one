@@ -1,6 +1,5 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { cloudinaryLoader } from '@/lib/cloudinary'
 import type { CollectionSummary } from '@/types/collection'
 
 function idToHue(id: string): number {
@@ -42,7 +41,6 @@ export function CollectionCard({ collection }: Props) {
       >
         {cover_url ? (
           <Image
-            loader={cloudinaryLoader}
             src={cover_url}
             alt={title}
             fill

@@ -1,4 +1,25 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nuggets.one'
+const homeOgImage = `${siteUrl}/og-default.png`
+
+export const metadata: Metadata = {
+  title: 'Nuggets — Curated knowledge, delivered fast',
+  description: 'Hand-curated reads across technology, markets, and ideas. Standard and Market Pulse streams.',
+  openGraph: {
+    title: 'Nuggets — Curated knowledge, delivered fast',
+    description: 'Hand-curated reads across technology, markets, and ideas.',
+    url: siteUrl,
+    siteName: 'Nuggets',
+    type: 'website',
+    images: [{ url: homeOgImage }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: [homeOgImage],
+  },
+}
 import { unstable_noStore } from 'next/cache'
 import { getFeedPage } from '@/lib/queries/feed'
 import { listOfficialTags } from '@/lib/queries/tags'

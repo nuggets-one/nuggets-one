@@ -1,6 +1,5 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { cloudinaryLoader } from '@/lib/cloudinary'
 import { BookmarkButton } from '@/components/ui/bookmark-button'
 import type { ArticleCardProps } from '@/types/article'
 
@@ -73,7 +72,6 @@ export function ArticleCard({
       >
         {hero_thumb_url ? (
           <Image
-            loader={cloudinaryLoader}
             src={hero_thumb_url}
             alt={hero_alt_text ?? title}
             fill

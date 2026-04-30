@@ -22,7 +22,7 @@ interface CloudinaryLoaderParams {
   quality?: number
 }
 
-export default function cloudinaryLoader({
+export function cloudinaryLoader({
   src,
   width,
   quality,
@@ -33,8 +33,7 @@ export default function cloudinaryLoader({
   const uploadIndex = src.indexOf(uploadSegment)
 
   if (uploadIndex === -1) {
-    // Not a standard Cloudinary URL — return as-is and let Next.js handle it
-    console.warn('[cloudinary-loader] Unexpected src format:', src)
+    // Not a Cloudinary URL (e.g. i.ytimg.com) — return as-is for Next.js to serve directly
     return src
   }
 
@@ -51,3 +50,5 @@ export default function cloudinaryLoader({
 
   return `${baseUrl}${transforms}/${publicId}`
 }
+
+export default cloudinaryLoader

@@ -12,9 +12,11 @@ export type SuggestionRow = {
 export async function suggestArticles({
   q,
   stream,
+  limit = 8,
 }: {
   q: string
   stream: ContentStream
+  limit?: number
 }): Promise<SuggestionRow[]> {
   if (!q || q.trim().length < 2) return []
 
@@ -25,11 +27,16 @@ export async function suggestArticles({
     .select('id, slug, title, content_stream')
     .eq('status', 'published')
     .eq('content_stream', stream)
-    .ilike('title', `%${q.trim()}%`)
-    .order('published_at', { ascending: false })
-    .limit(6)
+    .textSearch('search_vector', `${q.trim()}:*`, {
+      type: 'plain',
+      config: 'english',
+    })
+    .limit(limit)
 
-  if (error || !data) return []
+  if (error || !data) {
+    console.error('suggestArticles error:', error?.message)
+    return []
+  }
   return data as SuggestionRow[]
 }
 
@@ -111,6 +118,26 @@ export async function getArticleMeta(id: string): Promise<{
     .select('title, excerpt, hero_thumb_url, slug')
     .eq('id', id)
     .eq('status', 'published')
+    .single()
+
+  if (error || !data) return null
+  return data
+}
+
+/**
+ * Lightweight slug lookup by article id — used by notification panel
+ * to build the /nuggets/[id]/[slug] navigation URL.
+ */
+export async function getArticleSlugById(
+  id: string
+): Promise<{ id: string; slug: string } | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('articles')
+    .select('id, slug')
+    .eq('id', id)
+    .limit(1)
     .single()
 
   if (error || !data) return null

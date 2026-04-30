@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
+import { permanentRedirect } from 'next/navigation'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { getArticleById, getArticleMeta } from '@/lib/queries/article'
@@ -7,7 +7,6 @@ import { isArticleBookmarked } from '@/lib/queries/bookmarks'
 import { ArticleBody } from '@/components/ui/article-body'
 import { ArticleDetailSkeleton } from '@/components/ui/article-detail-skeleton'
 import { BookmarkButton } from '@/components/ui/bookmark-button'
-import { cloudinaryLoader } from '@/lib/cloudinary'
 import { createClient } from '@/lib/supabase/server'
 
 // Bookmark check requires cookies — serves dynamically per user.
@@ -26,6 +25,8 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const meta = await getArticleMeta(id)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nuggets.one'
+  const defaultOgImage = `${siteUrl}/og-default.png`
 
   if (!meta) {
     return { title: 'Nugget not found — Nuggets' }
@@ -37,10 +38,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: meta.title,
       description: meta.excerpt ?? undefined,
-      images: meta.hero_thumb_url ? [{ url: meta.hero_thumb_url }] : [],
+      type: 'article',
+      url: `${siteUrl}/nuggets/${id}/${meta.slug}`,
+      images: [
+        {
+          url: meta.hero_thumb_url ?? defaultOgImage,
+          width: 1200,
+          height: 630,
+          alt: meta.title,
+        },
+      ],
     },
+    twitter: { card: 'summary_large_image' },
     alternates: {
-      canonical: `/nuggets/${id}/${meta.slug}`,
+      canonical: `${siteUrl}/nuggets/${id}/${meta.slug}`,
     },
   }
 }
@@ -58,7 +69,7 @@ async function ArticleContent({ id, slug }: Params) {
 
   // Canonical slug redirect — 301 if URL slug is stale
   if (article.slug !== slug) {
-    redirect(`/nuggets/${id}/${article.slug}`)
+    permanentRedirect(`/nuggets/${id}/${article.slug}`)
   }
 
   const supabase = await createClient()
@@ -105,7 +116,6 @@ async function ArticleContent({ id, slug }: Params) {
       {article.hero_thumb_url && (
         <div className="relative aspect-video w-full rounded-xl overflow-hidden mb-8 bg-surface-raised">
           <Image
-            loader={cloudinaryLoader}
             src={article.hero_thumb_url}
             alt={article.hero_alt_text ?? article.title}
             fill

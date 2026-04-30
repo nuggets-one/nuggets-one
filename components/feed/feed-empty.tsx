@@ -1,6 +1,7 @@
 'use client'
 
 import { useQueryState } from 'nuqs'
+import Link from 'next/link'
 
 type Props = {
   q: string
@@ -44,11 +45,19 @@ export function FeedEmpty({ q, hasTags }: Props) {
           No nuggets match these filters.
         </p>
         <button
-          onClick={() => setTags(null)}
+          onClick={() => {
+            setTags(null)
+            setQ(null)
+          }}
           className="mt-4 text-sm font-medium text-primary underline underline-offset-2"
         >
           Clear filters
         </button>
+        <div className="mt-3">
+          <Link href="/" className="text-sm text-muted underline underline-offset-2">
+            Back to home
+          </Link>
+        </div>
       </div>
     )
   }

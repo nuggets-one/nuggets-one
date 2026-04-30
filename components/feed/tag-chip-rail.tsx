@@ -1,6 +1,7 @@
 'use client'
 
 import { useQueryState } from 'nuqs'
+import { useTransition } from 'react'
 import type { TagSummary } from '@/types/article'
 
 type Props = {
@@ -12,6 +13,7 @@ export function TagChipRail({ tags }: Props) {
     defaultValue: '',
     shallow: false,
   })
+  const [isPending, startTransition] = useTransition()
 
   const selected = selectedRaw
     ? selectedRaw.split(',').filter(Boolean)
@@ -21,7 +23,9 @@ export function TagChipRail({ tags }: Props) {
     const next = selected.includes(slug)
       ? selected.filter((s) => s !== slug)
       : [...selected, slug]
-    setSelected(next.length ? next.join(',') : null)
+    startTransition(() => {
+      setSelected(next.length ? next.join(',') : null)
+    })
   }
 
   if (tags.length === 0) return null
@@ -35,6 +39,7 @@ export function TagChipRail({ tags }: Props) {
             key={tag.slug}
             onClick={() => toggle(tag.slug)}
             aria-pressed={active}
+            disabled={isPending}
             className={`rounded-full px-3 py-1 text-sm font-medium transition-colors min-h-[44px] ${
               active
                 ? 'bg-accent text-black'

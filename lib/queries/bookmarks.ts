@@ -28,8 +28,8 @@ export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
   if (error || !data) return []
 
   return data
-    .map((row: any) => row.articles)
-    .filter(Boolean) as ArticleCardProps[]
+    .map((row: { articles: ArticleCardProps[] | null }) => row.articles?.[0] ?? null)
+    .filter((article): article is ArticleCardProps => article !== null)
 }
 
 export async function isArticleBookmarked(articleId: string): Promise<boolean> {
@@ -57,5 +57,7 @@ export async function getBookmarkedArticleIds(
     .select('article_id')
     .in('article_id', articleIds)
 
-  return new Set((data ?? []).map((row: any) => row.article_id as string))
+  return new Set(
+    (data ?? []).map((row: { article_id: string }) => row.article_id)
+  )
 }
