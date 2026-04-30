@@ -74,7 +74,7 @@ export function ArticleCard({
   const sourceHost = getSourceHostLabel(source_url)
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-transform duration-150 hover:-translate-y-px hover:shadow-md dark:border-zinc-700/80 dark:shadow-black/20 focus-within:ring-2 focus-within:ring-accent">
+    <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-transform duration-150 motion-reduce:transition-none motion-safe:hover:-translate-y-px hover:shadow-md dark:border-zinc-700/80 dark:shadow-black/20 focus-within:ring-2 focus-within:ring-accent">
       {/* Media block — fixed 16:9 aspect, no CLS */}
       <Link
         href={href}
@@ -115,7 +115,7 @@ export function ArticleCard({
 
         {/* Title */}
         <Link href={href} className="focus:outline-none min-h-[44px] flex items-start">
-          <h2 className="text-base font-semibold leading-snug line-clamp-2 text-primary group-hover:text-primary/80 transition-colors">
+          <h2 className="text-base font-semibold leading-snug line-clamp-2 text-primary transition-colors motion-reduce:transition-none group-hover:text-primary/80">
             {title}
           </h2>
         </Link>
