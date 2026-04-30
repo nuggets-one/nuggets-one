@@ -63,7 +63,7 @@ export async function listCollections(): Promise<CollectionSummary[]> {
       created_at,
       community_collection_entries ( position, articles ( hero_thumb_url ) )
     `)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -121,7 +121,7 @@ export async function getCollectionById(id: string): Promise<CollectionDetail> {
       )
     `)
     .eq('id', id)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .single()
 
   if (error || !data) notFound()
@@ -163,7 +163,7 @@ export async function getCollectionMeta(
     .from('community_collections')
     .select('title, description')
     .eq('id', id)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .single()
 
   if (error || !data) return null
