@@ -12,7 +12,7 @@
 //   primaryMedia image → hero_thumb_url + article_media kind='image'
 //   primaryMedia video → hero_media_kind='youtube' + hero_video_id + article_media kind='youtube'
 //   hero_media_id → article_media.id (always set when media exists; null only if no media)
-//   tagIds embedded [{ slug, label }] → article_tags join rows + tag_slugs[]
+//   tags/tagIds (legacy shape variants) → article_tags join rows + tag_slugs[]
 
 import { connectMongo, disconnectMongo } from './mongo-client'
 import { db } from './supabase-client'
@@ -78,6 +78,14 @@ function mapContentStream(raw: string | null | undefined): 'standard' | 'pulse' 
   return raw === 'pulse' ? 'pulse' : 'standard'
 }
 
+function normalizeSlug(raw: string | null | undefined): string | null {
+  const slug = (raw ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+  return slug || null
+}
+
 // Derive hero fields + article_media payload from primaryMedia
 // Blueprint §12.2a: hero_media_id must always be set when media exists
 function deriveMedia(primaryMedia: any): {
@@ -91,13 +99,20 @@ function deriveMedia(primaryMedia: any): {
     return { hero_thumb_url: null, hero_alt_text: null, hero_media_kind: null, hero_video_id: null, mediaRow: null }
   }
 
-  if (primaryMedia.type === 'video' && primaryMedia.videoId) {
+  const typeRaw = String(primaryMedia.type ?? primaryMedia.kind ?? primaryMedia.mediaType ?? '').toLowerCase()
+  const isYoutube = typeRaw.includes('youtube')
+  const isVideo = typeRaw.includes('video') || isYoutube
+  const inferredVideoId = typeof primaryMedia.videoId === 'string'
+    ? primaryMedia.videoId
+    : extractYouTubeVideoId(primaryMedia.url)
+
+  if (isVideo && inferredVideoId) {
     return {
-      hero_thumb_url: null,
+      hero_thumb_url: typeof primaryMedia.thumbnail_url === 'string' ? primaryMedia.thumbnail_url : null,
       hero_alt_text: primaryMedia.alt || null,
       hero_media_kind: 'youtube',
-      hero_video_id: primaryMedia.videoId,
-      mediaRow: { url: primaryMedia.url, kind: 'youtube', video_id: primaryMedia.videoId },
+      hero_video_id: inferredVideoId,
+      mediaRow: { url: primaryMedia.url, kind: 'youtube', video_id: inferredVideoId },
     }
   }
 
@@ -108,6 +123,78 @@ function deriveMedia(primaryMedia: any): {
     hero_video_id: null,
     mediaRow: { url: primaryMedia.url, kind: 'image', video_id: null },
   }
+}
+
+function extractYouTubeVideoId(url: unknown): string | null {
+  if (typeof url !== 'string' || !url.trim()) return null
+  const raw = url.trim()
+  const shortMatch = raw.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/)
+  if (shortMatch) return shortMatch[1]
+  const longMatch = raw.match(/[?&]v=([a-zA-Z0-9_-]{6,})/)
+  if (longMatch) return longMatch[1]
+  const embedMatch = raw.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/)
+  if (embedMatch) return embedMatch[1]
+  return null
+}
+
+/**
+ * Legacy media appears under several shapes: primaryMedia, media[], heroImage, etc.
+ * Normalize to the shape expected by deriveMedia().
+ */
+function pickPrimaryMedia(doc: any): { url: string; alt?: string; type?: string; videoId?: string } | null {
+  const candidate = doc.primaryMedia
+  if (candidate && typeof candidate === 'object') {
+    const url = String(candidate.url ?? candidate.src ?? candidate.secure_url ?? '').trim()
+    if (url) {
+      return {
+        url,
+        alt: typeof candidate.alt === 'string' ? candidate.alt : undefined,
+        type: typeof candidate.type === 'string' ? candidate.type : undefined,
+        videoId: typeof candidate.videoId === 'string' ? candidate.videoId : undefined,
+      }
+    }
+  }
+
+  if (doc.media && typeof doc.media === 'object' && !Array.isArray(doc.media)) {
+    const url = String(doc.media.url ?? doc.media.src ?? doc.media.secure_url ?? '').trim()
+    if (url) {
+      return {
+        url,
+        alt: typeof doc.media.alt === 'string' ? doc.media.alt : undefined,
+        type: typeof doc.media.type === 'string' ? doc.media.type : undefined,
+        videoId: typeof doc.media.videoId === 'string' ? doc.media.videoId : undefined,
+      }
+    }
+  }
+
+  if (Array.isArray(doc.media)) {
+    for (const m of doc.media) {
+      if (!m || typeof m !== 'object') continue
+      const url = String(m.url ?? m.src ?? m.secure_url ?? '').trim()
+      if (!url) continue
+      const kind = String(m.type ?? m.kind ?? m.mediaType ?? '').toLowerCase()
+      const videoId = typeof m.videoId === 'string' ? m.videoId : undefined
+      return {
+        url,
+        alt: typeof m.alt === 'string' ? m.alt : undefined,
+        type: kind.includes('video') || videoId ? 'video' : 'image',
+        videoId,
+      }
+    }
+  }
+
+  for (const key of ['heroImage', 'hero_image', 'thumbnail', 'coverImage', 'image']) {
+    const raw = doc[key]
+    if (typeof raw === 'string' && raw.trim()) {
+      return { url: raw.trim(), type: 'image' }
+    }
+    if (raw && typeof raw === 'object') {
+      const url = String(raw.url ?? raw.src ?? raw.secure_url ?? '').trim()
+      if (url) return { url, alt: typeof raw.alt === 'string' ? raw.alt : undefined, type: 'image' }
+    }
+  }
+
+  return null
 }
 
 // Derive created_at from ObjectId timestamp (Migration Plan §3.2: no createdAt field on docs)
@@ -135,6 +222,34 @@ function firstExternalLinkUrl(links: unknown): string | null {
   return null
 }
 
+function resolveTagSlugs(doc: any, mongoTagIdToSlug: Map<string, string>): string[] {
+  const out = new Set<string>()
+
+  if (Array.isArray(doc.tags)) {
+    for (const t of doc.tags) {
+      if (typeof t === 'string') {
+        const s = normalizeSlug(t)
+        if (s) out.add(s)
+        continue
+      }
+      if (t && typeof t === 'object') {
+        const s = normalizeSlug((t.slug as string | undefined) ?? (t.label as string | undefined) ?? (t.name as string | undefined))
+        if (s) out.add(s)
+      }
+    }
+  }
+
+  if (Array.isArray(doc.tagIds)) {
+    for (const tagId of doc.tagIds) {
+      const key = String(tagId)
+      const s = mongoTagIdToSlug.get(key)
+      if (s) out.add(s)
+    }
+  }
+
+  return [...out]
+}
+
 async function main() {
   console.log(
     `\n📦 Article migration ${isDryRun ? '[DRY RUN]' : '[LIVE]'}${LIMIT ? ` [LIMIT ${LIMIT}]` : ''}\n`
@@ -143,12 +258,30 @@ async function main() {
   await connectMongo()
 
   // Build tag slug → postgres id map for article_tags population
-  const { data: tagRows, error: tagFetchErr } = await db.from('tags').select('id, slug')
+  const { data: tagRows, error: tagFetchErr } = await db.from('tags').select('id, slug, legacy_mongo_id')
   if (tagFetchErr) throw new Error(`Failed to fetch tags: ${tagFetchErr.message}`)
   const tagSlugToId = new Map<string, string>(
     (tagRows ?? []).map((r) => [r.slug as string, r.id as string])
   )
-  console.log(`Loaded ${tagSlugToId.size} tags from Postgres\n`)
+  const mongoTagIdToSlug = new Map<string, string>(
+    (tagRows ?? [])
+      .filter((r) => typeof r.legacy_mongo_id === 'string' && typeof r.slug === 'string')
+      .map((r) => [r.legacy_mongo_id as string, r.slug as string])
+  )
+
+  const { data: existingRows, error: existingErr } = await db
+    .from('articles')
+    .select('legacy_mongo_id')
+    .not('legacy_mongo_id', 'is', null)
+  if (existingErr) throw new Error(`Failed to fetch existing article legacy IDs: ${existingErr.message}`)
+  const existingLegacyIds = new Set<string>(
+    (existingRows ?? [])
+      .map((r) => r.legacy_mongo_id as string | null)
+      .filter((v): v is string => typeof v === 'string' && v.length > 0)
+  )
+
+  console.log(`Loaded ${tagSlugToId.size} tags (${mongoTagIdToSlug.size} with legacy IDs) from Postgres`)
+  console.log(`Loaded ${existingLegacyIds.size} existing article legacy IDs from Postgres\n`)
 
   const query = MongoArticle.find({}).sort({ publishedAt: -1 }).lean()
   if (LIMIT) query.limit(LIMIT)
@@ -159,8 +292,15 @@ async function main() {
   let inserted = 0
   let skipped = 0
   let errors = 0
+  let publishedFallbacks = 0
 
   for (const doc of mongoArticles) {
+    const legacyMongoId = String(doc._id)
+    if (!isDryRun && existingLegacyIds.has(legacyMongoId)) {
+      skipped++
+      continue
+    }
+
     const title = (doc.title as string)?.trim()
     if (!title) {
       console.warn(`  ⚠ Skipping article with no title: ${doc._id}`)
@@ -170,21 +310,19 @@ async function main() {
 
     const status = mapStatus(doc)
     const content_stream = mapContentStream(doc.contentStream as string)
+    const created_at = objectIdToDate(doc._id as mongoose.Types.ObjectId)
     const published_at = doc.publishedAt
       ? new Date(doc.publishedAt as Date).toISOString()
-      : null
-    const created_at = objectIdToDate(doc._id as mongoose.Types.ObjectId)
+      : status === 'published'
+        ? created_at
+        : null
 
-    if (status === 'published' && !published_at) {
-      console.warn(`  ⚠ Published article missing publishedAt — skipping: ${title.slice(0, 60)}`)
-      skipped++
-      continue
+    if (status === 'published' && !doc.publishedAt) {
+      publishedFallbacks++
     }
 
-    // Normalize embedded tag slugs for tag_slugs[] and article_tags lookup
-    const tag_slugs: string[] = ((doc.tags as any[]) ?? [])
-      .map((t: any) => (t.slug as string)?.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
-      .filter(Boolean)
+    // Resolve tags from either embedded tags[] or referenced tagIds[]
+    const tag_slugs: string[] = resolveTagSlugs(doc, mongoTagIdToSlug)
 
     // source_url: prefer sourceUrl, fall back to first externalLink
     const source_url =
@@ -193,7 +331,7 @@ async function main() {
       null
 
     const { hero_thumb_url, hero_alt_text, hero_media_kind, hero_video_id, mediaRow } =
-      deriveMedia(doc.primaryMedia)
+      deriveMedia(pickPrimaryMedia(doc))
 
     const id = crypto.randomUUID()
     const slug = generateArticleSlug(title, id)
@@ -225,7 +363,7 @@ async function main() {
       hero_video_id,
       hero_media_id: media_id,
       tag_slugs,
-      legacy_mongo_id: String(doc._id),
+      legacy_mongo_id: legacyMongoId,
     })
 
     if (articleErr) {
@@ -265,8 +403,12 @@ async function main() {
 
     console.log(`  ✓ [${content_stream}] ${title.slice(0, 60)}`)
     inserted++
+    if (!isDryRun) existingLegacyIds.add(legacyMongoId)
   }
 
+  if (publishedFallbacks > 0) {
+    console.log(`\nℹ Applied published_at fallback to created_at for ${publishedFallbacks} published articles`)
+  }
   console.log(`\nDone. inserted=${inserted} skipped=${skipped} errors=${errors}`)
   await disconnectMongo()
 }
