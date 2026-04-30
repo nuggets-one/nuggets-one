@@ -1,44 +1,17 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import type { User } from '@supabase/supabase-js'
 import { logoutAction } from '@/lib/actions/auth'
 
-export function HeaderAuth() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const pathname = usePathname()
+type HeaderAuthProps = {
+  isAuthenticated: boolean
+  userEmail?: string | null
+}
 
-  useEffect(() => {
-    const supabase = createClient()
-
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null)
-      setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  // Match SSR anonymous output during hydration to avoid mismatch
-  if (loading) {
-    return (
-      <span className="shrink-0 text-sm text-muted">Sign in</span>
-    )
-  }
-
-  if (!user) {
+export function HeaderAuth({ isAuthenticated, userEmail }: HeaderAuthProps) {
+  if (!isAuthenticated) {
     return (
       <Link
-        href={`/login${pathname !== '/' ? `?next=${encodeURIComponent(pathname)}` : ''}`}
-        className="shrink-0 text-sm text-muted hover:text-primary transition-colors"
+        href="/login"
+        className="inline-flex min-h-[44px] items-center rounded-md px-2 text-sm text-muted transition-colors hover:text-primary active:bg-surface-raised"
       >
         Sign in
       </Link>
@@ -47,14 +20,14 @@ export function HeaderAuth() {
 
   // Authenticated state — minimal avatar + logout
   // Bell/notifications added in later PR (§6.6)
-  const initials = (user.email ?? 'U').charAt(0).toUpperCase()
+  const initials = (userEmail ?? 'U').charAt(0).toUpperCase()
 
   return (
-    <div className="shrink-0 flex items-center gap-3">
-      <form action={logoutAction}>
+    <div className="shrink-0 flex items-center gap-2 sm:gap-3">
+      <form action={logoutAction} className="hidden md:block">
         <button
           type="submit"
-          className="text-sm text-muted hover:text-primary transition-colors"
+          className="inline-flex min-h-[44px] items-center rounded-md px-2 text-sm text-muted transition-colors hover:text-primary active:bg-surface-raised"
         >
           Sign out
         </button>

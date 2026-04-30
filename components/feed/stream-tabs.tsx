@@ -36,8 +36,8 @@ export function StreamTabs() {
           }}
           className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[44px] ${
             stream === value
-              ? 'bg-surface text-primary shadow-sm'
-              : 'text-muted hover:text-primary'
+              ? 'bg-surface text-primary shadow-sm active:bg-surface'
+              : 'text-muted hover:text-primary active:bg-surface/70'
           }`}
         >
           {label}

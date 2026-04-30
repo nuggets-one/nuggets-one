@@ -42,8 +42,8 @@ export function TagChipRail({ tags }: Props) {
             disabled={isPending}
             className={`rounded-full px-3 py-1 text-sm font-medium transition-colors min-h-[44px] ${
               active
-                ? 'bg-accent text-black'
-                : 'bg-surface-raised text-muted hover:text-primary hover:bg-surface border border-border'
+                ? 'bg-accent text-black ring-1 ring-accent/70 active:brightness-95'
+                : 'bg-surface-raised text-muted hover:text-primary hover:bg-surface active:bg-surface border border-border'
             }`}
           >
             {tag.label}

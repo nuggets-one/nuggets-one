@@ -2,7 +2,7 @@
 
 // Logged-out: redirects to /login?next=<currentPath> — no auth modal (PRODUCT §0.7)
 
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -53,7 +53,7 @@ export function BookmarkButton({
   const [bookmarked, setBookmarked] = useState(initialBookmarked)
   const [isPending, setIsPending] = useState(false)
 
-  async function handleClick(e: React.MouseEvent) {
+  async function handleClick(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
     e.stopPropagation()
 
@@ -91,8 +91,8 @@ export function BookmarkButton({
       disabled={isPending}
       className={`inline-flex items-center gap-1.5 transition-colors min-h-[44px] min-w-[44px] justify-center ${
         variant === 'detail'
-          ? 'px-3 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-surface-raised'
-          : 'p-1 rounded hover:bg-surface-raised'
+          ? 'px-3 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-surface-raised active:bg-surface-raised/80'
+          : 'p-1 rounded hover:bg-surface-raised active:bg-surface-raised/80'
       } ${bookmarked ? 'text-accent' : 'text-muted hover:text-primary'} ${
         isPending ? 'opacity-50 cursor-not-allowed' : ''
       }`}

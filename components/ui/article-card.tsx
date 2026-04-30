@@ -62,7 +62,7 @@ export function ArticleCard({
   const primaryTag = tag_slugs[0] ?? null
 
   return (
-    <article className="group flex flex-col rounded-xl border border-border bg-surface overflow-hidden transition-transform duration-150 hover:-translate-y-px hover:shadow-sm focus-within:ring-2 focus-within:ring-accent">
+    <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-transform duration-150 hover:-translate-y-px hover:shadow-md dark:border-zinc-700/80 dark:shadow-black/20 focus-within:ring-2 focus-within:ring-accent">
       {/* Media block — fixed 16:9 aspect, no CLS */}
       <Link
         href={href}
@@ -76,7 +76,7 @@ export function ArticleCard({
             alt={hero_alt_text ?? title}
             fill
             className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc((100vw - 3rem) / 2), (max-width: 1280px) calc((100vw - 4rem) / 3), 360px"
             quality={75}
             priority={priority}
           />
@@ -117,15 +117,15 @@ export function ArticleCard({
         )}
 
         {/* Footer */}
-        <div className="mt-auto pt-2 flex items-center gap-3 text-xs">
+        <div className="mt-auto flex items-center gap-3 border-t border-border/70 pt-2 text-xs">
           {source_url && (
             <a
               href={source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted hover:text-primary transition-colors min-h-[44px] flex items-center"
+              className="inline-flex min-h-[44px] items-center rounded-md px-2 text-muted transition-colors hover:text-primary active:bg-surface-raised"
             >
-              View source ↗
+              View Full Article
             </a>
           )}
           <div className="ml-auto">

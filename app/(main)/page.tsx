@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { cookies } from 'next/headers'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nuggets.one'
 const homeOgImage = `${siteUrl}/og-default.png`
@@ -63,11 +64,19 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
     unstable_noStore()
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const isAuthenticated = !!user
+  const cookieStore = await cookies()
+  const hasSupabaseAuthCookie = cookieStore
+    .getAll()
+    .some(({ name }) => name.includes('-auth-token'))
+
+  let isAuthenticated = false
+  if (hasSupabaseAuthCookie) {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    isAuthenticated = !!user
+  }
 
   const [feedResult, officialTags] = await Promise.all([
     hasFilters
@@ -77,6 +86,14 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   ])
 
   const { articles, nextCursor } = feedResult
+  const aboveFoldPriorityCount = 3
+  const streamLabel = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+  const resultLabel = `${articles.length} result${articles.length === 1 ? '' : 's'}`
+  const contextParts = [
+    streamLabel,
+    q ? `Search: "${q}"` : null,
+    tags.length ? `${tags.length} tag filter${tags.length === 1 ? '' : 's'}` : null,
+  ].filter(Boolean)
 
   // Batch bookmark check — BLUEPRINT: "one batched GET per feed page (24 IDs max)"
   const bookmarkedIds = isAuthenticated
@@ -88,6 +105,11 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       <div className="flex flex-col gap-4 mb-6">
         <StreamTabs />
         <TagChipRail tags={officialTags} />
+        <p className="text-xs text-muted">
+          <span className="font-medium text-primary/85">{resultLabel}</span>
+          <span className="mx-1.5 text-muted/70">|</span>
+          <span>{contextParts.join(' · ')}</span>
+        </p>
       </div>
 
       {articles.length === 0 ? (
@@ -98,7 +120,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
             <ArticleCard
               key={article.id}
               article={article}
-              priority={index === 0}
+              priority={index < aboveFoldPriorityCount}
               isAuthenticated={isAuthenticated}
               initialBookmarked={bookmarkedIds.has(article.id)}
             />
