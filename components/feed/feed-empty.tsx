@@ -2,6 +2,7 @@
 
 import { useQueryState } from 'nuqs'
 import Link from 'next/link'
+import { StatusBlock } from '@/components/ui/status-block'
 
 type Props = {
   q: string
@@ -14,10 +15,7 @@ export function FeedEmpty({ q, hasTags }: Props) {
 
   if (q) {
     return (
-      <div className="py-16 text-center">
-        <p className="text-base font-semibold text-primary mb-1">
-          No nuggets match &ldquo;{q}&rdquo;.
-        </p>
+      <StatusBlock heading={`No nuggets match "${q}".`}>
         <div className="flex justify-center gap-4 mt-4">
           <button
             onClick={() => setQ(null)}
@@ -34,16 +32,13 @@ export function FeedEmpty({ q, hasTags }: Props) {
             </button>
           )}
         </div>
-      </div>
+      </StatusBlock>
     )
   }
 
   if (hasTags) {
     return (
-      <div className="py-16 text-center">
-        <p className="text-base font-semibold text-primary mb-1">
-          No nuggets match these filters.
-        </p>
+      <StatusBlock heading="No nuggets match these filters.">
         <button
           onClick={() => {
             setTags(null)
@@ -58,13 +53,9 @@ export function FeedEmpty({ q, hasTags }: Props) {
             Back to home
           </Link>
         </div>
-      </div>
+      </StatusBlock>
     )
   }
 
-  return (
-    <div className="py-16 text-center">
-      <p className="text-base font-semibold text-primary">No nuggets yet.</p>
-    </div>
-  )
+  return <StatusBlock heading="No nuggets yet." />
 }

@@ -1,13 +1,15 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 
 type Props = {
   heading: string
   body?: string
   linkHref?: string
   linkLabel?: string
+  children?: ReactNode
 }
 
-export function StatusBlock({ heading, body, linkHref, linkLabel }: Props) {
+export function StatusBlock({ heading, body, linkHref, linkLabel, children }: Props) {
   return (
     <div className="py-20 text-center">
       <p className="text-base font-semibold text-primary mb-1">{heading}</p>
@@ -20,6 +22,7 @@ export function StatusBlock({ heading, body, linkHref, linkLabel }: Props) {
           {linkLabel}
         </Link>
       )}
+      {children}
     </div>
   )
 }

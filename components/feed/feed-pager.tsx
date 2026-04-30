@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { ArticleCard } from '@/components/ui/article-card'
 import { ArticleCardSkeleton } from '@/components/ui/article-card-skeleton'
+import { StatusBlock } from '@/components/ui/status-block'
 import type { ArticleCardProps, FeedCursor, ContentStream } from '@/types/article'
 
 type Props = {
@@ -123,15 +124,17 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
       )}
 
       {error && !isLoading && (
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted mb-2">Couldn&apos;t load more nuggets.</p>
+        <StatusBlock
+          heading="Couldn't load more nuggets."
+          body="Please try again. If this keeps happening, refresh the page."
+        >
           <button
             onClick={fetchNextPage}
-            className="text-sm font-medium text-primary underline underline-offset-2"
+            className="mt-3 text-sm font-medium text-primary underline underline-offset-2"
           >
             Retry
           </button>
-        </div>
+        </StatusBlock>
       )}
 
       {isEnd && !isLoading && cards.length > 0 && (
