@@ -6,7 +6,8 @@ import { upsertNotifications } from '@/lib/notifications/fan-out'
 // Auth: Bearer ${CRON_SECRET} header only — no Supabase session.
 // Never add this route to the middleware matcher.
 
-export async function POST(req: NextRequest) {
+// S7-F8: Vercel Cron issues GET — not POST. GET keeps the queue draining.
+export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
