@@ -35,11 +35,10 @@ import { createClient } from '@/lib/supabase/server'
 import { DEFAULT_STREAM } from '@/types/article'
 import type { ContentStream } from '@/types/article'
 
-// Pulse SLA = 120s. Standard could be 300s but we use the shorter
-// so pulse users never wait >120s for new articles.
-// BLUEPRINT §11: "Only canonical first page is server-cacheable via revalidateTag.
-// Filtered URLs are dynamic."
-export const revalidate = 120
+// S4-F3: revalidate = 120 removed — page is forced dynamic by cookies() in FeedGrid
+// (bookmark hydration requires auth state server-side). Cache ownership lives in the
+// feed data layer (lib/cache.ts revalidateTag) per BLUEPRINT §11. When feed queries
+// move to fetch+next.tags the revalidateTag calls will take effect automatically.
 
 type SearchParams = {
   stream?: string

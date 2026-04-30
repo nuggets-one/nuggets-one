@@ -214,9 +214,9 @@ function PreferencesSection({
 // ── Main component ──────────────────────────────────────────────────────────
 
 export function NotificationPanel({
-  initialUnreadCount,
+  initialUnreadCount = 0,
 }: {
-  initialUnreadCount: number
+  initialUnreadCount?: number
 }) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
