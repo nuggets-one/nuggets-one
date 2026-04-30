@@ -4,42 +4,13 @@
 
 import { useState, type MouseEvent } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { toggleBookmarkAction } from '@/lib/actions/bookmarks'
 
 type Props = {
   articleId: string
   initialBookmarked: boolean
   isAuthenticated: boolean
   variant?: 'card' | 'detail'
-}
-
-async function toggleBookmark(
-  articleId: string,
-  currentlyBookmarked: boolean
-): Promise<{ bookmarked: boolean; error: string | null }> {
-  const supabase = createClient()
-
-  if (currentlyBookmarked) {
-    const { error } = await supabase
-      .from('bookmarks')
-      .delete()
-      .eq('article_id', articleId)
-
-    if (error) return { bookmarked: true, error: error.message }
-    return { bookmarked: false, error: null }
-  } else {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { bookmarked: false, error: 'not_authenticated' }
-
-    const { error } = await supabase
-      .from('bookmarks')
-      .insert({ article_id: articleId, user_id: user.id })
-
-    if (error) return { bookmarked: false, error: error.message }
-    return { bookmarked: true, error: null }
-  }
 }
 
 export function BookmarkButton({
@@ -68,7 +39,8 @@ export function BookmarkButton({
     // Optimistic update
     setBookmarked((prev) => !prev)
 
-    const result = await toggleBookmark(articleId, bookmarked)
+    // S11-F10: auth check is server-side — no client getUser() call per click
+    const result = await toggleBookmarkAction(articleId, bookmarked)
 
     if (result.error) {
       // Roll back optimistic update
