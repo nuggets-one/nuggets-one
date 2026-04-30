@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { ArticleFormFields } from '../new/page'
+import { ArticleFormFields } from '../_components/article-form-fields'
+import type { ArticleFormDefaults } from '../_components/article-form-fields'
 import { updateArticleAction, publishArticleAction, unpublishArticleAction } from '@/lib/actions/admin'
 import { DeleteArticleButton } from '../_components/DeleteArticleButton'
-import type { ArticleFormDefaults } from '../new/page'
 
 export const dynamic = 'force-dynamic'
 
