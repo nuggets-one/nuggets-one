@@ -4,7 +4,21 @@
       "Bash(npm run *)",
       "Bash(curl -s http://localhost:3000/queries-test)",
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npm ls *)",
+      "Bash(git stash *)",
+      "Bash(curl -s http://localhost:3000 -o /dev/null -w \"%{http_code}\")",
+      "Bash(echo \"PID=$!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(node scripts/validate-og.mjs http://localhost:3000)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(python3 -c \"import sys; html=sys.stdin.read\\(\\); found=any\\(x in html for x in ['googletagmanager','G-']\\); print\\('GA4 found in HTML' if found else 'GA4 correctly absent \\(NEXT_PUBLIC_GA_ID is empty\\)'\\)\")",
+      "Bash(pkill -f \"node.*next\")",
+      "Bash(node -e \"const p = require\\('./node_modules/next-themes/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git rm *)"
     ]
   }
 }
