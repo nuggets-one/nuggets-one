@@ -23,14 +23,14 @@ export async function createArticleAction(formData: FormData) {
   await requireAdmin()
   const db = createAdminClient()
 
-  const title = (formData.get('title') as string).trim()
+  const title = String(formData.get('title') ?? '').trim()
   const excerpt = (formData.get('excerpt') as string | null)?.trim() || null
   const content_markdown = (formData.get('content_markdown') as string | null)?.trim() || null
   const content_stream = (formData.get('content_stream') as ContentStream) ?? 'standard'
   const source_url = (formData.get('source_url') as string | null)?.trim() || null
   const hero_thumb_url = (formData.get('hero_thumb_url') as string | null)?.trim() || null
   const hero_alt_text = (formData.get('hero_alt_text') as string | null)?.trim() || null
-  const tag_slugs_raw = (formData.get('tag_slugs') as string | null)?.trim() || ''
+  const tag_slugs_raw = String(formData.get('tag_slugs') ?? '').trim()
   const tag_slugs = tag_slugs_raw
     ? tag_slugs_raw.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
     : []
@@ -40,6 +40,7 @@ export async function createArticleAction(formData: FormData) {
   const id = crypto.randomUUID()
   const slug = generateArticleSlug(title, id)
 
+  // S6-F4: insert with empty tag_slugs; RPC populates article_tags and recomputes the array
   const { error } = await db.from('articles').insert({
     id,
     slug,
@@ -50,11 +51,24 @@ export async function createArticleAction(formData: FormData) {
     source_url,
     hero_thumb_url,
     hero_alt_text,
-    tag_slugs,
+    tag_slugs: [],
     status: 'draft',
   })
 
   if (error) throw new Error(error.message)
+
+  if (tag_slugs.length > 0) {
+    const { error: tagError } = await db.rpc('upsert_article_tags', {
+      p_article_id: id,
+      p_tag_slugs: tag_slugs,
+    })
+    if (tagError) {
+      // Clean up orphaned article if tag resolution fails
+      await db.from('articles').delete().eq('id', id)
+      const code = tagError.message.includes('unknown_tag_slugs') ? 'unknown_tags' : 'tag_update_failed'
+      redirect(`/admin/articles/new?error=${encodeURIComponent(code)}`)
+    }
+  }
 
   revalidateArticle(id)
   redirect(`/admin/articles/${id}`)
@@ -64,15 +78,15 @@ export async function updateArticleAction(formData: FormData) {
   await requireAdmin()
   const db = createAdminClient()
 
-  const id = formData.get('id') as string
-  const title = (formData.get('title') as string).trim()
+  const id = String(formData.get('id') ?? '').trim()
+  const title = String(formData.get('title') ?? '').trim()
   const excerpt = (formData.get('excerpt') as string | null)?.trim() || null
   const content_markdown = (formData.get('content_markdown') as string | null)?.trim() || null
   const content_stream = (formData.get('content_stream') as ContentStream) ?? 'standard'
   const source_url = (formData.get('source_url') as string | null)?.trim() || null
   const hero_thumb_url = (formData.get('hero_thumb_url') as string | null)?.trim() || null
   const hero_alt_text = (formData.get('hero_alt_text') as string | null)?.trim() || null
-  const tag_slugs_raw = (formData.get('tag_slugs') as string | null)?.trim() || ''
+  const tag_slugs_raw = String(formData.get('tag_slugs') ?? '').trim()
   const tag_slugs = tag_slugs_raw
     ? tag_slugs_raw.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
     : []
@@ -82,6 +96,7 @@ export async function updateArticleAction(formData: FormData) {
   // Blueprint §2.a: slug regenerated on every save (title changes → new slug → 301 from old)
   const slug = generateArticleSlug(title, id)
 
+  // S6-F4: tag_slugs excluded from direct update; RPC recomputes from article_tags
   const { error } = await db.from('articles').update({
     slug,
     title,
@@ -91,10 +106,20 @@ export async function updateArticleAction(formData: FormData) {
     source_url,
     hero_thumb_url,
     hero_alt_text,
-    tag_slugs,
   }).eq('id', id)
 
   if (error) throw new Error(error.message)
+
+  // S6-F4: article_tags is canonical; upsert_article_tags atomically replaces join rows
+  // and recomputes articles.tag_slugs from the join table (admin CLAUDE.md SQL pattern)
+  const { error: tagError } = await db.rpc('upsert_article_tags', {
+    p_article_id: id,
+    p_tag_slugs: tag_slugs,
+  })
+  if (tagError) {
+    const code = tagError.message.includes('unknown_tag_slugs') ? 'unknown_tags' : 'tag_update_failed'
+    redirect(`/admin/articles/${id}?error=${encodeURIComponent(code)}`)
+  }
 
   revalidateArticle(id)
   redirect(`/admin/articles/${id}`)

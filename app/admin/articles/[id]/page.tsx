@@ -15,6 +15,9 @@ const PUBLISH_ERRORS: Record<string, string> = {
   stream_required: 'Select a stream before publishing.',
   source_url_invalid: 'Source URL must be a valid http(s) link.',
   publish_validation_failed: 'Article could not be published. Fix the required fields and retry.',
+  // S6-F4: tag resolution errors from upsert_article_tags RPC
+  unknown_tags: 'One or more tag slugs were not found. Check Tags admin and retry.',
+  tag_update_failed: 'Tag update failed. Please try again.',
 }
 
 export default async function EditArticlePage({
