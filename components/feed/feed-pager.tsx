@@ -21,12 +21,16 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
   const [error, setError] = useState<string | null>(null)
   const isFetchingRef = useRef(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  // S5-F1: abort in-flight requests when filter/stream changes cause remount
+  const abortRef = useRef<AbortController | null>(null)
 
   const fetchNextPage = useCallback(async () => {
     if (isFetchingRef.current || isEnd || !cursor) return
     isFetchingRef.current = true
     setIsLoading(true)
     setError(null)
+
+    abortRef.current = new AbortController()
 
     try {
       const params = new URLSearchParams({ stream })
@@ -37,7 +41,9 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
         params.set('cursor_id', cursor.id)
       }
 
-      const res = await fetch(`/api/feed?${params.toString()}`)
+      const res = await fetch(`/api/feed?${params.toString()}`, {
+        signal: abortRef.current.signal,
+      })
       if (!res.ok) throw new Error(`Feed fetch failed: ${res.status}`)
 
       const data = await res.json()
@@ -46,12 +52,20 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
       setCursor(data.nextCursor)
       if (!data.nextCursor) setIsEnd(true)
     } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
       setIsLoading(false)
       isFetchingRef.current = false
     }
   }, [cursor, isEnd, stream, tags, q])
+
+  // Abort any in-flight request on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
