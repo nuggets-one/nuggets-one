@@ -2,13 +2,14 @@ import 'server-only'
 
 import { createClient } from '@supabase/supabase-js'
 
-export const adminClient = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-)
+export function createAdminClient() {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('Missing Supabase admin env vars')
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
+
+// Singleton for modules that import once at startup (query helpers, etc.)
+export const adminClient = createAdminClient()
