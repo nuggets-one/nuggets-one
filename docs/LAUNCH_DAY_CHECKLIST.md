@@ -79,6 +79,7 @@ Notes:
 
 - `CRON_SECRET` must match what cron-protected route expects.
 - Keep `NEXT_PUBLIC_GA_ID` empty in local; set real ID in production.
+- If deploying on Vercel Hobby/free plan, review `docs/VERCEL_FREE_PLAN_FOLLOWUP.md` before launch decisions (cron frequency and image-loader trade-offs).
 
 ## 5) OG validation (preview/prod candidate)
 
