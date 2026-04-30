@@ -42,8 +42,6 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   images: {
-    loader: 'custom',
-    loaderFile: './lib/cloudinary-loader.ts',
     remotePatterns: [
       {
         protocol: 'https',
