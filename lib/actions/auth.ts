@@ -2,8 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
 import { z } from 'zod'
+
+// S7-F4: use the canonical site URL env var — never trust the Host header for
+// redirect construction (host-header poisoning → attacker controls reset link).
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 // PRODUCT §0.7: reject next values not starting with '/' OR starting with '//'
 // OR containing a scheme. Defense-in-depth against open redirects.
@@ -88,13 +91,9 @@ export async function forgotPasswordAction(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const headersList = await headers()
-  const host = headersList.get('host') ?? 'localhost:3000'
-  const proto = headersList.get('x-forwarded-proto') ?? 'http'
-  const baseUrl = `${proto}://${host}`
 
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${baseUrl}/auth/callback?next=/account`,
+    redirectTo: `${SITE_URL}/auth/callback?next=/account`,
   })
 
   if (error) {
@@ -107,15 +106,11 @@ export async function forgotPasswordAction(formData: FormData) {
 export async function googleSignInAction(formData: FormData) {
   const next = sanitizeNext(formData.get('next'))
   const supabase = await createClient()
-  const headersList = await headers()
-  const host = headersList.get('host') ?? 'localhost:3000'
-  const proto = headersList.get('x-forwarded-proto') ?? 'http'
-  const baseUrl = `${proto}://${host}`
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(next)}`,
+      redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   })
 

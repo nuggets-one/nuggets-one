@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { getBookmarkedArticles } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
 import { createClient } from '@/lib/supabase/server'
@@ -11,6 +12,11 @@ export default async function BookmarksPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // S7-F5: defense-in-depth — proxy also redirects, but page must not render for anon
+  if (!user) {
+    redirect('/login?next=/bookmarks')
+  }
 
   const articles = await getBookmarkedArticles()
 

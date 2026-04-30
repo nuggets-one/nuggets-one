@@ -32,6 +32,12 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (!user) {
+    // S7-F2: API routes must receive JSON 401, not an HTML redirect.
+    // BookmarkButton and other fetch() callers check res.ok — a 307 to /login
+    // gives res.ok=true (after redirect) with HTML body, silently breaking JSON parsing.
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
     loginUrl.searchParams.set('next', request.nextUrl.pathname)
