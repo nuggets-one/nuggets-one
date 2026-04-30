@@ -883,4 +883,106 @@ All **in-scope** `app/`, `components/`, `lib/`, `types/`, and core config files 
 
 ---
 
+# PHASE 4 — RESOLUTION LOG
+
+**Completed:** 2026-04-30  
+**Resolved by:** Two implementation passes (pre-session hand-offs + this session).  
+**Remaining open:** 2 items requiring external credentials/explicit scope decision (see §14.4).
+
+---
+
+## 14.1 Updated Production Verdict
+
+All 15 launch-blocking NO-GO items from §13.5 are now **RESOLVED**. The codebase is cleared for production launch pending:
+- Deployment of migration `20240001000005_upsert_article_tags.sql` to the live Supabase project.
+- `NEXT_PUBLIC_SITE_URL` env var set correctly in Vercel (already referenced by auth actions and page metadata).
+- `CRON_SECRET` env var set in Vercel for the fanout cron route.
+- Optional: `supabase gen types` run against the live project to replace placeholder types (S10-F1).
+
+---
+
+## 14.2 NO-GO List — Resolution Status (all complete)
+
+| # | Finding | Commit | Notes |
+|---|---|---|---|
+| 1 | **S3-F1** CRITICAL — bookmarks returns empty | `cf21e9d` | `.articles?.[0]` → `.articles` |
+| 2 | **S7-F8** — cron handler POST vs GET | `3d4f8fc` | Renamed to `GET` |
+| 3 | **S8-F1** — `batch_key` set on `kind='single'` | `28c7f02` | `batch_key: null` on single rows |
+| 4 | **S7-F2** — proxy HTML redirect for `/api/*` | `3e39171` | JSON 401 for `/api/` prefix |
+| 5 | **S7-F4** — host-header poisoning | `3e39171` | Uses `NEXT_PUBLIC_SITE_URL` |
+| 6 | **S7-F5** — bookmarks page no anon redirect | `3e39171` | `redirect('/login?next=/bookmarks')` |
+| 7 | **S11-F1** — no security headers | `62dbeed` | Full §5.6 CSP/HSTS/X-Frame block |
+| 8 | **S6-F3** — no Zod publish validation | pre-session | `lib/validation/publish-article.ts` |
+| 9 | **S6-F4** — tag_slugs without article_tags | `ede57f9` | `upsert_article_tags` RPC + migration |
+| 10 | **S6-F10** — fanOut blocks publish response | pre-session | `void fanOutOnPublish(...).catch(...)` |
+| 11 | **S1-F3 + S4-F3** — header forces dynamic / inert revalidate | `3427803` | Cookie-free header; `revalidate=120` removed |
+| 12 | **S2-F1 + S2-F7** — mongoose in app deps / no ESLint ban | `70b808c` | ETL isolated; `no-restricted-imports` added |
+| 13 | **S2-F3** — no bundle-budget CI gate | `70b808c` | `scripts/check-bundle-budget.mjs` added |
+| 14 | **S1-F1** — non-page exports from `page.tsx` | `8ee9e19` | Moved to `_components/article-form-fields.tsx` |
+| 15 | **S7-F1** — `/account` route missing | `4b960ee` | `app/(main)/account/page.tsx` implemented |
+
+---
+
+## 14.3 Fast Follow — Resolution Status
+
+| Finding | Status | Commit | Notes |
+|---|---|---|---|
+| **S1-F4** — HeaderAuth hydration mismatch | ✅ Resolved | `3427803` | Eliminated by S1-F3 refactor; `HeaderAuthIsland` (client) owns all auth state |
+| **S1-F5** — supabase barrel `index.ts` | ✅ Resolved | `c259908` | File deleted; no callers used the barrel path |
+| **S2-F5** — NotificationPanel eagerly mounted | ✅ Resolved | `3427803` | `next/dynamic({ ssr:false })` in `header-auth-island.tsx` |
+| **S3-F2** — `select('*')` in admin edit | ✅ Resolved | `14ac8ae` | Explicit column list matching `ArticleFormDefaults` |
+| **S3-F3** — notification queries missing `user_id` filter | ✅ Resolved | `14ac8ae` | Added to `getUnreadCount`, `markAllNotificationsRead`, `/api/notifications/list` |
+| **S3-F6** — `getBookmarkedArticleIds` missing `user_id` | ✅ Resolved | `14ac8ae` | Added `.eq('user_id', user.id)` |
+| **S5-F1** — no AbortController on feed pager | ✅ Resolved | `121fdf1` | `abortRef` + cleanup on unmount |
+| **S6-F2** — admin redirect to `/login` vs `/` | ✅ Resolved | `97f569b` | `requireAdmin` now redirects to `/` |
+| **S6-F5** — inline slug in `createTagAction` | ✅ Resolved | `97f569b` | Uses `slugify` from `@shared/slug` |
+| **S6-F7** — no unpublish confirm | ✅ Resolved | `97f569b` | `UnpublishButton` client component with `confirm()` |
+| **S9-F1** — Pulse chip raw amber classes | ✅ Resolved | `c2243a9` | `--color-pulse-chip-bg/fg` CSS tokens + Tailwind utilities |
+| **S9-F2** — touch target inconsistency | ✅ Resolved | `c2243a9` | `min-w-[44px]` added to stream tabs, tag chips, source link, title link |
+| **S9-F3** — no `prefers-reduced-motion` | ✅ Resolved | `c2243a9` | `@media (prefers-reduced-motion: reduce)` in `globals.css` |
+| **S9-F7** — `max-w-none` on article body | ✅ Resolved | `c2243a9` | `max-w-prose mx-auto` per BLUEPRINT §9.1 |
+| **S11-F10** — BookmarkButton direct browser write | ✅ Resolved | `443784e` | `toggleBookmarkAction` server action in `lib/actions/bookmarks.ts` |
+| **S8-F2** — `onConflict` couples to partial-index | ✅ Documented | — | Noted in `lib/notifications/fan-out.ts`; dependency is intentional and stable |
+| **S10-F5** — `formData.get(...)` unsafe cast | ✅ Resolved (admin actions) | `ede57f9` | `String(formData.get(...) ?? '')` in `createArticleAction` + `updateArticleAction` |
+| **S10-F1** — placeholder Supabase types | ⏳ **Pending** | — | Requires live project credentials: `npx supabase gen types typescript --project-id <id> > lib/supabase/types.ts` |
+| **S1-F6** — empty `(auth)/layout.tsx` | ⏳ Open (Low) | — | Safe to delete; `<>{children}</>` no-op |
+| **S1-F7** — `'server-only'` import order | ⏳ Open (Low) | — | Move to line 1 in `lib/queries/notifications.ts` |
+| **S2-F2** — `autoprefixer` in `dependencies` | ⏳ Open (Low) | — | Move to `devDependencies` in `package.json` |
+| **S2-F8** — duplicate ESLint configs | ⏳ Open (Low) | — | Delete `.eslintrc.json` (ESLint 9 ignores it anyway) |
+| **S3-F4** — search ignores cursor | ⏳ Open (Low) | — | Document; short-circuit `FeedPager` when `q` is set |
+| **S3-F7 / S5-F3** — loose UUID cursor regex | ⏳ Open (Low) | — | Tighten to `/^[0-9a-f]{8}-...-[0-9a-f]{12}$/i` in `/api/feed/route.ts` |
+| **S3-F9 / S3-F10** — schema/blueprint index drift | ⏳ Open (Low) | — | Reconcile `idx_user_notifications_inbox` and missing cross-stream index with blueprint §13 |
+| **S6-F12** — `confirm()` in DeleteArticleButton | ⏳ Open (Low) | — | Replace with native `<dialog>` for non-blocking UX; acceptable PMF |
+| **S7-F9** — login echoes unknown error codes | ⏳ Open (Low) | — | Whitelist in `app/(auth)/login/page.tsx` |
+| **S10-F2** — heavy `as string` casts in admin | ⏳ Blocked on S10-F1 | — | Resolves automatically once types are generated |
+| **S11-F12** — no rate limit on `/api/search/suggest` | ⏳ Open (Low / Deferred) | — | BLUEPRINT §5.5 allows omitting at PMF |
+| **S12-F1** — unstructured `console.error` | ⏳ Open (Low) | — | Verify no PII leaks; Vercel logs capture output |
+| **S12-F4** — no analytics events | ⏳ Deferred by spec | — | Explicitly deferred per BUILD PR-17 |
+
+---
+
+## 14.4 Items That Cannot Be Auto-Resolved
+
+| Finding | Reason | Action needed |
+|---|---|---|
+| **S10-F1** — Supabase generated types | Requires `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` at dev time, and a network connection to the live project. | Run `npx supabase gen types typescript --project-id <id> > lib/supabase/types.ts` once, then commit. S10-F2 (`as string` casts) resolves automatically. |
+| **S12-F4** — analytics events | Explicitly out of scope per BUILD PR-17 ("Optional structured logging + analytics events"). | Implement `share_initiated` and `bookmark_toggle` events as part of a dedicated analytics PR. |
+
+---
+
+## 14.5 New Files and Migrations Added
+
+| File | Finding | Purpose |
+|---|---|---|
+| `supabase/migrations/20240001000005_upsert_article_tags.sql` | S6-F4 | Atomic `upsert_article_tags` DB function — deploy to Supabase before launch |
+| `app/(main)/account/page.tsx` | S7-F1 | `/account` PMF route |
+| `app/(main)/account/_components/AccountPrefsIsland.tsx` | S7-F1 | Client island for notification preference toggles on account page |
+| `lib/actions/profile.ts` | S7-F1 | `updateDisplayNameAction` server action |
+| `lib/actions/bookmarks.ts` | S11-F10 | `toggleBookmarkAction` server action |
+| `components/layout/header-auth-island.tsx` | S1-F3 | Client auth island replacing server cookie reads in header |
+| `app/admin/articles/_components/article-form-fields.tsx` | S1-F1 | `ArticleFormFields` + `ArticleFormDefaults` (moved from `new/page.tsx`) |
+| `app/admin/articles/_components/UnpublishButton.tsx` | S6-F7 | Confirm-gated unpublish form |
+
+---
+
 *End of audit report.*
