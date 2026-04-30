@@ -32,9 +32,10 @@ export default async function EditArticlePage({
     : resolvedSearchParams.error
   const db = createAdminClient()
 
+  // S3-F2: explicit column list — avoids serializing search_vector (binary tsvector blob)
   const { data: article } = await db
     .from('articles')
-    .select('*')
+    .select('id, slug, title, excerpt, content_markdown, content_stream, source_url, hero_thumb_url, hero_alt_text, tag_slugs, status, published_at')
     .eq('id', id)
     .single()
 

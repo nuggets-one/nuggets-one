@@ -31,10 +31,14 @@ export async function getMyNotifications(limit = 15): Promise<NotificationRow[]>
 
 export async function getUnreadCount(): Promise<number> {
   const supabase = await createClient()
+  // S3-F3: explicit user_id filter (defense-in-depth on top of RLS)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
 
   const { count, error } = await supabase
     .from('user_notifications')
     .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
     .eq('is_read', false)
 
   if (error) return 0
@@ -51,8 +55,12 @@ export async function markNotificationRead(id: string): Promise<void> {
 
 export async function markAllNotificationsRead(): Promise<void> {
   const supabase = await createClient()
+  // S3-F3: explicit user_id filter (defense-in-depth on top of RLS)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
   await supabase
     .from('user_notifications')
     .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq('user_id', user.id)
     .eq('is_read', false)
 }

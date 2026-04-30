@@ -23,9 +23,11 @@ export async function GET() {
       .order('created_at', { ascending: false })
       .limit(15),
 
+    // S3-F3: explicit user_id filter (defense-in-depth on top of RLS)
     supabase
       .from('user_notifications')
       .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
       .eq('is_read', false),
 
     supabase

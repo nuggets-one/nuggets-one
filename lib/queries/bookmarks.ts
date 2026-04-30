@@ -52,10 +52,14 @@ export async function getBookmarkedArticleIds(
   if (!articleIds.length) return new Set()
 
   const supabase = await createClient()
+  // S3-F6: explicit user_id filter (defense-in-depth on top of RLS)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return new Set()
 
   const { data } = await supabase
     .from('bookmarks')
     .select('article_id')
+    .eq('user_id', user.id)
     .in('article_id', articleIds)
 
   return new Set(
