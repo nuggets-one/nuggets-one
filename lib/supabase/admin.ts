@@ -11,5 +11,12 @@ export function createAdminClient() {
   })
 }
 
-// Singleton for modules that import once at startup (query helpers, etc.)
-export const adminClient = createAdminClient()
+let cachedAdminClient: ReturnType<typeof createAdminClient> | null = null
+
+// Lazily resolve service-role env vars at request/runtime, not module import time.
+export function getAdminClient() {
+  if (!cachedAdminClient) {
+    cachedAdminClient = createAdminClient()
+  }
+  return cachedAdminClient
+}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminClient } from '@/lib/supabase/admin'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { upsertNotifications } from '@/lib/notifications/fan-out'
 
 // Vercel Cron calls this every 60 seconds.
@@ -8,6 +8,7 @@ import { upsertNotifications } from '@/lib/notifications/fan-out'
 
 // S7-F8: Vercel Cron issues GET — not POST. GET keeps the queue draining.
 export async function GET(req: NextRequest) {
+  const adminClient = getAdminClient()
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 

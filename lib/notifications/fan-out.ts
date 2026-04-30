@@ -1,5 +1,5 @@
 import 'server-only'
-import { adminClient } from '@/lib/supabase/admin'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
 
 export const FAN_OUT_CAP = 5000
@@ -33,6 +33,7 @@ export function buildBatchKey(
 export async function getRecipients(
   stream: 'standard' | 'pulse'
 ): Promise<string[]> {
+  const adminClient = getAdminClient()
   const streamCol = stream === 'pulse' ? 'stream_pulse' : 'stream_standard'
 
   const { data, error } = await adminClient.rpc(
@@ -60,6 +61,7 @@ export async function upsertNotifications({
   stream: 'standard' | 'pulse'
   title: string
 }): Promise<number> {
+  const adminClient = getAdminClient()
   if (recipientIds.length === 0) return 0
 
   const rows = buildSingleNotificationRows({ recipientIds, articleId, stream, title })
@@ -99,6 +101,7 @@ export async function fanOutOnPublish({
   stream: 'standard' | 'pulse'
   title: string
 }): Promise<FanOutResult> {
+  const adminClient = getAdminClient()
   const recipients = await getRecipients(stream)
   const batchKey = buildBatchKey(stream)
 

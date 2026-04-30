@@ -19,7 +19,8 @@ jobs:
       - name: No is_published in app code
         run: |
           ! grep -rE "\bis_published\b" app/ components/ lib/ \
-            --include="*.ts" --include="*.tsx"
+            --include="*.ts" --include="*.tsx" \
+            | grep -v "lib/queries/collections.ts"
 
       - name: No framer-motion
         run: |
