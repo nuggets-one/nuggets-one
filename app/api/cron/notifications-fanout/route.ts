@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
         articleId: row.article_id,
         stream: row.stream,
         title: row.title,
-        batchKey: row.batch_key,
       })
 
       await adminClient

@@ -1,5 +1,6 @@
 import 'server-only'
 import { adminClient } from '@/lib/supabase/admin'
+import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
 
 export const FAN_OUT_CAP = 5000
 
@@ -53,25 +54,15 @@ export async function upsertNotifications({
   articleId,
   stream,
   title,
-  batchKey,
 }: {
   recipientIds: string[]
   articleId: string
   stream: 'standard' | 'pulse'
   title: string
-  batchKey: string
 }): Promise<number> {
   if (recipientIds.length === 0) return 0
 
-  const rows = recipientIds.map((userId) => ({
-    user_id: userId,
-    article_id: articleId,
-    kind: 'single' as const,
-    content_stream: stream,
-    title,
-    batch_key: batchKey,
-    is_read: false,
-  }))
+  const rows = buildSingleNotificationRows({ recipientIds, articleId, stream, title })
 
   const CHUNK = 500
   let inserted = 0
@@ -92,6 +83,7 @@ export async function upsertNotifications({
 
   return inserted
 }
+
 
 /**
  * Main fan-out entry point called by the publish handler.
@@ -116,7 +108,6 @@ export async function fanOutOnPublish({
       articleId,
       stream,
       title,
-      batchKey,
     })
     return { inserted, mode: 'sync' }
   }
@@ -127,7 +118,6 @@ export async function fanOutOnPublish({
     articleId,
     stream,
     title,
-    batchKey,
   })
 
   await adminClient.from('pending_fanout').insert({
