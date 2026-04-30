@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateArticle, revalidateOfficialTags } from '@/lib/cache'
-import { generateArticleSlug } from '@shared/slug'
+import { generateArticleSlug, slugify } from '@shared/slug'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
 import { normalizePublishPayload } from '@/lib/validation/publish-article'
 import type { ContentStream } from '@/types/article'
@@ -13,8 +13,9 @@ import { ZodError } from 'zod'
 async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
+  // S6-F2: redirect to / (not /login) — consistent with admin layout behavior
   if (error || !user || user.app_metadata?.is_admin !== true) {
-    redirect('/login')
+    redirect('/')
   }
   return user
 }
@@ -225,7 +226,8 @@ export async function createTagAction(formData: FormData) {
 
   if (!label) throw new Error('Label is required')
 
-  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  // S6-F5: use shared slugify — same function as ETL and article slug generation
+  const slug = slugify(label)
 
   const { error } = await db.from('tags').insert({
     slug,

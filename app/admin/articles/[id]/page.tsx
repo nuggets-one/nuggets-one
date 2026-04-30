@@ -3,8 +3,9 @@ import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ArticleFormFields } from '../_components/article-form-fields'
 import type { ArticleFormDefaults } from '../_components/article-form-fields'
-import { updateArticleAction, publishArticleAction, unpublishArticleAction } from '@/lib/actions/admin'
+import { updateArticleAction, publishArticleAction } from '@/lib/actions/admin'
 import { DeleteArticleButton } from '../_components/DeleteArticleButton'
+import { UnpublishButton } from '../_components/UnpublishButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,15 +76,7 @@ export default async function EditArticlePage({
 
       <div className="flex gap-2 mb-8 pb-6 border-b border-border">
         {isPublished ? (
-          <form action={unpublishArticleAction}>
-            <input type="hidden" name="id" value={id} />
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted hover:text-primary hover:bg-surface-raised transition-colors"
-            >
-              Unpublish
-            </button>
-          </form>
+          <UnpublishButton id={id} />
         ) : (
           <form action={publishArticleAction}>
             <input type="hidden" name="id" value={id} />
