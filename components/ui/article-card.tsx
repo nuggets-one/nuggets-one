@@ -91,7 +91,7 @@ export function ArticleCard({
         <div className="flex items-center gap-2 text-xs text-muted">
           <span className={`rounded-full px-2 py-0.5 font-medium ${
             content_stream === 'pulse'
-              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+              ? 'bg-pulse-chip-bg text-pulse-chip-fg'
               : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
           }`}>
             {content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'}
@@ -103,7 +103,7 @@ export function ArticleCard({
         </div>
 
         {/* Title */}
-        <Link href={href} className="focus:outline-none">
+        <Link href={href} className="focus:outline-none min-h-[44px] flex items-start">
           <h2 className="text-base font-semibold leading-snug line-clamp-2 text-primary group-hover:text-primary/80 transition-colors">
             {title}
           </h2>
@@ -123,7 +123,7 @@ export function ArticleCard({
               href={source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-[44px] items-center rounded-md px-2 text-muted transition-colors hover:text-primary active:bg-surface-raised"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md px-2 text-muted transition-colors hover:text-primary active:bg-surface-raised"
             >
               View Full Article
             </a>

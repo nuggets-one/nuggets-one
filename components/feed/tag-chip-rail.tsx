@@ -40,7 +40,7 @@ export function TagChipRail({ tags }: Props) {
             onClick={() => toggle(tag.slug)}
             aria-pressed={active}
             disabled={isPending}
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-colors min-h-[44px] ${
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-colors min-h-[44px] min-w-[44px] ${
               active
                 ? 'bg-accent text-black ring-1 ring-accent/70 active:brightness-95'
                 : 'bg-surface-raised text-muted hover:text-primary hover:bg-surface active:bg-surface border border-border'

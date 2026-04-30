@@ -89,7 +89,7 @@ async function ArticleContent({ id, slug }: Params) {
       <div className="flex flex-wrap items-center gap-2 mb-4 text-sm text-muted">
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
           article.content_stream === 'pulse'
-            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+            ? 'bg-pulse-chip-bg text-pulse-chip-fg'
             : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
         }`}>
           {article.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'}

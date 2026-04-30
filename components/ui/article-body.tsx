@@ -65,7 +65,7 @@ function BodyImage({
 
 export function ArticleBody({ markdown }: Props) {
   return (
-    <div className="prose prose-zinc dark:prose-invert max-w-none
+    <div className="prose prose-zinc dark:prose-invert max-w-prose mx-auto
       prose-headings:font-semibold prose-headings:tracking-tight
       prose-a:text-primary prose-a:underline prose-a:underline-offset-2
       prose-img:rounded-lg prose-img:my-6

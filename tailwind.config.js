@@ -15,6 +15,9 @@ module.exports = {
         border: "var(--color-border)",
         accent: "var(--color-accent)",
         "accent-hover": "var(--color-accent-hover)",
+        // S9-F1: Pulse chip tokens — avoids raw amber-* in component code
+        "pulse-chip-bg": "var(--color-pulse-chip-bg)",
+        "pulse-chip-fg": "var(--color-pulse-chip-fg)",
       },
       textColor: {
         primary: "var(--color-text-primary)",

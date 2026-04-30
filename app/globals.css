@@ -24,6 +24,10 @@
 
   /* Semantic */
   --color-focus-ring: #F5B800;
+
+  /* S9-F1: Pulse stream chip — token table §3.2 */
+  --color-pulse-chip-bg: theme('colors.amber.100');
+  --color-pulse-chip-fg: theme('colors.amber.700');
 }
 
 .dark {
@@ -48,4 +52,19 @@
 
   /* Semantic */
   --color-focus-ring: #F5B800;
+
+  /* S9-F1: Pulse chip dark overrides */
+  --color-pulse-chip-bg: rgb(120 53 15 / 0.3);
+  --color-pulse-chip-fg: theme('colors.amber.400');
+}
+
+/* S9-F3: respect prefers-reduced-motion — disable non-essential animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
