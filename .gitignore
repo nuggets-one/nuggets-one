@@ -47,3 +47,5 @@ next-env.d.ts
 
 # validation reports
 scripts/validate/output/
+
+.vercel
