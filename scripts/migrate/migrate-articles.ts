@@ -66,11 +66,23 @@ const ArticleSchema = new mongoose.Schema({
 const MongoArticle = mongoose.models.Article ||
   mongoose.model('Article', ArticleSchema, 'articles')
 
-// Migration Plan §3.2: status wins if present; else fall back to isPublished boolean
-function mapStatus(doc: any): 'published' | 'draft' {
-  if (doc.status === 'published') return 'published'
-  if (doc.status === 'draft') return 'draft'
-  return doc.isPublished === true ? 'published' : 'draft'
+type LegacyArticleDoc = {
+  [key: string]: unknown
+  _id: mongoose.Types.ObjectId
+  title?: string
+  excerpt?: string
+  content?: string
+  contentStream?: string
+  status?: string
+  isPublished?: boolean
+  publishedAt?: Date | string | null
+  visibility?: string
+  sourceUrl?: string
+  externalLinks?: unknown
+  tags?: unknown
+  tagIds?: unknown
+  primaryMedia?: unknown
+  media?: unknown
 }
 
 // Blueprint §12.2: 'both'|null|undefined → 'standard'; 'pulse' → 'pulse'
@@ -88,40 +100,49 @@ function normalizeSlug(raw: string | null | undefined): string | null {
 
 // Derive hero fields + article_media payload from primaryMedia
 // Blueprint §12.2a: hero_media_id must always be set when media exists
-function deriveMedia(primaryMedia: any): {
+function deriveMedia(primaryMedia: unknown): {
   hero_thumb_url: string | null
   hero_alt_text: string | null
   hero_media_kind: 'image' | 'youtube' | null
   hero_video_id: string | null
   mediaRow: { url: string; kind: 'image' | 'youtube'; video_id: string | null } | null
 } {
-  if (!primaryMedia?.url) {
+  const media = (primaryMedia ?? {}) as {
+    url?: unknown
+    type?: unknown
+    kind?: unknown
+    mediaType?: unknown
+    videoId?: unknown
+    thumbnail_url?: unknown
+    alt?: unknown
+  }
+  if (typeof media.url !== 'string' || !media.url.trim()) {
     return { hero_thumb_url: null, hero_alt_text: null, hero_media_kind: null, hero_video_id: null, mediaRow: null }
   }
 
-  const typeRaw = String(primaryMedia.type ?? primaryMedia.kind ?? primaryMedia.mediaType ?? '').toLowerCase()
+  const typeRaw = String(media.type ?? media.kind ?? media.mediaType ?? '').toLowerCase()
   const isYoutube = typeRaw.includes('youtube')
   const isVideo = typeRaw.includes('video') || isYoutube
-  const inferredVideoId = typeof primaryMedia.videoId === 'string'
-    ? primaryMedia.videoId
-    : extractYouTubeVideoId(primaryMedia.url)
+  const inferredVideoId = typeof media.videoId === 'string'
+    ? media.videoId
+    : extractYouTubeVideoId(media.url)
 
   if (isVideo && inferredVideoId) {
     return {
-      hero_thumb_url: typeof primaryMedia.thumbnail_url === 'string' ? primaryMedia.thumbnail_url : null,
-      hero_alt_text: primaryMedia.alt || null,
+      hero_thumb_url: typeof media.thumbnail_url === 'string' ? media.thumbnail_url : null,
+      hero_alt_text: typeof media.alt === 'string' ? media.alt : null,
       hero_media_kind: 'youtube',
       hero_video_id: inferredVideoId,
-      mediaRow: { url: primaryMedia.url, kind: 'youtube', video_id: inferredVideoId },
+      mediaRow: { url: media.url, kind: 'youtube', video_id: inferredVideoId },
     }
   }
 
   return {
-    hero_thumb_url: primaryMedia.url,
-    hero_alt_text: primaryMedia.alt || null,
+    hero_thumb_url: media.url,
+    hero_alt_text: typeof media.alt === 'string' ? media.alt : null,
     hero_media_kind: 'image',
     hero_video_id: null,
-    mediaRow: { url: primaryMedia.url, kind: 'image', video_id: null },
+    mediaRow: { url: media.url, kind: 'image', video_id: null },
   }
 }
 
@@ -141,28 +162,30 @@ function extractYouTubeVideoId(url: unknown): string | null {
  * Legacy media appears under several shapes: primaryMedia, media[], heroImage, etc.
  * Normalize to the shape expected by deriveMedia().
  */
-function pickPrimaryMedia(doc: any): { url: string; alt?: string; type?: string; videoId?: string } | null {
+function pickPrimaryMedia(doc: LegacyArticleDoc): { url: string; alt?: string; type?: string; videoId?: string } | null {
   const candidate = doc.primaryMedia
   if (candidate && typeof candidate === 'object') {
-    const url = String(candidate.url ?? candidate.src ?? candidate.secure_url ?? '').trim()
+    const c = candidate as Record<string, unknown>
+    const url = String(c.url ?? c.src ?? c.secure_url ?? '').trim()
     if (url) {
       return {
         url,
-        alt: typeof candidate.alt === 'string' ? candidate.alt : undefined,
-        type: typeof candidate.type === 'string' ? candidate.type : undefined,
-        videoId: typeof candidate.videoId === 'string' ? candidate.videoId : undefined,
+        alt: typeof c.alt === 'string' ? c.alt : undefined,
+        type: typeof c.type === 'string' ? c.type : undefined,
+        videoId: typeof c.videoId === 'string' ? c.videoId : undefined,
       }
     }
   }
 
   if (doc.media && typeof doc.media === 'object' && !Array.isArray(doc.media)) {
-    const url = String(doc.media.url ?? doc.media.src ?? doc.media.secure_url ?? '').trim()
+    const mediaObj = doc.media as Record<string, unknown>
+    const url = String(mediaObj.url ?? mediaObj.src ?? mediaObj.secure_url ?? '').trim()
     if (url) {
       return {
         url,
-        alt: typeof doc.media.alt === 'string' ? doc.media.alt : undefined,
-        type: typeof doc.media.type === 'string' ? doc.media.type : undefined,
-        videoId: typeof doc.media.videoId === 'string' ? doc.media.videoId : undefined,
+        alt: typeof mediaObj.alt === 'string' ? mediaObj.alt : undefined,
+        type: typeof mediaObj.type === 'string' ? mediaObj.type : undefined,
+        videoId: typeof mediaObj.videoId === 'string' ? mediaObj.videoId : undefined,
       }
     }
   }
@@ -189,8 +212,9 @@ function pickPrimaryMedia(doc: any): { url: string; alt?: string; type?: string;
       return { url: raw.trim(), type: 'image' }
     }
     if (raw && typeof raw === 'object') {
-      const url = String(raw.url ?? raw.src ?? raw.secure_url ?? '').trim()
-      if (url) return { url, alt: typeof raw.alt === 'string' ? raw.alt : undefined, type: 'image' }
+      const rawObj = raw as Record<string, unknown>
+      const url = String(rawObj.url ?? rawObj.src ?? rawObj.secure_url ?? '').trim()
+      if (url) return { url, alt: typeof rawObj.alt === 'string' ? rawObj.alt : undefined, type: 'image' }
     }
   }
 
@@ -222,7 +246,7 @@ function firstExternalLinkUrl(links: unknown): string | null {
   return null
 }
 
-function resolveTagSlugs(doc: any, mongoTagIdToSlug: Map<string, string>): string[] {
+function resolveTagSlugs(doc: LegacyArticleDoc, mongoTagIdToSlug: Map<string, string>): string[] {
   const out = new Set<string>()
 
   if (Array.isArray(doc.tags)) {
@@ -250,6 +274,24 @@ function resolveTagSlugs(doc: any, mongoTagIdToSlug: Map<string, string>): strin
   return [...out]
 }
 
+function resolveTitle(doc: LegacyArticleDoc): string {
+  const direct = String(doc.title ?? '').trim()
+  if (direct) return direct
+
+  const mediaObj = (doc.media ?? null) as { previewMetadata?: { title?: unknown } } | null
+  const mediaPreviewTitle = String(mediaObj?.previewMetadata?.title ?? '').trim()
+  if (mediaPreviewTitle) return mediaPreviewTitle
+
+  const primaryMediaObj = (doc.primaryMedia ?? null) as { previewMetadata?: { title?: unknown } } | null
+  const primaryPreviewTitle = String(primaryMediaObj?.previewMetadata?.title ?? '').trim()
+  if (primaryPreviewTitle) return primaryPreviewTitle
+
+  const source = String(doc.sourceUrl ?? firstExternalLinkUrl(doc.externalLinks) ?? '').trim()
+  if (source) return source
+
+  return `Untitled ${String(doc._id).slice(-6)}`
+}
+
 async function main() {
   console.log(
     `\n📦 Article migration ${isDryRun ? '[DRY RUN]' : '[LIVE]'}${LIMIT ? ` [LIMIT ${LIMIT}]` : ''}\n`
@@ -269,16 +311,23 @@ async function main() {
       .map((r) => [r.legacy_mongo_id as string, r.slug as string])
   )
 
-  const { data: existingRows, error: existingErr } = await db
-    .from('articles')
-    .select('legacy_mongo_id')
-    .not('legacy_mongo_id', 'is', null)
-  if (existingErr) throw new Error(`Failed to fetch existing article legacy IDs: ${existingErr.message}`)
-  const existingLegacyIds = new Set<string>(
-    (existingRows ?? [])
-      .map((r) => r.legacy_mongo_id as string | null)
-      .filter((v): v is string => typeof v === 'string' && v.length > 0)
-  )
+  const existingLegacyIds = new Set<string>()
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1
+    const { data: existingRows, error: existingErr } = await db
+      .from('articles')
+      .select('legacy_mongo_id')
+      .not('legacy_mongo_id', 'is', null)
+      .range(from, to)
+    if (existingErr) throw new Error(`Failed to fetch existing article legacy IDs: ${existingErr.message}`)
+    const rows = existingRows ?? []
+    for (const r of rows) {
+      const id = r.legacy_mongo_id as string | null
+      if (typeof id === 'string' && id.length > 0) existingLegacyIds.add(id)
+    }
+    if (rows.length < pageSize) break
+  }
 
   console.log(`Loaded ${tagSlugToId.size} tags (${mongoTagIdToSlug.size} with legacy IDs) from Postgres`)
   console.log(`Loaded ${existingLegacyIds.size} existing article legacy IDs from Postgres\n`)
@@ -294,19 +343,14 @@ async function main() {
   let errors = 0
   let publishedFallbacks = 0
 
-  for (const doc of mongoArticles) {
+  for (const doc of mongoArticles as LegacyArticleDoc[]) {
     const legacyMongoId = String(doc._id)
     if (!isDryRun && existingLegacyIds.has(legacyMongoId)) {
       skipped++
       continue
     }
 
-    const title = (doc.title as string)?.trim()
-    if (!title) {
-      console.warn(`  ⚠ Skipping article with no title: ${doc._id}`)
-      skipped++
-      continue
-    }
+    const title = resolveTitle(doc)
 
     // Legacy data uses publishedAt as the canonical publish signal.
     // isPublished is absent on all documents in this dataset.
@@ -317,7 +361,8 @@ async function main() {
       doc.status === 'published' ||
       doc.isPublished === true
 
-    const status: 'published' | 'draft' = isPublished ? 'published' : 'draft'
+    const status: 'published' | 'draft' =
+      doc.visibility === 'private' ? 'draft' : (isPublished ? 'published' : 'draft')
     const content_stream = mapContentStream(doc.contentStream as string)
     const created_at = objectIdToDate(doc._id as mongoose.Types.ObjectId)
     const published_at = isPublished
@@ -370,7 +415,7 @@ async function main() {
       hero_alt_text,
       hero_media_kind,
       hero_video_id,
-      hero_media_id: media_id,
+      hero_media_id: null,
       tag_slugs,
       legacy_mongo_id: legacyMongoId,
     })
@@ -394,6 +439,14 @@ async function main() {
       })
       if (mediaErr) {
         console.warn(`  ⚠ article_media insert failed for ${title.slice(0, 40)}: ${mediaErr.message}`)
+      } else {
+        const { error: heroRefErr } = await db
+          .from('articles')
+          .update({ hero_media_id: media_id })
+          .eq('id', id)
+        if (heroRefErr) {
+          console.warn(`  ⚠ hero_media_id update failed for ${title.slice(0, 40)}: ${heroRefErr.message}`)
+        }
       }
     }
 

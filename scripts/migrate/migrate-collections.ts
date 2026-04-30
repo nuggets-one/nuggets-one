@@ -37,7 +37,19 @@ const CollectionSchema = new mongoose.Schema({
 const MongoCollection = mongoose.models.Collection ||
   mongoose.model('Collection', CollectionSchema, 'collections')
 
-function resolveTitle(doc: any): string {
+type LegacyCollectionDoc = {
+  [key: string]: unknown
+  _id: mongoose.Types.ObjectId
+  title?: string
+  rawName?: string
+  canonicalName?: string
+  description?: string
+  curatorName?: string
+  entries?: Array<{ articleId?: mongoose.Types.ObjectId | string | null }>
+  articles?: Array<mongoose.Types.ObjectId | string | null>
+}
+
+function resolveTitle(doc: LegacyCollectionDoc): string {
   return (
     ((doc.rawName as string) ?? '').trim() ||
     ((doc.canonicalName as string) ?? '').trim() ||
@@ -46,7 +58,7 @@ function resolveTitle(doc: any): string {
 }
 
 // Resolve article mongo IDs from either entries[].articleId or articles[] formats
-function resolveMongoArticleIds(doc: any): string[] {
+function resolveMongoArticleIds(doc: LegacyCollectionDoc): string[] {
   const ids: string[] = []
 
   // entries: [{ articleId: ObjectId, ... }]
@@ -92,7 +104,7 @@ async function main() {
   let inserted = 0
   let errors = 0
 
-  for (const col of mongoCols) {
+  for (const col of mongoCols as LegacyCollectionDoc[]) {
     const title = resolveTitle(col)
     if (!title) {
       console.warn(`  ⚠ Collection ${col._id} has no title — skipping`)

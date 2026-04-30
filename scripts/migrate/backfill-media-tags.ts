@@ -255,7 +255,7 @@ async function main() {
     .filter((id) => Types.ObjectId.isValid(id))
     .map((id) => new Types.ObjectId(id))
 
-  const mongoDocs = await mongoose.connection.db
+  const mongoDocs = await mongoose.connection.db!
     .collection<MongoArticle>('articles')
     .find({ _id: { $in: objectIds } })
     .toArray()
