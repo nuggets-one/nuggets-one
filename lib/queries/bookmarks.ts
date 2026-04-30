@@ -27,8 +27,9 @@ export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
 
   if (error || !data) return []
 
+  // PostgREST returns the FK-joined side as a single object (many-to-one), not an array
   return data
-    .map((row: { articles: ArticleCardProps[] | null }) => row.articles?.[0] ?? null)
+    .map((row: { articles: ArticleCardProps | null }) => row.articles ?? null)
     .filter((article): article is ArticleCardProps => article !== null)
 }
 
