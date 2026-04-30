@@ -13,8 +13,15 @@ type Props = {
   isAuthenticated?: boolean
 }
 
+type FeedApiResponse = {
+  articles: ArticleCardProps[]
+  nextCursor: FeedCursor | null
+  bookmarkedArticleIds?: string[]
+}
+
 export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = false }: Props) {
   const [cards, setCards] = useState<ArticleCardProps[]>([])
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [cursor, setCursor] = useState<FeedCursor | null>(initialCursor)
   const [isLoading, setIsLoading] = useState(false)
   const [isEnd, setIsEnd] = useState(initialCursor === null)
@@ -46,9 +53,17 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
       })
       if (!res.ok) throw new Error(`Feed fetch failed: ${res.status}`)
 
-      const data = await res.json()
+      const data: FeedApiResponse = await res.json()
 
       setCards((prev) => [...prev, ...data.articles])
+      setBookmarkedIds((prev) => {
+        if (!isAuthenticated || !data.bookmarkedArticleIds?.length) return prev
+        const next = new Set(prev)
+        for (const id of data.bookmarkedArticleIds) {
+          next.add(id)
+        }
+        return next
+      })
       setCursor(data.nextCursor)
       if (!data.nextCursor) setIsEnd(true)
     } catch (e) {
@@ -58,7 +73,7 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
       setIsLoading(false)
       isFetchingRef.current = false
     }
-  }, [cursor, isEnd, stream, tags, q])
+  }, [cursor, isEnd, stream, tags, q, isAuthenticated])
 
   // Abort any in-flight request on unmount
   useEffect(() => {
@@ -93,6 +108,7 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
               key={article.id}
               article={article}
               isAuthenticated={isAuthenticated}
+              initialBookmarked={bookmarkedIds.has(article.id)}
             />
           ))}
         </div>

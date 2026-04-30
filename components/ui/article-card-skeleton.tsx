@@ -14,6 +14,10 @@ export function ArticleCardSkeleton() {
         <div className="h-4 w-4/5 rounded bg-surface-raised animate-pulse" />
         <div className="h-3 w-full rounded bg-surface-raised animate-pulse" />
         <div className="h-3 w-3/4 rounded bg-surface-raised animate-pulse" />
+        <div className="mt-2 flex items-center justify-between border-t border-border/70 pt-2">
+          <div className="h-4 w-28 rounded bg-surface-raised animate-pulse" />
+          <div className="h-8 w-8 rounded bg-surface-raised animate-pulse" />
+        </div>
       </div>
     </div>
   )

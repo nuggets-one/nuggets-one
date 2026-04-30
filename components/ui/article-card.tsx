@@ -32,6 +32,16 @@ function formatDate(iso: string): string {
   }).format(new Date(iso))
 }
 
+function getSourceHostLabel(url: string | null): string | null {
+  if (!url) return null
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '')
+    return host.length > 24 ? `${host.slice(0, 24)}…` : host
+  } catch {
+    return null
+  }
+}
+
 type Props = {
   article: ArticleCardProps
   priority?: boolean
@@ -60,6 +70,8 @@ export function ArticleCard({
 
   const href = `/nuggets/${id}/${slug}`
   const primaryTag = tag_slugs[0] ?? null
+  const secondaryTag = tag_slugs[1] ?? null
+  const sourceHost = getSourceHostLabel(source_url)
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-transform duration-150 hover:-translate-y-px hover:shadow-md dark:border-zinc-700/80 dark:shadow-black/20 focus-within:ring-2 focus-within:ring-accent">
@@ -96,9 +108,8 @@ export function ArticleCard({
           }`}>
             {content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'}
           </span>
-          {primaryTag && (
-            <span className="truncate text-muted">{primaryTag}</span>
-          )}
+          {primaryTag && <span className="truncate text-muted">{primaryTag}</span>}
+          {secondaryTag && <span className="hidden truncate text-muted/80 lg:inline">{secondaryTag}</span>}
           <span className="ml-auto shrink-0">{formatDate(published_at)}</span>
         </div>
 
@@ -117,18 +128,24 @@ export function ArticleCard({
         )}
 
         {/* Footer */}
-        <div className="mt-auto flex items-center gap-3 border-t border-border/70 pt-2 text-xs">
-          {source_url && (
+        <div className="mt-auto flex items-center gap-2 border-t border-border/70 pt-2 text-xs">
+          <Link
+            href={href}
+            className="inline-flex min-h-[44px] items-center rounded-md px-2 font-medium text-muted transition-colors hover:text-primary active:bg-surface-raised"
+          >
+            View Full Article
+          </Link>
+          {source_url && sourceHost && (
             <a
               href={source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-md px-2 text-muted transition-colors hover:text-primary active:bg-surface-raised"
+              className="hidden min-h-[44px] items-center rounded-md px-2 text-muted/90 transition-colors hover:text-primary active:bg-surface-raised sm:inline-flex"
             >
-              View Full Article
+              Source: {sourceHost} ↗
             </a>
           )}
-          <div className="ml-auto">
+          <div className="ml-auto shrink-0">
             <BookmarkButton
               articleId={id}
               initialBookmarked={initialBookmarked}
