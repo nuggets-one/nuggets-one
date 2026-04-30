@@ -308,14 +308,23 @@ async function main() {
       continue
     }
 
-    const status = mapStatus(doc)
+    // Legacy data uses publishedAt as the canonical publish signal.
+    // isPublished is absent on all documents in this dataset.
+    // status field exists on ~2% of documents only.
+    // Rule: any doc with publishedAt set is published.
+    const isPublished =
+      doc.publishedAt != null ||
+      doc.status === 'published' ||
+      doc.isPublished === true
+
+    const status: 'published' | 'draft' = isPublished ? 'published' : 'draft'
     const content_stream = mapContentStream(doc.contentStream as string)
     const created_at = objectIdToDate(doc._id as mongoose.Types.ObjectId)
-    const published_at = doc.publishedAt
-      ? new Date(doc.publishedAt as Date).toISOString()
-      : status === 'published'
-        ? created_at
-        : null
+    const published_at = isPublished
+      ? (doc.publishedAt
+          ? new Date(doc.publishedAt as Date).toISOString()
+          : created_at)
+      : null
 
     if (status === 'published' && !doc.publishedAt) {
       publishedFallbacks++
