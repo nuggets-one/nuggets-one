@@ -13,8 +13,8 @@ a legacy MongoDB/Express/Vite app (Project-Phoenix).
 4. docs/NUGGETS_V2_BUILD_EXECUTION.md — PR sequence, merge boundaries
 
 ## Current build position
-PR-15 — ETL scripts: Mongo → Postgres (tags, articles, collections)
-Update this line after each PR merges.
+PR-18 complete — v2 build sequence finished.
+Cutover pending human sign-off on docs/CUTOVER_RUNBOOK.md.
 
 ---
 

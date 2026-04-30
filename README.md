@@ -34,3 +34,35 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## OG Validation Script
+
+Use `scripts/validate-og.mjs` to validate Open Graph and canonical metadata before launch.
+
+### Basic usage
+
+```bash
+node scripts/validate-og.mjs https://your-staging-url.vercel.app
+```
+
+### Validate home + article paths
+
+```bash
+OG_PATHS="/,/nuggets/<uuid>/<slug>" node scripts/validate-og.mjs https://your-staging-url.vercel.app
+```
+
+Or pass paths directly:
+
+```bash
+node scripts/validate-og.mjs https://your-staging-url.vercel.app --paths="/,/nuggets/<uuid>/<slug>"
+```
+
+### CI-friendly modes
+
+- Emits `::error` lines for failed checks.
+- Exits with non-zero status if any check fails.
+- Use JSON output for machine parsing:
+
+```bash
+node scripts/validate-og.mjs https://your-staging-url.vercel.app --json
+```
