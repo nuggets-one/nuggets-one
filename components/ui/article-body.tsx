@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { cloudinaryLoader } from '@/lib/cloudinary-loader'
 
 type Props = {
   markdown: string
@@ -25,7 +24,6 @@ function BodyImage({
       <figure className="my-6 w-full max-w-prose">
         <div className="relative w-full aspect-video overflow-hidden rounded-lg">
           <Image
-            loader={cloudinaryLoader}
             src={src}
             alt={alt ?? ''}
             fill

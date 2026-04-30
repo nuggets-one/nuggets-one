@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import type { ArticleCardProps } from '@/types/article'
 
+type BookmarkWithArticleRow = {
+  articles: ArticleCardProps | ArticleCardProps[] | null
+}
+
 export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
   const supabase = await createClient()
 
@@ -27,9 +31,13 @@ export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
 
   if (error || !data) return []
 
-  // PostgREST returns the FK-joined side as a single object (many-to-one), not an array
-  return data
-    .map((row: { articles: ArticleCardProps | null }) => row.articles ?? null)
+  // Relation payload shape can vary with generated DB types (object vs array).
+  // Normalize to one article per bookmark row.
+  return (data as BookmarkWithArticleRow[])
+    .map((row) => {
+      if (!row.articles) return null
+      return Array.isArray(row.articles) ? row.articles[0] ?? null : row.articles
+    })
     .filter((article): article is ArticleCardProps => article !== null)
 }
 

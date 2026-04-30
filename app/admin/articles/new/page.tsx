@@ -1,7 +1,7 @@
 // S1-F1: page files must only export default + Next.js-approved named exports.
 // ArticleFormFields and ArticleFormDefaults moved to _components/article-form-fields.tsx.
 import { createArticleAction } from '@/lib/actions/admin'
-import { ArticleFormFields } from './_components/article-form-fields'
+import { ArticleFormFields } from '../_components/article-form-fields'
 
 const TAG_ERRORS: Record<string, string> = {
   unknown_tags: 'One or more tag slugs were not found. Check Tags admin and retry.',
