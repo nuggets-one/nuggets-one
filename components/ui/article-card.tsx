@@ -74,6 +74,8 @@ export function ArticleCard({
           title={hero_alt_text ?? title}
           images={images}
           totalCount={images.length}
+          sourceHost={sourceHost}
+          source_url={source_url}
         />
       ) : (
         <CardMedia
@@ -84,6 +86,8 @@ export function ArticleCard({
           hero_alt_text={hero_alt_text}
           ytMedia={ytMedia}
           priority={priority}
+          sourceHost={sourceHost}
+          source_url={source_url}
         />
       )}
 
@@ -100,8 +104,6 @@ export function ArticleCard({
 
       <CardFooter
         href={href}
-        source_url={source_url}
-        sourceHost={sourceHost}
         published_at={published_at}
         articleId={id}
         isAuthenticated={isAuthenticated}

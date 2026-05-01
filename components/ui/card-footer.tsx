@@ -11,8 +11,6 @@ function formatDate(iso: string): string {
 
 type Props = {
   href: string
-  source_url: string | null
-  sourceHost: string | null
   published_at: string
   articleId: string
   isAuthenticated: boolean
@@ -21,8 +19,6 @@ type Props = {
 
 export function CardFooter({
   href,
-  source_url,
-  sourceHost,
   published_at,
   articleId,
   isAuthenticated,
@@ -36,16 +32,6 @@ export function CardFooter({
       >
         View Full Article
       </Link>
-      {source_url && sourceHost && (
-        <a
-          href={source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden min-h-[44px] items-center rounded-full px-3 py-1 text-xs text-muted/90 transition-colors hover:text-primary hover:bg-surface-raised active:bg-surface-raised sm:inline-flex"
-        >
-          Source: {sourceHost} ↗
-        </a>
-      )}
       <span className="ml-auto shrink-0 text-muted">
         {formatDate(published_at)}
       </span>
