@@ -45,7 +45,7 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 **Verification**
 - Run `npm run build` before merge (local full build can take several minutes on cold compile).
 
-### 2026-05-02 — Phase 3 (header + auth island)
+### 2026-05-02 — Phase 3 (header + auth island); commit `bb44fee` on `main`
 - **Executed:** Removed masthead **`Home` / `Collections` / `Create nugget`** (desktop + mobile rows). **`GET /api/auth/status`** returns **`isAdmin`**. Avatar menu: **Bookmarks**, **Collections**, **Admin** + **Create nugget** (admin-only), Legal, **Sign out**; **`/account`** removed. Docs: remediation plan **§0g**, §5 Phase 3, **M6**; this changelog.
 
 **Files touched**
@@ -56,7 +56,7 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 - `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
 
 **Verification**
-- `npm run build` before merge / push.
+- `npm run build` → exit 0; `node scripts/check-bundle-budget.mjs` → `Home=43117B` `Detail=38472B`.
 - Manual: anon → **Sign in** only; signed-in reader → Bookmarks + Collections, no Admin/Create; admin → Admin + Create nugget present.
 
 ## Baseline and Measured Deltas
@@ -145,10 +145,10 @@ Measured with local production Lighthouse runs on `/`:
 - `19c4754` feat(homepage): ship Phase 15 — sheet/parallel-route detail
 - `f11b342` fix(search): enforce suggest row cap and document Phase 11
 - _(Phase 2026-05-02)_ `feat(homepage): YouTube hqdefault fallback when hero thumb missing` — see `git log` on `main` for exact SHA.
-- _(Phase 2026-05-02)_ `feat(homepage): Phase 3 header strip and auth island` — see `git log` on `main` after push.
+- `bb44fee` feat(homepage): Phase 3 header strip and auth island (isAdmin)
 
 ## Pending (Not Yet Committed)
-Run `git status` after committing Phase 3 (should be clean once pushed).
+Working tree clean after **`bb44fee`** aside from local-only files (`git status`).
 
 ## Latest Regression Validation (Post-Polish)
 - Production build status: pass.
