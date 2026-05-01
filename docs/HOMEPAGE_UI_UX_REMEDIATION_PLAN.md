@@ -1,6 +1,6 @@
 # Homepage UI/UX Remediation Plan
 
-**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). **Phase 4 shipped 2026-05-02** (§0h). **Phase 5 shipped 2026-05-02** (§0i). Phases 6–10, 12, 14.5 pending.
+**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). **Phase 4 shipped 2026-05-02** (§0h). **Phase 5 shipped 2026-05-02** (§0i). **Phase 7 shipped 2026-05-02** (§0j). **Phase 8 shipped 2026-05-02** (§0k). **Phase 6 shipped 2026-05-02** (§0l). Phases 9, 10, 12, 14.5 pending.
 **Author:** Claude (audit + design pass, 2026-05-01)
 **Source audit:** in-conversation audit covering L1–L4, S1, C1–C6, SR1, AV1, F1.
 **Doc precedence (per `AGENTS.md`):** Migration Plan → Blueprint → Product Behavior & UI → Build Execution → Replication Spec.
@@ -17,9 +17,9 @@
 | 3 | Header strip + auth island extension | ✅ **DONE 2026-05-02** | §0g — PRODUCT §3.3 / §2.B |
 | 4 | Stream tabs restyle + mobile bottom nav | ✅ **DONE 2026-05-02** | §0h · magazine tabs + **`MobileBottomNav`** |
 | 5 | Site footer | ✅ **DONE 2026-05-02** | §0i — `legal_pages` + `Footer` + `/legal/contact` |
-| 6 | YouTube state machine on detail | ⏳ PENDING | Largest single phase |
-| 7 | Card source badge | ⏳ PENDING | Depends on Phase 1 |
-| 8 | Share button (card + detail) | ⏳ PENDING | |
+| 6 | YouTube state machine on detail | ✅ **DONE 2026-05-02** | §0l — facade poster + lazy iframe + `youtube-seek` event |
+| 7 | Card source badge | ✅ **DONE 2026-05-02** | §0j — top-right pill on media; footer `Source:` link removed |
+| 8 | Share button (card + detail) | ✅ **DONE 2026-05-02** | §0k — `navigator.share` → clipboard fallback with inline label |
 | 9 | Active filters bar | ⏳ PENDING | Depends on Phase 1 |
 | 10 | Filter popover + tag counts | ⏳ PENDING | Wires the `More` rail trigger (deferred from Phase 1) |
 | 11 | Suggest cap verification | ✅ **DONE 2026-05-02** | Verified + hard cap — see §0e |
@@ -277,6 +277,59 @@ components/ui/sheet.tsx (new — single client island)
 **Files:** `supabase/migrations/20240001000008_legal_pages.sql`, `lib/queries/legal-pages.ts`, `lib/supabase/types.ts` (**`legal_pages`** row stub), `components/layout/footer.tsx`, `app/(main)/layout.tsx`, `app/(main)/legal/contact/page.tsx`.
 
 **Verification (2026-05-02):** `npm run build` exit 0; `node scripts/check-bundle-budget.mjs` → **`Home=43534B` `Detail=38839B`** — within caps (unchanged vs §0h).
+
+---
+
+### 0j. Phase 7 — card source badge (C5.2) — shipped 2026-05-02 (`887b2c0`)
+
+**Outcome:** Source attribution moved from the duplicate footer `Source: host ↗` link to a single top-right pill overlaying the media block (per plan §7 / §2.L line 526). Dual surfaces collapsed to one.
+
+**What shipped:**
+- New `components/ui/card-source-badge.tsx` (Server Component) — `bg-black/60 backdrop-blur-sm`, `text-[10px]` per spec, `aria-label` for screen readers, `target="_blank" rel="noopener noreferrer"`.
+- `components/ui/card-media.tsx` and `components/ui/card-thumbnail-grid.tsx` — restructured so the wrapping `<Link>` is now a child of a `relative aspect-video` div; the badge sits as a sibling `<a>` to avoid nested anchors. Both single-hero and multi-image cards render the badge.
+- `components/ui/article-card.tsx` — passes `sourceHost` + `source_url` to media components instead of footer.
+- `components/ui/card-footer.tsx` — dropped the `Source:` link block and its now-unused props.
+
+**Files:** new `components/ui/card-source-badge.tsx`; modified `components/ui/card-media.tsx`, `components/ui/card-thumbnail-grid.tsx`, `components/ui/article-card.tsx`, `components/ui/card-footer.tsx`.
+
+**Verification (2026-05-02):** `npm run build` exit 0; `node scripts/check-bundle-budget.mjs` → **`Home=43763B`** (+229 B vs §0i; well under 85 KiB cap), Detail unchanged. `tsc --noEmit` clean.
+
+---
+
+### 0k. Phase 8 — share button (M5 + 2.G — both surfaces) — shipped 2026-05-02
+
+**Outcome:** Single `'use client'` island serves card and detail. `navigator.share` preferred; clipboard fallback shows inline `Copied!` / `Copy failed` for 1.5 s.
+
+**What shipped:**
+- New `components/ui/share-button.tsx` — feature-detects `navigator.share`; constructs absolute URL on the client via `window.location.origin + href`; placeholder telemetry via `console.log('[telemetry]', { event: 'share_initiated', surface, channel })` until a real telemetry helper lands; `aria-live="polite"` for status announcements; `e.preventDefault()` + `e.stopPropagation()` so the click doesn't bubble to surrounding card surfaces; `setTimeout` cleanup on unmount.
+- `components/ui/card-footer.tsx` — accepts `title` prop; renders `<ShareButton variant="card" />` adjacent to the bookmark button, matching the icon-only style.
+- `components/ui/article-card.tsx` — threads `title` through to `CardFooter`.
+- `components/ui/article-content.tsx` — renders `<ShareButton variant="detail" />` next to the detail-page bookmark with explicit pill label.
+
+**Files:** new `components/ui/share-button.tsx`; modified `components/ui/article-card.tsx`, `components/ui/card-footer.tsx`, `components/ui/article-content.tsx`.
+
+**Verification (2026-05-02):** `npm run build` exit 0; `node scripts/check-bundle-budget.mjs` → **`Home=44194B`** (+431 B), **`Detail=39304B`** (+442 B) — under plan §8 budget of <2 KiB per surface and well within 85/60 KiB caps. AbortError on user-cancelled `navigator.share` is silently swallowed — no clipboard fallback after explicit dismiss.
+
+---
+
+### 0l. Phase 6 — YouTube state machine on detail — shipped 2026-05-02
+
+**Outcome:** Detail-page hero for YouTube articles is now a facade — poster image (LCP element) with a play overlay; iframe is **not in the DOM** until first user gesture. Body timestamp links of the form `[label](#yt=N)` mount the iframe on demand and seek to the requested second; subsequent timestamp clicks `postMessage` `seekTo` to the live iframe. Outbound `Watch on YouTube ↗` link is rendered at all times.
+
+**What shipped:**
+- New `components/ui/youtube-player.tsx` (`'use client'`) — exports `YOUTUBE_SEEK_EVENT` and a `YouTubeSeekDetail` type. State machine: `poster` ↔ `embed`. Poster click mounts `<iframe src="https://www.youtube-nocookie.com/embed/{id}?enablejsapi=1&rel=0&autoplay=1">`. Cold-mount via timestamp click adds `&start=N`; warm-seek uses `iframe.contentWindow.postMessage(JSON.stringify({event:'command',func:'seekTo',args:[seconds,true]}), 'https://www.youtube-nocookie.com')`. Window-level event listener for `youtube-seek`. Container `scrollIntoView` after seek. Telemetry placeholder per plan §6.3a follow-up: `console.log('[telemetry]', { event: 'youtube_play', video_id, seconds, source })` with `source: 'poster' | 'timestamp'`.
+- New `components/ui/timestamp-link-interceptor.tsx` (`'use client'`) — single click handler with event delegation; matches anchors whose `href` starts with `#yt=` and a non-negative integer; dispatches `youtube-seek` with `{ seconds }`. Other anchor clicks pass through unchanged. Wraps `<ArticleBody/>` only when the article has a YouTube hero.
+- `components/ui/article-content.tsx` — when `article.hero_media_kind === 'youtube' && article.hero_video_id`, renders `<YouTubePlayer/>` instead of the existing `<Image>` hero; poster URL falls back to `youTubePosterHqUrl(hero_video_id)` when `hero_thumb_url` is absent or whitespace; body is wrapped in `<TimestampLinkInterceptor>`.
+
+**CSP:** already covers `frame-src https://www.youtube.com https://www.youtube-nocookie.com` and `img-src ... https://i.ytimg.com` (next.config.ts §S11-F1); no edits required.
+
+**Files:** new `components/ui/youtube-player.tsx`, new `components/ui/timestamp-link-interceptor.tsx`; modified `components/ui/article-content.tsx`.
+
+**Verification (2026-05-02):** `npm run build` exit 0; `node scripts/check-bundle-budget.mjs` → **`Home=44194B`** (unchanged — YT components ship only on detail), **`Detail=40615B`** (+1311 B vs §0k; well under 60 KiB cap). `tsc --noEmit` clean. LCP element on detail = poster `<Image priority>` (iframe is not in the initial DOM).
+
+**Manual smoke matrix (recommended before merge):** sample articles with (a) YT hero + body timestamps, (b) YT hero + no timestamps, (c) image hero + body timestamps that should be ignored, (d) YT hero with `hero_thumb_url = null` (verify `hqdefault` fallback). On each: poster paints, ▶ overlay visible, iframe absent until first click; click poster → autoplay starts; click `[label](#yt=120)` in body → embed mounts/seeks and scrolls into view; subsequent timestamp click while embed is mounted → seekTo postMessage works (verify in DevTools Console, not Network).
+
+**Follow-up:** wire real telemetry POST when the helper exists — replace `console.log('[telemetry]', …)` in both `youtube-player.tsx` and `share-button.tsx`.
 
 ---
 
@@ -732,7 +785,7 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 6 — YouTube state machine on detail page (M4 / C4)
+### Phase 6 — YouTube state machine on detail page (M4 / C4) ✅ **COMPLETE 2026-05-02** — **§0l**
 *This is the largest single phase. Treat as one PR but worth its own design pass.*
 
 - New `components/ui/youtube-player.tsx` (`'use client'`) implementing the §6.3a state machine.
@@ -760,7 +813,7 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 7 — Card source badge (C5.2)
+### Phase 7 — Card source badge (C5.2) ✅ **COMPLETE 2026-05-02** — **§0j**
 - Top-right overlay on media block when `source_url` exists.
 - Replaces the current footer `Source: host ↗` pattern — dual surfaces are noise.
 - Visual: `absolute top-2 right-2`, dark translucent pill (`bg-black/60 backdrop-blur-sm`), white text, host label truncated to ~24 chars + external-link icon.
@@ -774,7 +827,7 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 8 — Share button (M5 + 2.G — both surfaces)
+### Phase 8 — Share button (M5 + 2.G — both surfaces) ✅ **COMPLETE 2026-05-02** — **§0k**
 - New `components/ui/share-button.tsx` (`'use client'`) — single client island used on both card and detail.
 - Behavior: feature-detect `navigator.share`; if available, prefer (`{title, url}`); else `navigator.clipboard.writeText(url)` + 1.5s "Copied" inline label state (no portal/toast lib).
 - Telemetry: `share_initiated { surface: 'card'|'detail', channel: 'native'|'copy' }` — fire-and-forget POST to a lightweight endpoint, or temporarily `console.log` until telemetry helper exists.
@@ -1081,4 +1134,4 @@ Headline findings:
 
 *Phase 11 is complete (2026-05-02) — see **§0e**.*
 
-**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → ~~3~~ → ~~4~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). **Phase 3** shipped 2026-05-02 (§0g). **Phase 4** shipped 2026-05-02 (§0h). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.
+**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → ~~3~~ → ~~4~~ → ~~5~~ → ~~7~~ → ~~8~~ → ~~6~~ → 9 → 10 → 12 → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). **Phase 3** shipped 2026-05-02 (§0g). **Phase 4** shipped 2026-05-02 (§0h). **Phase 5** shipped 2026-05-02 (§0i). **Phase 7** shipped 2026-05-02 (§0j). **Phase 8** shipped 2026-05-02 (§0k). **Phase 6** shipped 2026-05-02 (§0l). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.

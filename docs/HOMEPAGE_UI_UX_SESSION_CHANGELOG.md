@@ -15,6 +15,10 @@ Track all homepage-focused UI/UX, performance, and interaction changes made duri
 - **[2026-05-02]** Homepage remediation **Phase 3** (`PRODUCT` §3.3 header strip + auth island **`isAdmin`**) — see Work execution log below
 - **[2026-05-02]** Homepage remediation **Phase 4** (magazine **StreamTabs** + **`MobileBottomNav`**) — see Work execution log below
 - **[2026-05-02]** Homepage remediation **Phase 5** (**M1** site footer, `legal_pages` + **`Footer`**) — see Work execution log below
+- **[2026-05-02]** Maker–checker **audit fixes** (legal_pages migration idempotency, apply-migration transaction, dead `header-auth.tsx` removed, admin gate strict equality, footer query cache + error-code switch, `/legal/contact` `noindex`, mobile bottom nav active-state + scroll behavior, `/account` link restored to avatar menu) — `6d8c9ea`
+- **[2026-05-02]** Homepage remediation **Phase 7** (card source badge **C5.2**, footer `Source:` link removed) — `887b2c0`
+- **[2026-05-02]** Homepage remediation **Phase 8** (share button **M5 + 2.G**, both surfaces) — see Work execution log below
+- **[2026-05-02]** Homepage remediation **Phase 6** (**M4 / C4** YouTube state machine on detail page) — see Work execution log below
 
 ## Work execution log (review trail)
 
@@ -92,6 +96,84 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 **Verification**
 - `npm run build` → exit 0 (Next.js 16.2.4; no expected noise from **`legal_pages`** missing before migration — query falls back quietly)
 - **`node scripts/check-bundle-budget.mjs`** → **`Home=43534B` `Detail=38839B`** — unchanged vs Phase 4
+
+### 2026-05-02 — Maker–checker audit fixes; **`6d8c9ea`** on `main`
+- **Executed:** Audit pass on Phases 11/2/3/4/5 + tooling identified 13 findings (2 Major, 8 Minor, 3 Suggestion). All actionable fixes shipped:
+  - Migration `20240001000008_legal_pages.sql` — `DROP POLICY IF EXISTS` guard added; re-runs are now idempotent.
+  - `scripts/migrate/apply-migration.mjs` — wrapped raw `pool.query` in `BEGIN`/`COMMIT`/`ROLLBACK` on a dedicated client; failures roll back and exit non-zero.
+  - `components/layout/header-auth.tsx` — **deleted** (orphan with stale `/account` link; `header-auth-island.tsx` is the only consumer).
+  - `app/admin/layout.tsx` — predicate tightened to `=== true` to match `lib/actions/admin.ts` and `/api/auth/status`.
+  - `components/layout/header-auth-island.tsx` — restored "Account settings" entry to the avatar menu (deviation from §0g, intentional: `/account` route still receives the post-auth callback redirect and hosts password-reset + display-name + notification prefs; deleting the route is out of scope for this audit).
+  - `lib/queries/legal-pages.ts` — error filter switched from message substrings to `error.code` (`PGRST205` / `42P01`); query wrapped in `unstable_cache` with 1 h `revalidate`.
+  - `app/(main)/legal/contact/page.tsx` — `metadata.robots = { index: false, follow: false }` while content is placeholder.
+  - `lib/supabase/types.ts` — inlined typed `legal_pages` Row.
+  - `components/layout/mobile-bottom-nav.tsx` — generalized active-state to `pathActive(pathname, base)` (now handles `/bookmarks/*`); restricted `scroll={false}` to stream-switch tabs only (Collections / Bookmarks now scroll-to-top on entry).
+
+**Files touched this batch**
+- `supabase/migrations/20240001000008_legal_pages.sql`
+- `scripts/migrate/apply-migration.mjs`
+- `components/layout/header-auth.tsx` (deleted)
+- `components/layout/header-auth-island.tsx`
+- `app/admin/layout.tsx`
+- `lib/queries/legal-pages.ts`
+- `app/(main)/legal/contact/page.tsx`
+- `lib/supabase/types.ts`
+- `components/layout/mobile-bottom-nav.tsx`
+
+**Verification**
+- `npm run build` → exit 0
+- `npx tsc --noEmit` → clean
+- `node scripts/check-bundle-budget.mjs` → **`Home=43557B` `Detail=38862B`** — +23 B from Phase 5 baseline (cache wrapper + types stub), well within caps.
+
+### 2026-05-02 — Phase 7 (card source badge / C5.2); **`887b2c0`** on `main`
+- **Executed:** New `components/ui/card-source-badge.tsx`; `card-media.tsx` and `card-thumbnail-grid.tsx` restructured so the wrapping `<Link>` is a child of a `relative aspect-video` div (avoids nested anchors); badge sits as a sibling `<a>` with `target="_blank" rel="noopener noreferrer"` and a screen-reader `aria-label`. Both single-hero and multi-image cards render the badge. Footer `Source: host ↗` link and unused `source_url`/`sourceHost` props removed. Plan **§0j**, status table, §5 Phase 7, §10 build order; this changelog.
+
+**Files touched this batch**
+- `components/ui/card-source-badge.tsx` (new)
+- `components/ui/card-media.tsx`
+- `components/ui/card-thumbnail-grid.tsx`
+- `components/ui/article-card.tsx`
+- `components/ui/card-footer.tsx`
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md`
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
+
+**Verification**
+- `npm run build` → exit 0
+- `node scripts/check-bundle-budget.mjs` → **`Home=43763B`** (+229 B; well under 85 KiB cap), Detail unchanged. Plan §7 budget unspecified; +0.2 KiB.
+
+### 2026-05-02 — Phase 8 (share button / M5 + 2.G — both surfaces)
+- **Executed:** New `components/ui/share-button.tsx` (`'use client'`) — feature-detects `navigator.share`; clipboard fallback with `Copied!` / `Copy failed` inline label for 1.5 s; absolute URL built on the client via `window.location.origin + href`; placeholder telemetry via `console.log('[telemetry]', { event: 'share_initiated', surface, channel })` until a real telemetry helper lands; `aria-live="polite"` for status; `e.preventDefault()` + `e.stopPropagation()` so clicks don't bubble to surrounding card surfaces. Card variant: icon-only adjacent to bookmark; detail variant: pill with label. Plan **§0k**, status table, §5 Phase 8, §10 build order; this changelog.
+
+**Files touched this batch**
+- `components/ui/share-button.tsx` (new)
+- `components/ui/article-card.tsx` (passes `title` to footer)
+- `components/ui/card-footer.tsx` (renders `<ShareButton variant="card" />`)
+- `components/ui/article-content.tsx` (renders `<ShareButton variant="detail" />`)
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md`
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
+
+**Verification**
+- `npm run build` → exit 0
+- `node scripts/check-bundle-budget.mjs` → **`Home=44194B`** (+431 B), **`Detail=39304B`** (+442 B) — under plan §8 budget of <2 KiB per surface and well within 85/60 KiB caps.
+
+### 2026-05-02 — Phase 6 (YouTube state machine on detail / M4 + C4)
+- **Executed:** Two new client islands plus a conditional swap in `article-content.tsx`. `<YouTubePlayer/>` (`components/ui/youtube-player.tsx`) implements the §6.3a poster ↔ embed state machine; iframe is **not in the DOM** until first user gesture, so the LCP element remains the poster `<Image priority>`. Body timestamp links of the form `[label](#yt=N)` dispatch a `youtube-seek` window event consumed by the player — cold-mount uses `start=N` URL param; warm-seek uses `iframe.contentWindow.postMessage({event:'command',func:'seekTo',args:[seconds,true]})` to `https://www.youtube-nocookie.com`. `<TimestampLinkInterceptor/>` (`components/ui/timestamp-link-interceptor.tsx`) does the click delegation. Outbound `Watch on YouTube ↗` link is rendered at all times. Telemetry placeholder: `console.log('[telemetry]', { event: 'youtube_play', video_id, seconds, source: 'poster'|'timestamp' })`. CSP already covers `frame-src ...youtube-nocookie.com` and `img-src ...i.ytimg.com` — no edits needed. Plan **§0l**, status table, §5 Phase 6, §10 build order; this changelog.
+
+**Files touched this batch**
+- `components/ui/youtube-player.tsx` (new)
+- `components/ui/timestamp-link-interceptor.tsx` (new)
+- `components/ui/article-content.tsx`
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md`
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
+
+**Verification**
+- `npm run build` → exit 0
+- `npx tsc --noEmit` → clean
+- `node scripts/check-bundle-budget.mjs` → **`Home=44194B`** (unchanged — YT components ship only on detail), **`Detail=40615B`** (+1311 B vs Phase 8; well under 60 KiB cap)
+
+**Manual smoke matrix (recommended before merge):** sample articles with (a) YT hero + body timestamps, (b) YT hero + no timestamps, (c) image hero + body timestamps that should be ignored, (d) YT hero with `hero_thumb_url = null` (verify `hqdefault` fallback). Verify on each: poster paints, ▶ overlay visible, iframe absent until first click; click poster → autoplay starts; click `[label](#yt=120)` in body → embed mounts/seeks and scrolls into view; subsequent timestamp click while embed is mounted → `seekTo` postMessage works (visible in DevTools Console).
+
+**Follow-up:** wire real telemetry POST when the helper exists — replaces `console.log('[telemetry]', …)` in `youtube-player.tsx` (`youtube_play`) and `share-button.tsx` (`share_initiated`).
 
 ## Baseline and Measured Deltas
 Measured with local production Lighthouse runs on `/`:
