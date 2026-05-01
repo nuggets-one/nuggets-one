@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/scripts/migrate/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -49,5 +50,8 @@ next-env.d.ts
 # validation reports
 scripts/validate/output/
 .tmp-*
+
+# local Supabase CLI
+supabase/.temp
 
 .vercel

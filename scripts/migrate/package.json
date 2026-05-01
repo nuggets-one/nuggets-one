@@ -5,7 +5,9 @@
     "etl:tags": "tsx migrate-tags.ts",
     "etl:articles": "tsx migrate-articles.ts",
     "etl:collections": "tsx migrate-collections.ts",
-    "test:handoff": "tsx --test tests/*.test.ts"
+    "test:handoff": "tsx --test tests/*.test.ts",
+    "apply:migration": "node apply-migration.mjs",
+    "apply:legal-pages": "node apply-migration.mjs supabase/migrations/20240001000008_legal_pages.sql"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
