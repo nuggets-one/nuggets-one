@@ -186,7 +186,6 @@ CREATE TABLE IF NOT EXISTS user_notifications (
 
 -- =============================================================================
 -- SECTION 9 — community_collections
--- Note: is_published boolean — no draft/scheduled workflow for collections (PMF).
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS community_collections (
@@ -194,7 +193,9 @@ CREATE TABLE IF NOT EXISTS community_collections (
   title text NOT NULL,
   description text,
   curator_name text,
-  is_published boolean NOT NULL DEFAULT false,
+  cover_image_url text,
+  status text NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'published')),
   legacy_mongo_id text UNIQUE,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -264,6 +265,7 @@ EXCEPTION
 END $$;
 
 ALTER TABLE community_collections ADD COLUMN IF NOT EXISTS legacy_mongo_id text;
+ALTER TABLE community_collections ADD COLUMN IF NOT EXISTS cover_image_url text;
 
 -- =============================================================================
 -- SECTION 11 — INDEXES

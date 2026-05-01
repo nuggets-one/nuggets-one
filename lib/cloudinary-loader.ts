@@ -22,6 +22,23 @@ interface CloudinaryLoaderParams {
   quality?: number
 }
 
+function isTransformationSegment(segment: string): boolean {
+  // Cloudinary transformation components typically look like:
+  // "w_800", "c_fill,g_auto,q_auto", etc.
+  return /^([a-z]{1,4}_[^,\/]+)(,[a-z]{1,4}_[^,\/]+)*$/i.test(segment)
+}
+
+function stripLeadingTransforms(pathAfterUpload: string): string {
+  const segments = pathAfterUpload.split('/').filter(Boolean)
+  let index = 0
+
+  while (index < segments.length && isTransformationSegment(segments[index])) {
+    index++
+  }
+
+  return segments.slice(index).join('/')
+}
+
 export function cloudinaryLoader({
   src,
   width,
@@ -33,17 +50,19 @@ export function cloudinaryLoader({
   const uploadIndex = src.indexOf(uploadSegment)
 
   if (uploadIndex === -1) {
-    // Not a Cloudinary URL (e.g. i.ytimg.com) — return as-is for Next.js to serve directly
-    return src
+    // Not a Cloudinary URL (e.g. i.ytimg.com). Keep passthrough behavior
+    // but include width/quality params so Next.js can verify responsive sizing.
+    const q = quality ?? 75
+    const separator = src.includes('?') ? '&' : '?'
+    return `${src}${separator}w=${width}&q=${q}`
   }
 
   const baseUrl = src.slice(0, uploadIndex + uploadSegment.length)
   const rest = src.slice(uploadIndex + uploadSegment.length)
 
-  // Strip any existing transformation prefix (starts with a letter + underscore
-  // pattern like "w_800,q_auto/") to avoid double-transforming
-  const hasExistingTransforms = /^[a-z]_[^/]+/.test(rest)
-  const publicId = hasExistingTransforms ? rest.replace(/^[^/]+\//, '') : rest
+  // Strip any leading transformation segments to avoid double-transforming.
+  // Keep version/public-id segments untouched.
+  const publicId = stripLeadingTransforms(rest)
 
   const q = quality ?? 75
   const transforms = `w_${width},q_${q},f_auto,c_fill,g_auto`

@@ -4,10 +4,9 @@
 // The server Header component is cookie-free; auth state is determined here
 // on the client so the (main) layout can be statically rendered.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { createClient } from '@/lib/supabase/client'
 import { logoutAction } from '@/lib/actions/auth'
 
 // S2-F5: lazy-load the notification panel — must not block / first-byte path
@@ -19,7 +18,7 @@ const NotificationPanel = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-9 h-9 rounded-lg bg-surface-raised animate-pulse" aria-hidden="true" />
+      <div className="h-9 w-9 rounded-lg bg-surface-raised animate-pulse" aria-hidden="true" />
     ),
   }
 )
@@ -29,18 +28,37 @@ type AuthState =
   | { status: 'anonymous' }
   | { status: 'authenticated'; email: string | null }
 
+function MenuHeading({ children }: { children: ReactNode }) {
+  return (
+    <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+      {children}
+    </p>
+  )
+}
+
 export function HeaderAuthIsland() {
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' })
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setAuth({ status: 'authenticated', email: session.user.email ?? null })
-      } else {
-        setAuth({ status: 'anonymous' })
-      }
-    })
+    let cancelled = false
+
+    fetch('/api/auth/status', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : { authenticated: false }))
+      .then((data: { authenticated?: boolean; email?: string | null }) => {
+        if (cancelled) return
+        if (data.authenticated) {
+          setAuth({ status: 'authenticated', email: data.email ?? null })
+        } else {
+          setAuth({ status: 'anonymous' })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAuth({ status: 'anonymous' })
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   if (auth.status === 'loading') {
@@ -66,23 +84,78 @@ export function HeaderAuthIsland() {
   const initials = (auth.email ?? 'U').charAt(0).toUpperCase()
 
   return (
-    <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
+    <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
       <NotificationPanel />
-      <form action={logoutAction} className="hidden md:block">
-        <button
-          type="submit"
-          className="inline-flex min-h-[44px] items-center rounded-md px-2 text-sm text-muted transition-colors hover:text-primary active:bg-surface-raised"
+      <details className="group relative">
+        <summary
+          aria-label="Open account menu"
+          className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center outline-none [&:-moz-focusring]:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 rounded-full"
         >
-          Sign out
-        </button>
-      </form>
-      <Link
-        href="/account"
-        aria-label="Account settings"
-        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-accent text-white text-xs font-semibold select-none hover:bg-accent/90 transition-colors"
-      >
-        {initials}
-      </Link>
+          <span className="inline-flex size-9 select-none items-center justify-center rounded-full bg-accent text-xs font-semibold text-white transition-colors hover:bg-accent/90 active:bg-accent/80">
+            {initials}
+          </span>
+        </summary>
+
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-surface py-2 shadow-lg ring-1 ring-black/5 dark:bg-surface-raised dark:ring-white/10"
+        >
+          {auth.email && (
+            <>
+              <MenuHeading>Signed in as</MenuHeading>
+              <p className="-mt-2 px-3 pb-2 text-xs text-muted line-clamp-2 break-all">
+                {auth.email}
+              </p>
+            </>
+          )}
+
+          <Link
+            href="/account"
+            role="menuitem"
+            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+          >
+            Account
+          </Link>
+
+          <Link
+            href="/bookmarks"
+            role="menuitem"
+            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+          >
+            Bookmarks
+          </Link>
+
+          <div className="my-2 border-t border-border" />
+
+          <MenuHeading>Legal</MenuHeading>
+          <Link
+            href="/legal/terms"
+            role="menuitem"
+            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+          >
+            Terms of use
+          </Link>
+          <Link
+            href="/legal/privacy"
+            role="menuitem"
+            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+          >
+            Privacy policy
+          </Link>
+
+          <div className="my-2 border-t border-border" />
+
+          <form action={logoutAction} role="presentation">
+            <button
+              type="submit"
+              role="menuitem"
+              className="w-full px-3 py-2 text-left text-sm font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+      </details>
     </div>
   )
 }

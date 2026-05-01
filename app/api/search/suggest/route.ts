@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { suggestArticles } from '@/lib/queries/article'
+import { isSuggestRateLimited } from '@/lib/search/rate-limit'
 import type { ContentStream } from '@/types/article'
 
 const VALID_STREAMS = new Set<string>(['standard', 'pulse'])
@@ -13,6 +14,17 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const q = (searchParams.get('q') ?? '').trim().slice(0, 200)
   const stream = parseStream(searchParams.get('stream'))
+  const rateKey =
+    req.headers.get('x-vercel-ip') ??
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    'anonymous'
+
+  if (isSuggestRateLimited(rateKey)) {
+    return NextResponse.json(
+      { suggestions: [] },
+      { status: 429, headers: { 'Cache-Control': 'no-store' } }
+    )
+  }
 
   if (q.length < 2) {
     return NextResponse.json({ suggestions: [] }, {

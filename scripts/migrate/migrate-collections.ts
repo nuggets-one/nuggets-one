@@ -138,7 +138,7 @@ async function main() {
       title,
       description: (col.description as string) || null,
       curator_name: (col.curatorName as string) || 'Nuggets',
-      is_published: true,
+      status: 'published',
       legacy_mongo_id: String(col._id),
     })
 

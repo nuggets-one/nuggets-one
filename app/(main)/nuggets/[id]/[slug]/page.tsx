@@ -3,16 +3,13 @@ import { permanentRedirect } from 'next/navigation'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { getArticleById, getArticleMeta } from '@/lib/queries/article'
-import { isArticleBookmarked } from '@/lib/queries/bookmarks'
 import { ArticleBody } from '@/components/ui/article-body'
 import { ArticleDetailSkeleton } from '@/components/ui/article-detail-skeleton'
 import { BookmarkButton } from '@/components/ui/bookmark-button'
-import { createClient } from '@/lib/supabase/server'
+import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 
 // Bookmark check requires cookies — serves dynamically per user.
 // ISR via revalidateTag('article:' + id) is deferred to PR-14 when PPR is added.
-export const dynamic = 'force-dynamic'
-
 type Params = {
   id: string
   slug: string
@@ -71,15 +68,6 @@ async function ArticleContent({ id, slug }: Params) {
   if (article.slug !== slug) {
     permanentRedirect(`/nuggets/${id}/${article.slug}`)
   }
-
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const isAuthenticated = !!user
-  const bookmarked = isAuthenticated
-    ? await isArticleBookmarked(article.id)
-    : false
 
   const primaryTag = article.tag_slugs[0] ?? null
 
@@ -165,10 +153,10 @@ async function ArticleContent({ id, slug }: Params) {
         <div className="flex items-center gap-3 flex-wrap">
           <BookmarkButton
             articleId={article.id}
-            initialBookmarked={bookmarked}
-            isAuthenticated={isAuthenticated}
+            initialBookmarked={false}
             variant="detail"
           />
+          <BookmarkBatchHydrator articleIds={[article.id]} />
           {article.source_url && (
             <a
               href={article.source_url}

@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
+import vm from 'node:vm'
 
 const BUDGETS = {
   homeJsGzip: 85 * 1024,
@@ -17,15 +18,6 @@ if (process.env.BUNDLE_BUDGET_WAIVER?.startsWith('BUNDLE-BUDGET-WAIVER:')) {
   process.exit(0)
 }
 
-const manifestPath = join(process.cwd(), '.next', 'build-manifest.json')
-if (!existsSync(manifestPath)) {
-  fail('Missing .next/build-manifest.json. Run `next build` first.')
-}
-
-const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-const pages = manifest.pages ?? {}
-const appPathsManifestPath = join(process.cwd(), '.next', 'server', 'app-paths-manifest.json')
-
 function gzipBytesForFiles(files) {
   let total = 0
   for (const file of files) {
@@ -37,33 +29,38 @@ function gzipBytesForFiles(files) {
   return total
 }
 
-function routeFiles(routeKey) {
-  const pageFiles = pages[routeKey]
-  if (!Array.isArray(pageFiles)) return []
-  return pageFiles.filter((f) => f.endsWith('.js'))
+function entryJsFilesForAppRoute(routeKey, appPath) {
+  const manifestPath = join(
+    process.cwd(),
+    '.next',
+    'server',
+    'app',
+    appPath,
+    'page_client-reference-manifest.js'
+  )
+
+  if (!existsSync(manifestPath)) {
+    fail(`Missing client reference manifest for ${routeKey}. Run \`next build\` first.`)
+  }
+
+  const context = { globalThis: {} }
+  vm.runInNewContext(readFileSync(manifestPath, 'utf8'), context)
+  const manifest = context.globalThis.__RSC_MANIFEST?.[routeKey]
+  const files = manifest?.entryJSFiles?.[`[project]/app/${appPath}/page`]
+
+  if (!Array.isArray(files) || files.length === 0) {
+    fail(`Could not resolve client JS files for ${routeKey}.`)
+  }
+
+  return files.filter((file) => file.endsWith('.js'))
 }
 
-function gzipBytesForServerAppRoute(routeKey) {
-  if (!existsSync(appPathsManifestPath)) return 0
-  const appPathsManifest = JSON.parse(readFileSync(appPathsManifestPath, 'utf8'))
-  const appFile = appPathsManifest[routeKey]
-  if (!appFile) return 0
-  const absoluteFilePath = join(process.cwd(), '.next', 'server', appFile)
-  if (!existsSync(absoluteFilePath)) return 0
-  const raw = readFileSync(absoluteFilePath)
-  return gzipSync(raw).byteLength
-}
-
-const homeRoute = routeFiles('/(main)/page')?.length ? '/(main)/page' : '/page'
-const detailRoute = '/(main)/nuggets/[id]/[slug]/page'
-
-// Audit S2-F3 decision: enforce frozen Home/detail JS ceilings in CI.
-const homeSize = gzipBytesForFiles(routeFiles(homeRoute)) || gzipBytesForServerAppRoute('/(main)/page')
-const detailSize = gzipBytesForFiles(routeFiles(detailRoute)) || gzipBytesForServerAppRoute('/(main)/nuggets/[id]/[slug]/page')
-
-if (homeSize === 0 || detailSize === 0) {
-  fail('Could not resolve route bundle sizes from Next build manifests.')
-}
+const homeSize = gzipBytesForFiles(
+  entryJsFilesForAppRoute('/(main)/page', '(main)')
+)
+const detailSize = gzipBytesForFiles(
+  entryJsFilesForAppRoute('/(main)/nuggets/[id]/[slug]/page', '(main)/nuggets/[id]/[slug]')
+)
 
 if (homeSize > BUDGETS.homeJsGzip) {
   fail(`Home route JS gzip ${homeSize} exceeds ${BUDGETS.homeJsGzip} bytes`)

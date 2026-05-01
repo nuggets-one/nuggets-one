@@ -5,8 +5,8 @@ import { CollectionCard } from '@/components/collections/collection-card'
 import { CollectionListSkeleton } from '@/components/collections/collection-list-skeleton'
 import { StatusBlock } from '@/components/ui/status-block'
 
-// Collections change infrequently — BLUEPRINT §11 caching table
-export const revalidate = 300
+// Public route; rendered at request time so builds do not depend on live Supabase schema state.
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Collections — Nuggets',
@@ -28,7 +28,7 @@ async function CollectionGrid() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {collections.map((collection) => (
         <CollectionCard key={collection.id} collection={collection} />
       ))}

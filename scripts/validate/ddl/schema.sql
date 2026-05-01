@@ -143,7 +143,9 @@ CREATE TABLE IF NOT EXISTS community_collections (
   title text NOT NULL,
   description text,
   curator_name text,
-  is_published boolean NOT NULL DEFAULT false,
+  cover_image_url text,
+  status text NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'published')),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );

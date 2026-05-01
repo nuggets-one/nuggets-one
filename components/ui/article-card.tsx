@@ -1,36 +1,9 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { BookmarkButton } from '@/components/ui/bookmark-button'
+import { CardMedia } from '@/components/ui/card-media'
+import { CardBody } from '@/components/ui/card-body'
+import { CardFooter } from '@/components/ui/card-footer'
+import { CardThumbnailGrid } from '@/components/ui/card-thumbnail-grid'
+import { isYouTubeUrl } from '@/lib/ui/excerpt-card'
 import type { ArticleCardProps } from '@/types/article'
-
-function idToHue(id: string): number {
-  let hash = 0
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff
-  }
-  return Math.abs(hash) % 360
-}
-
-function GradientPlaceholder({ id }: { id: string }) {
-  const hue = idToHue(id)
-  return (
-    <div
-      className="w-full h-full"
-      style={{
-        background: `linear-gradient(135deg, hsl(${hue},40%,85%) 0%, hsl(${(hue + 40) % 360},30%,75%) 100%)`,
-      }}
-      aria-hidden="true"
-    />
-  )
-}
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(iso))
-}
 
 function getSourceHostLabel(url: string | null): string | null {
   if (!url) return null
@@ -59,102 +32,70 @@ export function ArticleCard({
     id,
     slug,
     title,
-    excerpt,
-    content_stream,
+    excerptHtml,
     published_at,
     hero_thumb_url,
     hero_alt_text,
     tag_slugs,
     source_url,
+    images,
   } = article
 
   const href = `/nuggets/${id}/${slug}`
-  const primaryTag = tag_slugs[0] ?? null
-  const secondaryTag = tag_slugs[1] ?? null
+  const displayTagSlugs = tag_slugs.filter(
+    (t) => t !== 'nuggets' && t !== 'pulse'
+  )
+  const primaryTag = displayTagSlugs[0] ?? null
+  const secondaryTag = displayTagSlugs[1] ?? null
+  const overflowMobile = Math.max(0, displayTagSlugs.length - 1)
+  const overflowDesktop = Math.max(0, displayTagSlugs.length - 2)
   const sourceHost = getSourceHostLabel(source_url)
+  const ytMedia =
+    isYouTubeUrl(source_url) ||
+    (hero_thumb_url?.toLowerCase().includes('ytimg.com') ?? false)
+  const useThumbnailGrid = images.length >= 2
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-transform duration-150 motion-reduce:transition-none motion-safe:hover:-translate-y-px hover:shadow-md dark:border-zinc-700/80 dark:shadow-black/20 focus-within:ring-2 focus-within:ring-accent">
-      {/* Media block — fixed 16:9 aspect, no CLS */}
-      <Link
+      {useThumbnailGrid ? (
+        <CardThumbnailGrid
+          href={href}
+          title={hero_alt_text ?? title}
+          images={images}
+          totalCount={images.length}
+        />
+      ) : (
+        <CardMedia
+          href={href}
+          id={id}
+          title={title}
+          hero_thumb_url={hero_thumb_url}
+          hero_alt_text={hero_alt_text}
+          ytMedia={ytMedia}
+          priority={priority}
+        />
+      )}
+
+      <CardBody
         href={href}
-        className="relative block aspect-video w-full overflow-hidden bg-surface-raised"
-        tabIndex={-1}
-        aria-hidden="true"
-      >
-        {hero_thumb_url ? (
-          <Image
-            src={hero_thumb_url}
-            alt={hero_alt_text ?? title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc((100vw - 3rem) / 2), (max-width: 1280px) calc((100vw - 4rem) / 3), 360px"
-            quality={75}
-            priority={priority}
-          />
-        ) : (
-          <GradientPlaceholder id={id} />
-        )}
-      </Link>
+        title={title}
+        excerptHtml={excerptHtml}
+        displayTagSlugs={displayTagSlugs}
+        primaryTag={primaryTag}
+        secondaryTag={secondaryTag}
+        overflowMobile={overflowMobile}
+        overflowDesktop={overflowDesktop}
+      />
 
-      {/* Text region */}
-      <div className="flex flex-col flex-1 p-4 gap-2">
-        {/* Meta row */}
-        <div className="flex items-center gap-2 text-xs text-muted">
-          <span className={`rounded-full px-2 py-0.5 font-medium ${
-            content_stream === 'pulse'
-              ? 'bg-pulse-chip-bg text-pulse-chip-fg'
-              : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-          }`}>
-            {content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'}
-          </span>
-          {primaryTag && <span className="truncate text-muted">{primaryTag}</span>}
-          {secondaryTag && <span className="hidden truncate text-muted/80 lg:inline">{secondaryTag}</span>}
-          <span className="ml-auto shrink-0">{formatDate(published_at)}</span>
-        </div>
-
-        {/* Title */}
-        <Link href={href} className="focus:outline-none min-h-[44px] flex items-start">
-          <h2 className="text-base font-semibold leading-snug line-clamp-2 text-primary transition-colors motion-reduce:transition-none group-hover:text-primary/80">
-            {title}
-          </h2>
-        </Link>
-
-        {/* Excerpt */}
-        {excerpt && (
-          <p className="text-sm leading-relaxed text-muted line-clamp-3 lg:line-clamp-4">
-            {excerpt}
-          </p>
-        )}
-
-        {/* Footer */}
-        <div className="mt-auto flex items-center gap-2 border-t border-border/70 pt-2 text-xs">
-          <Link
-            href={href}
-            className="inline-flex min-h-[44px] items-center rounded-md px-2 font-medium text-muted transition-colors hover:text-primary active:bg-surface-raised"
-          >
-            View Full Article
-          </Link>
-          {source_url && sourceHost && (
-            <a
-              href={source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden min-h-[44px] items-center rounded-md px-2 text-muted/90 transition-colors hover:text-primary active:bg-surface-raised sm:inline-flex"
-            >
-              Source: {sourceHost} ↗
-            </a>
-          )}
-          <div className="ml-auto shrink-0">
-            <BookmarkButton
-              articleId={id}
-              initialBookmarked={initialBookmarked}
-              isAuthenticated={isAuthenticated}
-              variant="card"
-            />
-          </div>
-        </div>
-      </div>
+      <CardFooter
+        href={href}
+        source_url={source_url}
+        sourceHost={sourceHost}
+        published_at={published_at}
+        articleId={id}
+        isAuthenticated={isAuthenticated}
+        initialBookmarked={initialBookmarked}
+      />
     </article>
   )
 }

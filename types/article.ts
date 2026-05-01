@@ -10,6 +10,8 @@ export type ArticleCardProps = {
   slug: string
   title: string
   excerpt: string | null
+  /** Sanitized HTML from markdown excerpt — populated by attachExcerptHtml in lib/ui/excerpt-markdown.ts. Empty string when excerpt is null/empty. */
+  excerptHtml: string
   content_stream: 'standard' | 'pulse'
   published_at: string        // ISO string — DB timestamptz serialized
   hero_thumb_url: string | null
@@ -18,6 +20,18 @@ export type ArticleCardProps = {
   hero_video_id: string | null
   tag_slugs: string[]
   source_url: string | null
+  /**
+   * Up to 4 image rows from `article_media` (kind='image', sort_order ASC).
+   * Populated only by the feed query (Phase 14); other surfaces leave it `[]`.
+   * The card renders the multi-image grid when length ≥ 2; otherwise falls
+   * back to single-hero rendering using `hero_thumb_url`.
+   */
+  images: CardImage[]
+}
+
+export type CardImage = {
+  url: string
+  alt: string | null
 }
 
 /**

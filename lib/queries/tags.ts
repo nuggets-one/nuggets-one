@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+import { getPublicClient } from '@/lib/supabase/public'
 import type { TagSummary } from '@/types/article'
 
 export async function listOfficialTags(): Promise<TagSummary[]> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('tags')
@@ -23,7 +23,7 @@ export async function listOfficialTags(): Promise<TagSummary[]> {
  * Not called from public routes.
  */
 export async function listAllTags(): Promise<TagSummary[]> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('tags')

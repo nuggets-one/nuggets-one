@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getPublicClient } from '@/lib/supabase/public'
 import { notFound } from 'next/navigation'
 import type { ArticleDetail, ContentStream } from '@/types/article'
 
@@ -20,7 +20,7 @@ export async function suggestArticles({
 }): Promise<SuggestionRow[]> {
   if (!q || q.trim().length < 2) return []
 
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('articles')
@@ -73,7 +73,7 @@ const DETAIL_SELECT = `
 export async function getArticleById(
   id: string
 ): Promise<ArticleDetail> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('articles')
@@ -111,7 +111,7 @@ export async function getArticleMeta(id: string): Promise<{
   hero_thumb_url: string | null
   slug: string
 } | null> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('articles')
@@ -131,7 +131,7 @@ export async function getArticleMeta(id: string): Promise<{
 export async function getArticleSlugById(
   id: string
 ): Promise<{ id: string; slug: string } | null> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('articles')
@@ -152,7 +152,7 @@ export async function getArticleSlugById(
 export async function getArticleIdBySlug(
   slug: string
 ): Promise<{ id: string; currentSlug: string } | null> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('articles')
@@ -163,5 +163,6 @@ export async function getArticleIdBySlug(
 
   if (error || !data) return null
 
-  return { id: data.id, currentSlug: data.slug }
+  const row = data as unknown as { id: string; slug: string }
+  return { id: row.id, currentSlug: row.slug }
 }

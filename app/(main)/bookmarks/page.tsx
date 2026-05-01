@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getBookmarkedArticles } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
+import { StatusBlock } from '@/components/ui/status-block'
 import { createClient } from '@/lib/supabase/server'
 
 // Bookmarks are user-specific — never ISR
@@ -28,20 +28,14 @@ export default async function BookmarksPage() {
       </div>
 
       {articles.length === 0 ? (
-        <div className="py-16 text-center">
-          <p className="text-base font-semibold text-primary mb-1">Nothing saved yet.</p>
-          <p className="text-sm text-muted mb-6">
-            Bookmark nuggets from Home to revisit them here.
-          </p>
-          <Link
-            href="/"
-            className="text-sm font-medium text-primary underline underline-offset-2"
-          >
-            Browse Home
-          </Link>
-        </div>
+        <StatusBlock
+          heading="Nothing saved yet."
+          body="Bookmark nuggets from Home to revisit them here."
+          linkHref="/"
+          linkLabel="Browse Home"
+        />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
           {articles.map((article, index) => (
             <ArticleCard
               key={article.id}

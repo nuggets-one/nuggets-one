@@ -2,14 +2,18 @@
 
 // Logged-out: redirects to /login?next=<currentPath> — no auth modal (PRODUCT §0.7)
 
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { toggleBookmarkAction } from '@/lib/actions/bookmarks'
+import {
+  BOOKMARK_HYDRATED_EVENT,
+  type BookmarkHydratedDetail,
+} from '@/components/ui/bookmark-batch-hydrator'
 
 type Props = {
   articleId: string
   initialBookmarked: boolean
-  isAuthenticated: boolean
+  isAuthenticated?: boolean
   variant?: 'card' | 'detail'
 }
 
@@ -24,11 +28,22 @@ export function BookmarkButton({
   const [bookmarked, setBookmarked] = useState(initialBookmarked)
   const [isPending, setIsPending] = useState(false)
 
+  useEffect(() => {
+    function handleHydrated(event: Event) {
+      const detail = (event as CustomEvent<BookmarkHydratedDetail>).detail
+      if (!detail?.bookmarkedIds || !detail.articleIds?.includes(articleId)) return
+      setBookmarked(detail.bookmarkedIds.includes(articleId))
+    }
+
+    window.addEventListener(BOOKMARK_HYDRATED_EVENT, handleHydrated)
+    return () => window.removeEventListener(BOOKMARK_HYDRATED_EVENT, handleHydrated)
+  }, [articleId])
+
   async function handleClick(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
     e.stopPropagation()
 
-    if (!isAuthenticated) {
+    if (isAuthenticated === false) {
       router.push(`/login?next=${encodeURIComponent(pathname)}`)
       return
     }

@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { upsertNotifications } from '@/lib/notifications/fan-out'

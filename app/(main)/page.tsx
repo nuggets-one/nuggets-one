@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { Suspense } from 'react'
-import { cookies } from 'next/headers'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nuggets.one'
 const homeOgImage = `${siteUrl}/og-default.png`
@@ -24,21 +24,15 @@ export const metadata: Metadata = {
 import { unstable_noStore } from 'next/cache'
 import { getFeedPage } from '@/lib/queries/feed'
 import { listOfficialTags } from '@/lib/queries/tags'
-import { getBookmarkedArticleIds } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
+import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
 import { FeedPager } from '@/components/feed/feed-pager'
 import { FeedEmpty } from '@/components/feed/feed-empty'
 import { StreamTabs } from '@/components/feed/stream-tabs'
 import { TagChipRail } from '@/components/feed/tag-chip-rail'
-import { createClient } from '@/lib/supabase/server'
 import { DEFAULT_STREAM } from '@/types/article'
 import type { ContentStream } from '@/types/article'
-
-// S4-F3: revalidate = 120 removed — page is forced dynamic by cookies() in FeedGrid
-// (bookmark hydration requires auth state server-side). Cache ownership lives in the
-// feed data layer (lib/cache.ts revalidateTag) per BLUEPRINT §11. When feed queries
-// move to fetch+next.tags the revalidateTag calls will take effect automatically.
 
 type SearchParams = {
   stream?: string
@@ -63,20 +57,6 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
     unstable_noStore()
   }
 
-  const cookieStore = await cookies()
-  const hasSupabaseAuthCookie = cookieStore
-    .getAll()
-    .some(({ name }) => name.includes('-auth-token'))
-
-  let isAuthenticated = false
-  if (hasSupabaseAuthCookie) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    isAuthenticated = !!user
-  }
-
   const [feedResult, officialTags] = await Promise.all([
     hasFilters
       ? getFeedPage({ stream, tags, q })
@@ -85,7 +65,6 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   ])
 
   const { articles, nextCursor } = feedResult
-  const aboveFoldPriorityCount = 3
   const streamLabel = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
   const resultLabel = `${articles.length} result${articles.length === 1 ? '' : 's'}`
   const contextParts = [
@@ -95,14 +74,21 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   ].filter(Boolean)
 
   // Batch bookmark check — BLUEPRINT: "one batched GET per feed page (24 IDs max)"
-  const bookmarkedIds = isAuthenticated
-    ? await getBookmarkedArticleIds(articles.map((a) => a.id))
-    : new Set<string>()
-
   return (
     <>
       <div className="flex flex-col gap-4 mb-6">
         <StreamTabs />
+        <p className="text-xs text-muted">
+          Filter by{' '}
+          <span className="font-medium text-primary/85">topics</span> below. Explore curated sets on{' '}
+          <Link
+            href="/collections"
+            className="font-medium text-primary underline underline-offset-2 decoration-primary/70 hover:text-primary"
+          >
+            Collections
+          </Link>
+          .
+        </p>
         <TagChipRail tags={officialTags} />
         <p className="text-xs text-muted">
           <span className="font-medium text-primary/85">{resultLabel}</span>
@@ -114,14 +100,14 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       {articles.length === 0 ? (
         <FeedEmpty q={q} hasTags={tags.length > 0} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
+          <BookmarkBatchHydrator articleIds={articles.map((article) => article.id)} />
           {articles.map((article, index) => (
             <ArticleCard
               key={article.id}
               article={article}
-              priority={index < aboveFoldPriorityCount}
-              isAuthenticated={isAuthenticated}
-              initialBookmarked={bookmarkedIds.has(article.id)}
+              priority={index === 0}
+              initialBookmarked={false}
             />
           ))}
         </div>
@@ -129,11 +115,11 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
 
       {articles.length > 0 && (
         <FeedPager
+          key={`${stream}:${[...tags].sort().join(',')}:${q}`}
           initialCursor={nextCursor}
           stream={stream}
           tags={tags}
           q={q}
-          isAuthenticated={isAuthenticated}
         />
       )}
     </>

@@ -9,7 +9,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getFeedPage } from '@/lib/queries/feed'
-import { getBookmarkedArticleIds } from '@/lib/queries/bookmarks'
 import type { ContentStream, FeedCursor } from '@/types/article'
 
 const VALID_STREAMS = new Set(['standard', 'pulse'])
@@ -72,16 +71,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await getFeedPage({ stream, tags, q, cursor })
-    const shouldResolveBookmarks = hasCursor || hasQ
-    const bookmarkedIds = shouldResolveBookmarks
-      ? await getBookmarkedArticleIds(result.articles.map((article) => article.id))
-      : new Set<string>()
 
     return NextResponse.json(
-      {
-        ...result,
-        bookmarkedArticleIds: Array.from(bookmarkedIds),
-      },
+      result,
       {
       headers: {
         'Cache-Control': getCacheControl(stream, hasCursor, hasQ),

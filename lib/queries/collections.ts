@@ -1,16 +1,19 @@
-// unstable_cache is NOT used here: createClient() calls cookies(), which is incompatible
-// with unstable_cache during static prerendering. Page-level revalidate = 300 (ISR)
-// is the correct caching mechanism for fully-public collection routes.
-// Per-collection revalidateTag wired when admin editor ships (PR-14).
+// Per-collection revalidateTag can be wired when a collections admin editor ships.
 
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getPublicClient } from '@/lib/supabase/public'
+import { attachExcerptHtml } from '@/lib/ui/excerpt-markdown'
 import type { CollectionSummary, CollectionDetail } from '@/types/collection'
 import type { ArticleCardProps } from '@/types/article'
 
+// Phase 14: collections doesn't fetch `article_media`; cards stay single-hero.
+// `images: []` is appended in the mapping step below.
+type ArticleRowWithoutImages = Omit<ArticleCardProps, 'excerptHtml' | 'images'>
+type ArticleRow = Omit<ArticleCardProps, 'excerptHtml'>
+
 type CollectionEntryRow = {
   position: number
-  articles: ArticleCardProps | null
+  articles: ArticleRowWithoutImages | null
 }
 
 type CollectionListRow = {
@@ -50,7 +53,7 @@ function deriveCover(
 // ─── List ─────────────────────────────────────────────────────────────
 
 export async function listCollections(): Promise<CollectionSummary[]> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('community_collections')
@@ -63,7 +66,7 @@ export async function listCollections(): Promise<CollectionSummary[]> {
       created_at,
       community_collection_entries ( position, articles ( hero_thumb_url ) )
     `)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -104,7 +107,7 @@ const ARTICLE_FIELDS = `
 `.trim()
 
 export async function getCollectionById(id: string): Promise<CollectionDetail> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('community_collections')
@@ -121,19 +124,21 @@ export async function getCollectionById(id: string): Promise<CollectionDetail> {
       )
     `)
     .eq('id', id)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .single()
 
   if (error || !data) notFound()
 
   const raw = data as unknown as CollectionDetailRow
-  const entries: Array<{ position: number; articles: ArticleCardProps | null }> =
+  const entries: Array<{ position: number; articles: ArticleRowWithoutImages | null }> =
     raw.community_collection_entries ?? []
 
-  const articles: ArticleCardProps[] = entries
+  const rows: ArticleRow[] = entries
     .filter((e) => e.articles != null)
     .sort((a, b) => a.position - b.position)
-    .map((e) => e.articles as ArticleCardProps)
+    .map((e) => ({ ...(e.articles as ArticleRowWithoutImages), images: [] }))
+
+  const articles = await attachExcerptHtml(rows)
 
   const coverEntries = entries.map((e) => ({
     position: e.position,
@@ -157,15 +162,16 @@ export async function getCollectionById(id: string): Promise<CollectionDetail> {
 export async function getCollectionMeta(
   id: string
 ): Promise<{ title: string; description: string | null } | null> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   const { data, error } = await supabase
     .from('community_collections')
     .select('title, description')
     .eq('id', id)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .single()
 
   if (error || !data) return null
-  return { title: data.title as string, description: data.description as string | null }
+  const row = data as unknown as { title: string; description: string | null }
+  return { title: row.title, description: row.description }
 }

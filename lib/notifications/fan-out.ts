@@ -1,4 +1,5 @@
 import 'server-only'
+
 import { getAdminClient } from '@/lib/supabase/admin'
 import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
 

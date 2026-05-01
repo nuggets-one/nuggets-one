@@ -5,9 +5,8 @@ import { ArticleCard } from '@/components/ui/article-card'
 import { CollectionDetailSkeleton } from '@/components/collections/collection-detail-skeleton'
 import { StatusBlock } from '@/components/ui/status-block'
 
-// Moderate revalidate — BLUEPRINT §11 caching table.
-// Per-collection revalidateTag('collection:' + id) wired when admin editor ships (PR-14).
-export const revalidate = 300
+// Public route; rendered at request time so builds do not depend on live Supabase schema state.
+export const dynamic = 'force-dynamic'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -56,7 +55,7 @@ async function CollectionContent({ id }: { id: string }) {
           linkLabel="Browse all collections"
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
           {collection.articles.map((article, index) => (
             <ArticleCard
               key={article.id}

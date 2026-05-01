@@ -1,5 +1,7 @@
 'use server'
 
+import 'server-only'
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -21,7 +23,7 @@ async function requireAdmin() {
 }
 
 export async function createArticleAction(formData: FormData) {
-  await requireAdmin()
+  const user = await requireAdmin()
   const db = createAdminClient()
 
   const title = String(formData.get('title') ?? '').trim()
@@ -53,6 +55,7 @@ export async function createArticleAction(formData: FormData) {
     hero_thumb_url,
     hero_alt_text,
     tag_slugs: [],
+    created_by: user.id,
     status: 'draft',
   })
 

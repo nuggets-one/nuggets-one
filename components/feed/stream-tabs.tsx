@@ -34,7 +34,7 @@ export function StreamTabs() {
               setQ(null)
             })
           }}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[44px] min-w-[44px] ${
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[44px] min-w-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
             stream === value
               ? 'bg-surface text-primary shadow-sm active:bg-surface'
               : 'text-muted hover:text-primary active:bg-surface/70'

@@ -1,11 +1,19 @@
-import { createClient } from '@/lib/supabase/server'
+import { getPublicClient } from '@/lib/supabase/public'
+import { attachExcerptHtml } from '@/lib/ui/excerpt-markdown'
+import { isImageUrl } from '@/lib/ui/is-image-url'
 import type {
   ArticleCardProps,
+  CardImage,
   FeedPage,
   FeedPageParams,
   FeedCursor,
   ContentStream,
 } from '@/types/article'
+
+type ArticleRow = Omit<ArticleCardProps, 'excerptHtml'>
+
+// Phase 14: cap at 4 images per card (2x2 grid + "+N" overlay if more exist).
+const MAX_IMAGES_PER_CARD = 4
 
 const FEED_SELECT = `
   id,
@@ -33,7 +41,7 @@ export async function getFeedPage({
   cursor,
   limit = 24,
 }: FeedPageParams): Promise<FeedPage> {
-  const supabase = await createClient()
+  const supabase = getPublicClient()
 
   // Branch: full-text search vs cursor pagination
   // Search uses textSearch on search_vector — no cursor support PMF
@@ -53,7 +61,7 @@ async function getFeedPageByCursor({
   cursor,
   limit,
 }: {
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: ReturnType<typeof getPublicClient>
   stream: ContentStream
   tags: string[]
   cursor?: FeedCursor
@@ -88,7 +96,9 @@ async function getFeedPageByCursor({
   }
 
   // TODO: replace with generated DB types in later PR
-  const articles = (data ?? []) as unknown as ArticleCardProps[]
+  const rawRows = (data ?? []) as unknown as Omit<ArticleRow, 'images'>[]
+  const rows = await attachImagesToRows(supabase, rawRows)
+  const articles = await attachExcerptHtml(rows)
 
   const nextCursor: FeedCursor | null =
     articles.length === limit
@@ -108,7 +118,7 @@ async function getFeedPageBySearch({
   q,
   limit,
 }: {
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: ReturnType<typeof getPublicClient>
   stream: ContentStream
   tags: string[]
   q: string
@@ -139,9 +149,52 @@ async function getFeedPageBySearch({
 
   // Search results have no stable cursor — return null
   // PR-09 can add pagination for search results if needed post-PMF
+  const rawRows = (data ?? []) as unknown as Omit<ArticleRow, 'images'>[]
+  const rows = await attachImagesToRows(supabase, rawRows)
+  const articles = await attachExcerptHtml(rows)
   return {
-    articles: (data ?? []) as unknown as ArticleCardProps[],
+    articles,
     nextCursor: null,
     stream,
   }
+}
+
+/**
+ * Phase 14: batch-fetch up to 4 image rows per article from `article_media`,
+ * then merge them onto each row as `images`. One query for all article ids,
+ * grouped in memory — no N+1.
+ *
+ * `article_media` has no `alt` column today; we surface `null` and let the
+ * card fall back to article-level alt/title in the renderer.
+ */
+async function attachImagesToRows(
+  supabase: ReturnType<typeof getPublicClient>,
+  rows: Omit<ArticleRow, 'images'>[]
+): Promise<ArticleRow[]> {
+  if (rows.length === 0) return []
+
+  const ids = rows.map((r) => r.id)
+  const { data: mediaRows, error } = await supabase
+    .from('article_media')
+    .select('article_id, url, sort_order')
+    .in('article_id', ids)
+    .eq('kind', 'image')
+    .order('sort_order', { ascending: true })
+
+  if (error) {
+    // Fail open — render single-hero rather than blocking the feed.
+    console.warn(`attachImagesToRows: ${error.message}`)
+    return rows.map((r) => ({ ...r, images: [] }))
+  }
+
+  const byArticle = new Map<string, CardImage[]>()
+  for (const m of (mediaRows ?? []) as { article_id: string; url: string }[]) {
+    if (typeof m.url !== 'string' || !isImageUrl(m.url)) continue
+    const list = byArticle.get(m.article_id) ?? []
+    if (list.length >= MAX_IMAGES_PER_CARD) continue
+    list.push({ url: m.url, alt: null })
+    byArticle.set(m.article_id, list)
+  }
+
+  return rows.map((r) => ({ ...r, images: byArticle.get(r.id) ?? [] }))
 }

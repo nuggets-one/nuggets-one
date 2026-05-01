@@ -8,6 +8,8 @@
 
 **Baseline codebase:** Project-Phoenix (`nuggets_v60`) — patterns referenced include **`NewsCard`** (+ **`GridVariant`**, **`FeedVariant`**, **`MasonryVariant`**), **`ArticleGrid`** (`expanded` URL ↔ **`ArticleDrawer`** sync), **`ArticleModal`**, **`BookmarkButton`**, **`CollectionSelector`**, **`Header`** / **`MobileBottomNav`**, **`FilterStateContext`**, **`ShareMenu`** / **`sharing/`**.
 
+> **Performance-rationale note (added 2026-05-01).** Several rules below were originally framed as defenses against the legacy "click lag" the founder reported. The technical root cause of that lag was `FilterStateContext` cascading re-renders through a fully-hydrated client tree — **not** the count of elements in the header or the existence of a sidebar per se. v2's RSC + `nuqs` + thin-client-island architecture **structurally eliminates** that mechanism: any URL-driven `next/link` or nuqs write is incapable of reproducing the v1 cascade. As a result, the rules below remain in force but the **why** has shifted to: (a) bundle / client-island discipline, (b) editorial cleanliness and content density, (c) one-mental-model simplicity. Where this re-evaluation applies, it is called out inline. See `docs/PERFORMANCE_RULES_REEVALUATION.md` for the full audit and rule-by-rule re-derivation.
+
 ---
 
 ## 0. Vocabulary & frozen decisions (LLM guardrails)
@@ -262,7 +264,7 @@ Implemented via `next-themes` + Tailwind `dark:` + CSS variables (§3 / `BUILD` 
 
 ### 3.3 Header & global chrome (frozen)
 
-**The header stays thin.** v1 nested filter affordances, search overlays, sub-toolbars, and stream switchers in the header — that chrome breadth is a primary cause of the click lag the founder described. v2 collapses the header to four elements; everything else lives in the page body chrome (stream tabs, chip rail — see §11.1).
+**The header stays thin.** v1 nested filter affordances, search overlays, sub-toolbars, and stream switchers in the header. The legacy click-lag the founder reported was technically caused by `FilterStateContext` cascading re-renders through a hydrated client tree — re-derived in `docs/PERFORMANCE_RULES_REEVALUATION.md`; v2 architecture (RSC + `nuqs`) eliminates that mechanism, so a `next/link` in the header would *not* reproduce the lag. The thin-header rule is retained for **content density** (every header pixel is grid pixel lost), **editorial cleanliness** (NYT/Bloomberg/FT/Reuters/Substack/Medium pattern: header = utilities only; destinations live in dropdowns + body chrome + mobile bottom nav), and **client-island discipline** (each interactive header element is potentially +1 hydration cost). v2 collapses the header to four elements; everything else lives in the page body chrome (stream tabs, chip rail — see §11.1) or the avatar dropdown / mobile bottom nav.
 
 #### Desktop header (`≥ 1024px`)
 
@@ -603,12 +605,12 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 
 **No left filter sidebar PMF — explicit decision.** Kills v1's `DesktopFilterSidebar` / `TaxonomySidebar`. Reasons (closed):
 
-1. Sidebar costs ~250px → loses 1 of 3 desktop columns above the fold (33% fewer cards visible on a surface that exists *to surface nuggets*).
-2. A useful sidebar (collapse panels, dimension groups, multi-select widgets) implies a fat client widget tree — fights v2's `nuqs` + Server Component architecture.
-3. Two filter UIs (sidebar desktop + sheet mobile) violates "one mental model" (§2.3).
-4. Curated tags filtered by `is_official = true` (`BLUEPRINT` §2.a) yield ~12–30 chips total — fits a rail.
-5. Tag dimensions (`format / domain / subtopic`) are deferred — flat list PMF, nothing taxonomic to surface in a sidebar.
-6. v1's filter component sprawl (8+ modules feeding `FilterStateContext`) is a primary cause of the click-lag the founder described — re-introducing a sidebar re-introduces the failure mode.
+1. Sidebar costs ~250px → loses 1 of 3 desktop columns above the fold (33% fewer cards visible on a surface that exists *to surface nuggets*). **(content-density argument — primary)**
+2. Two filter UIs (sidebar desktop + sheet mobile) violates "one mental model" (§2.3).
+3. Curated tags filtered by `is_official = true` (`BLUEPRINT` §2.a) yield ~12–30 chips total — fits a rail.
+4. Tag dimensions (`format / domain / subtopic`) are deferred — flat list PMF, nothing taxonomic to surface in a sidebar.
+5. **Client-island discipline.** A useful sidebar (collapse panels, multi-select widgets) implies many interactive elements; even with RSC rendering the chip list, every selectable control is a hydration unit. The chip rail keeps the count to one. *(Note: original framing claimed a sidebar would be "fat client widget tree fighting `nuqs` + RSC" — that framing was technically loose. RSC can render the list cheaply; the real cost is per-control hydration, not tree fatness. Re-evaluation: `PERFORMANCE_RULES_REEVALUATION.md` §2.2.)*
+6. **Historical note (founder click-lag).** v1's filter sprawl (8+ modules feeding `FilterStateContext`) was the technical root cause of the legacy click-lag — context re-render cascade into the hydrated feed grid. v2's `nuqs` + RSC architecture eliminates that mechanism regardless of UI shape, so reintroducing a sidebar would *not* re-introduce that specific failure mode. The decision against a sidebar stands on reasons 1–5 above, **not** click-lag avoidance.
 
 #### Visual hierarchy on Home (top-down)
 

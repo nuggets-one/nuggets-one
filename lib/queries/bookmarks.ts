@@ -1,8 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { attachExcerptHtml } from '@/lib/ui/excerpt-markdown'
 import type { ArticleCardProps } from '@/types/article'
 
+// Phase 14: bookmarks doesn't fetch `article_media`; cards stay single-hero.
+// `images: []` is appended after normalization.
+type ArticleRowWithoutImages = Omit<ArticleCardProps, 'excerptHtml' | 'images'>
+type ArticleRow = Omit<ArticleCardProps, 'excerptHtml'>
+
 type BookmarkWithArticleRow = {
-  articles: ArticleCardProps | ArticleCardProps[] | null
+  articles: ArticleRowWithoutImages | ArticleRowWithoutImages[] | null
 }
 
 export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
@@ -33,44 +39,13 @@ export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
 
   // Relation payload shape can vary with generated DB types (object vs array).
   // Normalize to one article per bookmark row.
-  return (data as BookmarkWithArticleRow[])
+  const rows: ArticleRow[] = (data as BookmarkWithArticleRow[])
     .map((row) => {
       if (!row.articles) return null
       return Array.isArray(row.articles) ? row.articles[0] ?? null : row.articles
     })
-    .filter((article): article is ArticleCardProps => article !== null)
-}
+    .filter((article): article is ArticleRowWithoutImages => article !== null)
+    .map((article) => ({ ...article, images: [] }))
 
-export async function isArticleBookmarked(articleId: string): Promise<boolean> {
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('bookmarks')
-    .select('id')
-    .eq('article_id', articleId)
-    .maybeSingle()
-
-  return !!data
-}
-
-// Batch check — BLUEPRINT: "one batched GET per feed page (24 IDs max) — not per card"
-export async function getBookmarkedArticleIds(
-  articleIds: string[]
-): Promise<Set<string>> {
-  if (!articleIds.length) return new Set()
-
-  const supabase = await createClient()
-  // S3-F6: explicit user_id filter (defense-in-depth on top of RLS)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new Set()
-
-  const { data } = await supabase
-    .from('bookmarks')
-    .select('article_id')
-    .eq('user_id', user.id)
-    .in('article_id', articleIds)
-
-  return new Set(
-    (data ?? []).map((row: { article_id: string }) => row.article_id)
-  )
+  return attachExcerptHtml(rows)
 }

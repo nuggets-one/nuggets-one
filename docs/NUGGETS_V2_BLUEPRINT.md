@@ -247,6 +247,8 @@ Authenticated identifier: `user.id` (uuid). Empty/spoofed IPs all share the `'an
 
 **Why this section exists:** v1's defining failure was **interaction lag** — clicking *View full article*, switching nav tabs, or toggling a filter would stall or hang the page. Root causes: TanStack on the feed firing refetches on filter changes, `FilterStateContext` re-rendering the entire grid, fat per-card click handlers, `useEffect` chains, modal-stack mount cost, no transition isolation. v2 removes these causes architecturally — but the **targets below must be enforced** so they don't creep back in.
 
+> **Re-evaluation note (added 2026-05-01).** A first-principles audit (`docs/PERFORMANCE_RULES_REEVALUATION.md`) confirmed this section's root-cause attribution is technically correct, and re-validated each rule below under the v2 architecture. Several *other* docs (notably `PRODUCT` §3.3 / §11.1) had carried looser framings of the same failure that conflated *header element count* with *context cascade*. Those have been corrected in place. The thresholds here remain authoritative.
+
 **Targets (CI / staging gates — frozen):**
 
 | Metric | Target | Notes |

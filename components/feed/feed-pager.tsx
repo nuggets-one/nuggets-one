@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { ArticleCard } from '@/components/ui/article-card'
 import { ArticleCardSkeleton } from '@/components/ui/article-card-skeleton'
+import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 import { StatusBlock } from '@/components/ui/status-block'
 import type { ArticleCardProps, FeedCursor, ContentStream } from '@/types/article'
 
@@ -11,18 +12,15 @@ type Props = {
   stream: ContentStream
   tags: string[]
   q: string
-  isAuthenticated?: boolean
 }
 
 type FeedApiResponse = {
   articles: ArticleCardProps[]
   nextCursor: FeedCursor | null
-  bookmarkedArticleIds?: string[]
 }
 
-export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = false }: Props) {
+export function FeedPager({ initialCursor, stream, tags, q }: Props) {
   const [cards, setCards] = useState<ArticleCardProps[]>([])
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [cursor, setCursor] = useState<FeedCursor | null>(initialCursor)
   const [isLoading, setIsLoading] = useState(false)
   const [isEnd, setIsEnd] = useState(initialCursor === null)
@@ -57,14 +55,6 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
       const data: FeedApiResponse = await res.json()
 
       setCards((prev) => [...prev, ...data.articles])
-      setBookmarkedIds((prev) => {
-        if (!isAuthenticated || !data.bookmarkedArticleIds?.length) return prev
-        const next = new Set(prev)
-        for (const id of data.bookmarkedArticleIds) {
-          next.add(id)
-        }
-        return next
-      })
       setCursor(data.nextCursor)
       if (!data.nextCursor) setIsEnd(true)
     } catch (e) {
@@ -74,7 +64,7 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
       setIsLoading(false)
       isFetchingRef.current = false
     }
-  }, [cursor, isEnd, stream, tags, q, isAuthenticated])
+  }, [cursor, isEnd, stream, tags, q])
 
   // Abort any in-flight request on unmount
   useEffect(() => {
@@ -89,11 +79,11 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        if (entries[0]?.isIntersecting) {
           fetchNextPage()
         }
       },
-      { rootMargin: '400px' }
+      { root: null, rootMargin: '800px 0px', threshold: 0 }
     )
 
     observer.observe(sentinel)
@@ -103,20 +93,20 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
   return (
     <>
       {cards.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mt-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
+          <BookmarkBatchHydrator articleIds={cards.slice(-24).map((article) => article.id)} />
           {cards.map((article) => (
             <ArticleCard
               key={article.id}
               article={article}
-              isAuthenticated={isAuthenticated}
-              initialBookmarked={bookmarkedIds.has(article.id)}
+              initialBookmarked={false}
             />
           ))}
         </div>
       )}
 
       {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mt-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <ArticleCardSkeleton key={i} />
           ))}
@@ -141,7 +131,13 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated = fa
         <p className="mt-8 text-center text-sm text-muted">You&apos;re all caught up</p>
       )}
 
-      {!isEnd && <div ref={sentinelRef} className="h-px" aria-hidden="true" />}
+      {!isEnd && (
+        <div
+          ref={sentinelRef}
+          className="mt-4 h-3 w-full touch-none select-none"
+          aria-hidden="true"
+        />
+      )}
     </>
   )
 }
