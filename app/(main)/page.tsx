@@ -76,8 +76,14 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   // Batch bookmark check — BLUEPRINT: "one batched GET per feed page (24 IDs max)"
   return (
     <>
-      <div className="flex flex-col gap-4 mb-6">
+      <section
+        className="-mx-4 mb-8 border-b border-border lg:-mx-6"
+        aria-label="Feed stream"
+      >
         <StreamTabs />
+      </section>
+
+      <div className="flex flex-col gap-4 mb-6">
         <p className="text-xs text-muted">
           Filter by{' '}
           <span className="font-medium text-primary/85">topics</span> below. Explore curated sets on{' '}
@@ -132,8 +138,11 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <Suspense fallback={
       <>
+        <div className="-mx-4 mb-8 flex min-h-[48px] animate-pulse border-b border-border lg:-mx-6">
+          <div className="h-11 w-24 rounded-none bg-border/40 sm:w-36" />
+          <div className="ml-6 h-11 w-32 rounded-none bg-border/30 sm:w-44" />
+        </div>
         <div className="flex flex-col gap-4 mb-6">
-          <div className="h-10 w-60 rounded-lg bg-surface-raised animate-pulse" />
           <div className="h-8 w-full rounded-full bg-surface-raised animate-pulse" />
         </div>
         <FeedSkeleton count={6} />

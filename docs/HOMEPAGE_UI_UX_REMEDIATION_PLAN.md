@@ -1,6 +1,6 @@
 # Homepage UI/UX Remediation Plan
 
-**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). Phases 4–10, 12, 14.5 pending.
+**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). **Phase 4 shipped 2026-05-02** (§0h). Phases 5–10, 12, 14.5 pending.
 **Author:** Claude (audit + design pass, 2026-05-01)
 **Source audit:** in-conversation audit covering L1–L4, S1, C1–C6, SR1, AV1, F1.
 **Doc precedence (per `AGENTS.md`):** Migration Plan → Blueprint → Product Behavior & UI → Build Execution → Replication Spec.
@@ -15,7 +15,7 @@
 | 1 | P0 visual fixes (L1, L2, L3, C2, C3, C6) | ✅ **DONE 2026-05-01** | One scope deviation — see §0a below |
 | 2 | YouTube hero fallback (C1) | ✅ **DONE 2026-05-02** | §0f — `youTubePosterHqUrl` when `hero_thumb_url` empty |
 | 3 | Header strip + auth island extension | ✅ **DONE 2026-05-02** | §0g — PRODUCT §3.3 / §2.B |
-| 4 | Stream tabs restyle + mobile bottom nav | ⏳ PENDING | Depends on Phase 3 (done) |
+| 4 | Stream tabs restyle + mobile bottom nav | ✅ **DONE 2026-05-02** | §0h · magazine tabs + **`MobileBottomNav`** |
 | 5 | Site footer | ⏳ PENDING | |
 | 6 | YouTube state machine on detail | ⏳ PENDING | Largest single phase |
 | 7 | Card source badge | ⏳ PENDING | Depends on Phase 1 |
@@ -233,7 +233,7 @@ components/ui/sheet.tsx (new — single client island)
 
 ### 0g. Phase 3 — header strip + auth island (2026-05-02)
 
-**Outcome:** Masthead aligns with **`PRODUCT` §3.3 / plan §2.B** — **`Home` / `Collections` / `Create nugget`** removed from header chrome; destinations for signed-in readers move into the avatar menu (and **`Create nugget`** + **`Admin`** gate on **`app_metadata.is_admin`**). Mobile inline nav row under the header (**Home / Collections / Create**) removed; **Phase 4** adds **`MobileBottomNav`** for thumb reach (<`lg`).
+**Outcome:** Masthead aligns with **`PRODUCT` §3.3 / plan §2.B** — **`Home` / `Collections` / `Create nugget`** removed from header chrome; destinations for signed-in readers move into the avatar menu (and **`Create nugget`** + **`Admin`** gate on **`app_metadata.is_admin`**). Mobile inline nav row under the header removed in this phase; **`MobileBottomNav`** landed in **Phase 4 (§0h)**.
 
 **What shipped:**
 - **`components/layout/header.tsx`** — logo + **`HeaderSearch`** + theme + **`HeaderAuthIsland`** only (no `<nav>` link rows).
@@ -244,7 +244,21 @@ components/ui/sheet.tsx (new — single client island)
 
 **Verification (2026-05-02):** `npm run build` exit 0; **`node scripts/check-bundle-budget.mjs`** → `Home=43117B` `Detail=38472B` (within 85/60 KiB caps).
 
-**Follow-up UX:** Below the **`lg`** breakpoint, anonymous users have no header nav chips until Phase 4 bottom nav; logo → **`/`**, direct **`/collections`** URL still works.
+**Follow-up UX (superseded by §0h Phase 4):** Below **`lg`**, destinations use **`MobileBottomNav`** + avatar menu; **`/collections`** URLs remain valid.
+
+---
+
+### 0h. Phase 4 — magazine stream tabs + mobile bottom nav (2026-05-02)
+
+**(a)** **`StreamTabs`** restyled (**§2.A**): text-only **`text-muted`**, active **`text-primary`** + **`border-b-2 border-accent`**; removed pill segmented control; **`-mx-4`/`-mx-6`** + **`border-b`** strip on **`/`** aligns with **`main`** gutters.
+
+**(b)** **`MobileBottomNav`**: **`lg:hidden`** fixed bar — **Nuggets** (`/?stream=standard`), **Pulse** (`/?stream=pulse`), **Collections** (`/collections` + subroutes), **Bookmarks** (`/bookmarks` — anonymous hits follow existing **`redirect`** to **`/login?next=/bookmarks`**); active highlight from **`usePathname()` + `useSearchParams()`** (**`stream`** on **`/`**); **`Link`** uses **`scroll={false}`** for stream hops.
+
+**(c)** **`app/(main)/layout.tsx`**: **`main`** **`pb-20`** on small screens (**`lg:pb-6`**) clears the bottom bar + **`Suspense`** wrapper for **`useSearchParams`**.
+
+**Files:** `components/feed/stream-tabs.tsx`, `components/layout/mobile-bottom-nav.tsx` (new), `app/(main)/layout.tsx`, `app/(main)/page.tsx`.
+
+**Verification (2026-05-02):** `npm run build` exit 0; **`node scripts/check-bundle-budget.mjs`** → **`Home=43534B` `Detail=38839B`** — within caps.
 
 ---
 
@@ -521,9 +535,8 @@ These were not in the original L/S/C/SR/AV/F scheme.
 - **PMF requirement:** required.
 
 ### M2 — Mobile bottom nav
-- **Spec:** `PRODUCT` §3.3 / §14 — 4 destinations (Nuggets · Market Pulse · Collections · Bookmarks). Replication spec §7 same. Fixed bottom, safe-area inset, hidden at `lg+`.
-- **State today:** missing entirely (`Glob components/**/mobile*nav*.tsx` → none).
-- **PMF requirement:** required (gates §2.B option a).
+- **Spec:** `PRODUCT` §3.3 / §14 — 4 destinations (Nuggets · Market Pulse · Collections · Bookmarks). Replication spec §7 same. Fixed bottom, safe-area inset, hidden at **`lg`** and up.
+- **Shipped:** `components/layout/mobile-bottom-nav.tsx` (**Phase 4 / §0h**) — `usePathname` + **`stream`** on `/`; **`lg:hidden`**.
 
 ### M3 — Active filters bar
 - **Spec:** `PRODUCT` §11.1 — between chip rail and grid; renders when `tags` or `q` set; removable pills + right-aligned **Clear all**.
@@ -654,7 +667,8 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 4 — Magazine-style stream tabs + mobile bottom nav (2.A + M2)
+### Phase 4 — Magazine-style stream tabs + mobile bottom nav (2.A + M2) ✅ **COMPLETE 2026-05-02** — **§0h**
+
 **Scope (split into two tightly-coupled deliverables but one PR):**
 
 **(a) StreamTabs restyle — magazine-section nav**
@@ -1051,4 +1065,4 @@ Headline findings:
 
 *Phase 11 is complete (2026-05-02) — see **§0e**.*
 
-**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → ~~3~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). **Phase 3** shipped 2026-05-02 (§0g). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.
+**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → ~~3~~ → ~~4~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). **Phase 3** shipped 2026-05-02 (§0g). **Phase 4** shipped 2026-05-02 (§0h). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.

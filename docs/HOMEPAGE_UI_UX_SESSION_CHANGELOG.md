@@ -13,6 +13,7 @@ Track all homepage-focused UI/UX, performance, and interaction changes made duri
 - **[2026-05-02]** Homepage remediation **Phase 11** (search suggest row cap verification) — see Work execution log below
 - **[2026-05-02]** Homepage remediation **Phase 2** (YouTube hero `hqdefault` fallback when `hero_thumb_url` missing) — see Work execution log below
 - **[2026-05-02]** Homepage remediation **Phase 3** (`PRODUCT` §3.3 header strip + auth island **`isAdmin`**) — see Work execution log below
+- **[2026-05-02]** Homepage remediation **Phase 4** (magazine **StreamTabs** + **`MobileBottomNav`**) — see Work execution log below
 
 ## Work execution log (review trail)
 
@@ -58,6 +59,21 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 **Verification**
 - `npm run build` → exit 0; `node scripts/check-bundle-budget.mjs` → `Home=43117B` `Detail=38472B`.
 - Manual: anon → **Sign in** only; signed-in reader → Bookmarks + Collections, no Admin/Create; admin → Admin + Create nugget present.
+
+### 2026-05-02 — Phase 4 (stream tabs + mobile bottom nav)
+- **Executed:** **`StreamTabs`** magazine underline style (§2.A); full-gutter strip on **`/`**; new **`MobileBottomNav`** (`lg:hidden`, 4 destinations, `usePathname` + `stream`); **`main`** **`pb-20`** + **`Suspense`** for client nav; plan **§0h**, **M2**, §5 Phase 4; this changelog.
+
+**Files touched**
+- `components/feed/stream-tabs.tsx`
+- `components/layout/mobile-bottom-nav.tsx` (new)
+- `app/(main)/layout.tsx`
+- `app/(main)/page.tsx`
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md`
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
+
+**Verification**
+- `npm run build` → exit 0
+- **`node scripts/check-bundle-budget.mjs`** → `Home=43534B` `Detail=38839B`
 
 ## Baseline and Measured Deltas
 Measured with local production Lighthouse runs on `/`:
@@ -117,6 +133,7 @@ Measured with local production Lighthouse runs on `/`:
 - Moved header auth state to server-rendered props (removed client auth sync path).
 - Added auth cookie short-circuit to skip unnecessary auth calls for anonymous requests.
 - **[2026-05-02 Phase 3]** Stripped **`Home` / `Collections` / `Create nugget`** from header; **`isAdmin`** on **`/api/auth/status`**; avatar menu destinations + admin-gated Admin/Create (**`/account`** link dropped per plan).
+- **[2026-05-02 Phase 4]** Magazine **StreamTabs** (accent underline, no pill); **`MobileBottomNav`** on **`<lg`**; **`main`** bottom padding for bar clearance.
 
 ### E) Empty/error status consistency
 - Standardized feed empty and pager error surfaces with shared `StatusBlock`.
@@ -148,7 +165,7 @@ Measured with local production Lighthouse runs on `/`:
 - `bb44fee` feat(homepage): Phase 3 header strip and auth island (isAdmin)
 
 ## Pending (Not Yet Committed)
-Working tree clean after **`bb44fee`** aside from local-only files (`git status`).
+Run `git status` after committing Phase 4 (`git push` clears review).
 
 ## Latest Regression Validation (Post-Polish)
 - Production build status: pass.
@@ -188,12 +205,12 @@ Source-of-truth status table for remediation phases is in `docs/HOMEPAGE_UI_UX_R
 
 **Shipped 2026-05-01:** Phases 1, 13, 14 (Tier 1), 15, 16.  
 **Verified / completed 2026-05-02:** Phase 11 (suggest cap — plan **§0e**).  
-**Shipped code 2026-05-02:** Phase 2 — YouTube **`hqdefault`** fallback (plan **§0f**); Phase 3 — header strip + auth **`isAdmin`** (plan **§0g**).
+**Shipped code 2026-05-02:** Phase 2 (**§0f**), Phase 3 (**§0g**), Phase 4 — **§0h**.
 
 **Explicit sequencing (2026-05-02):** Prerequisite **QA** (Phase 14/15 smoke, cross-cutting checklist rows) and **Lighthouse** re-baseline/triage were intentionally **not** run in this batch; they remain open in **QA Checklist for Final Verification** and **Latest Regression Validation** until the operator runs them or a later session does.
 
 **Pending:**
-- **P1** — Phase 4 (stream tabs restyle + mobile bottom nav — Phase 3 satisfied), Phase 5 (site footer), Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
+- **P1** — Phase 5 (site footer), Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
 - **P2** — Phase 9 (active filters bar), Phase 10 (filters popover + tag counts), Phase 12 (infinite scroll diagnostic).
 - **Follow-up** — Phase 14.5 (Cloudinary `image/fetch` proxy, ~2 weeks after Phase 14 Tier 1).
 
@@ -327,4 +344,19 @@ Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` **§0g** + §5 Phase 3.
 ### Verification
 - `npm run build` before release.
 - Three-role smoke: anonymous / authenticated reader / **`is_admin`** user.
+
+---
+
+## Remediation Plan — Phase 4 shipped (2026-05-02)
+
+Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` **§0h** + §5 Phase 4.
+
+### What changed
+- **`stream-tabs.tsx`** — magazine tabs, **`border-accent`** active rule, horizontal scroll on narrow widths.
+- **`mobile-bottom-nav.tsx`** — four links; bookmarks uses **`/bookmarks`** (server redirect for anon).
+- **`layout.tsx`** — **`pb-20`** / **`lg:pb-6`** on **`main`**; **`Suspense`** around bottom nav.
+- **`page.tsx`** — stream section above intro + chip rail; Suspense skeleton matches strip.
+
+### Verification
+- `npm run build` exit 0; bundle budget script passed (see Work execution log).
 
