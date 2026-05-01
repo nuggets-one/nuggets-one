@@ -4,6 +4,9 @@ import { getArticleById } from '@/lib/queries/article'
 import { ArticleBody } from '@/components/ui/article-body'
 import { BookmarkButton } from '@/components/ui/bookmark-button'
 import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
+import { TimestampLinkInterceptor } from '@/components/ui/timestamp-link-interceptor'
+import { YouTubePlayer } from '@/components/ui/youtube-player'
+import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 
 type Props = {
   id: string
@@ -61,22 +64,39 @@ export async function ArticleContent({ id, slug }: Props) {
         </p>
       )}
 
-      {article.hero_thumb_url && (
-        <div className="relative aspect-video w-full rounded-xl overflow-hidden mb-8 bg-surface-raised">
-          <Image
-            src={article.hero_thumb_url}
-            alt={article.hero_alt_text ?? article.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 672px) 100vw, 672px"
-            quality={80}
-            priority
-          />
-        </div>
+      {article.hero_media_kind === 'youtube' && article.hero_video_id ? (
+        <YouTubePlayer
+          videoId={article.hero_video_id}
+          posterUrl={
+            article.hero_thumb_url?.trim() ||
+            youTubePosterHqUrl(article.hero_video_id)
+          }
+          title={article.title}
+        />
+      ) : (
+        article.hero_thumb_url && (
+          <div className="relative aspect-video w-full rounded-xl overflow-hidden mb-8 bg-surface-raised">
+            <Image
+              src={article.hero_thumb_url}
+              alt={article.hero_alt_text ?? article.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 672px) 100vw, 672px"
+              quality={80}
+              priority
+            />
+          </div>
+        )
       )}
 
       {article.content_markdown ? (
-        <ArticleBody markdown={article.content_markdown} />
+        article.hero_media_kind === 'youtube' && article.hero_video_id ? (
+          <TimestampLinkInterceptor>
+            <ArticleBody markdown={article.content_markdown} />
+          </TimestampLinkInterceptor>
+        ) : (
+          <ArticleBody markdown={article.content_markdown} />
+        )
       ) : (
         <p className="text-muted text-sm italic">No content available.</p>
       )}
