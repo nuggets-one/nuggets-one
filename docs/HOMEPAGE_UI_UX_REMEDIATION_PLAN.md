@@ -1,6 +1,6 @@
 # Homepage UI/UX Remediation Plan
 
-**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (see §0e). Phases 2–10, 12, 14.5 pending.
+**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). Phases 3–10, 12, 14.5 pending.
 **Author:** Claude (audit + design pass, 2026-05-01)
 **Source audit:** in-conversation audit covering L1–L4, S1, C1–C6, SR1, AV1, F1.
 **Doc precedence (per `AGENTS.md`):** Migration Plan → Blueprint → Product Behavior & UI → Build Execution → Replication Spec.
@@ -13,7 +13,7 @@
 | Phase | Description | Status | Notes |
 |---|---|---|---|
 | 1 | P0 visual fixes (L1, L2, L3, C2, C3, C6) | ✅ **DONE 2026-05-01** | One scope deviation — see §0a below |
-| 2 | YouTube hero fallback (C1) | ⏳ PENDING | Next up |
+| 2 | YouTube hero fallback (C1) | ✅ **DONE 2026-05-02** | §0f — `youTubePosterHqUrl` when `hero_thumb_url` empty |
 | 3 | Header strip + auth island extension | ⏳ PENDING | |
 | 4 | Stream tabs restyle + mobile bottom nav | ⏳ PENDING | Depends on Phase 3 |
 | 5 | Site footer | ⏳ PENDING | |
@@ -92,7 +92,7 @@ components/ui/article-card.tsx
 - `getFeedPage`, `getBookmarkedArticles`, `getCollectionById` all run rows through `attachExcerptHtml` before returning.
 - `ArticleCardProps.excerptHtml: string` added to type.
 - `<CardBody>` renders via `dangerouslySetInnerHTML` inside a div with Tailwind arbitrary descendant selectors (`[&_p]:m-0 [&_strong]:font-semibold [&_em]:italic [&_code]:rounded ...`) — no `@tailwindcss/typography` dep.
-- Removed unused `formatExcerptForCard` from `lib/ui/excerpt-card.ts` (file now exports only `isYouTubeUrl`).
+- Removed unused `formatExcerptForCard` from `lib/ui/excerpt-card.ts` (file exported **`isYouTubeUrl`** at Phase 13 ship; **`youTubePosterHqUrl`** added later — **Phase 2 / §0f**).
 
 **Deviation from §2.I — cache key changed from `id+updated_at` to content hash.**
 The plan called for `unstable_cache(['excerpt-html', id, updated_at])`. Investigation showed `articles.updated_at` is not auto-bumped on admin update — there's only the `published_at` freeze trigger, and `lib/actions/admin.ts` `updateArticleAction` does not write `updated_at`. Using `id+updated_at` as the key would cache stale HTML across edits. Three options were weighed:
@@ -222,6 +222,14 @@ components/ui/sheet.tsx (new — single client island)
 **Manual API check (recommended for PR notes):** `GET /api/search/suggest?q=ab&stream=standard` → **≤ 8** objects in **`suggestions`**.
 
 **Automated check:** `npm run build` → exit 0 (2026-05-02).
+
+### 0f. Phase 2 — YouTube hero fallback (C1) — shipped 2026-05-02
+
+**Scope:** When `hero_media_kind === 'youtube'`, `hero_video_id` is set, and **`hero_thumb_url` is absent or whitespace-only**, the card passes **`https://i.ytimg.com/vi/{id}/hqdefault.jpg`** into `<CardMedia/>` (implemented as `youTubePosterHqUrl` + `encodeURIComponent` on the trimmed id). Non-YouTube rows and articles with a stored thumb are unchanged.
+
+**Files:** `components/ui/article-card.tsx`, `lib/ui/excerpt-card.ts` (shared URL helper next to `isYouTubeUrl`).
+
+**`ytMedia` / play overlay:** `hero_media_kind === 'youtube'` is included in **`ytMedia`** so the poster + ▶ treatment applies for the fallback thumb, not only when `source_url` is a YouTube host.
 
 ---
 
@@ -589,10 +597,10 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 2 — Hero image fallback (C1)
+### Phase 2 — Hero image fallback (C1) ✅ **COMPLETE 2026-05-02** — **§0f**
 **Scope:** YouTube fallback URL construction in `ArticleCard`. Out of scope: backfill of legacy non-Cloudinary `hero_thumb_url` rows (separate ops task — list in `docs/CARD_MEDIA_IMAGE_URL_PATTERNS.md` informs the backfill plan).
 
-**Files:** `components/ui/article-card.tsx`.
+**Files:** `components/ui/article-card.tsx`, `lib/ui/excerpt-card.ts` (`youTubePosterHqUrl`).
 
 **Acceptance:**
 - Articles with `hero_media_kind='youtube'` and `hero_video_id` set render `https://i.ytimg.com/vi/{video_id}/hqdefault.jpg` even when `hero_thumb_url` is null.
@@ -1028,4 +1036,4 @@ Headline findings:
 
 *Phase 11 is complete (2026-05-02) — see **§0e**.*
 
-**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.
+**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.

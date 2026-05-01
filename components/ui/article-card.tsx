@@ -2,7 +2,7 @@ import { CardMedia } from '@/components/ui/card-media'
 import { CardBody } from '@/components/ui/card-body'
 import { CardFooter } from '@/components/ui/card-footer'
 import { CardThumbnailGrid } from '@/components/ui/card-thumbnail-grid'
-import { isYouTubeUrl } from '@/lib/ui/excerpt-card'
+import { isYouTubeUrl, youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import type { ArticleCardProps } from '@/types/article'
 
 function getSourceHostLabel(url: string | null): string | null {
@@ -36,6 +36,8 @@ export function ArticleCard({
     published_at,
     hero_thumb_url,
     hero_alt_text,
+    hero_media_kind,
+    hero_video_id,
     tag_slugs,
     source_url,
     images,
@@ -50,9 +52,18 @@ export function ArticleCard({
   const overflowMobile = Math.max(0, displayTagSlugs.length - 1)
   const overflowDesktop = Math.max(0, displayTagSlugs.length - 2)
   const sourceHost = getSourceHostLabel(source_url)
+
+  const trimmedHeroThumb = hero_thumb_url?.trim() ?? ''
+  const youtubePosterFallback =
+    hero_media_kind === 'youtube' && hero_video_id?.trim() && !trimmedHeroThumb
+      ? youTubePosterHqUrl(hero_video_id)
+      : null
+  const heroThumbForCard = trimmedHeroThumb || youtubePosterFallback || null
+
   const ytMedia =
+    hero_media_kind === 'youtube' ||
     isYouTubeUrl(source_url) ||
-    (hero_thumb_url?.toLowerCase().includes('ytimg.com') ?? false)
+    (heroThumbForCard?.toLowerCase().includes('ytimg.com') ?? false)
   const useThumbnailGrid = images.length >= 2
 
   return (
@@ -69,7 +80,7 @@ export function ArticleCard({
           href={href}
           id={id}
           title={title}
-          hero_thumb_url={hero_thumb_url}
+          hero_thumb_url={heroThumbForCard}
           hero_alt_text={hero_alt_text}
           ytMedia={ytMedia}
           priority={priority}

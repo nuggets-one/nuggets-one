@@ -11,6 +11,7 @@ Track all homepage-focused UI/UX, performance, and interaction changes made duri
 - Performance and Lighthouse regression checks
 - Accessibility and reduced-motion compliance updates
 - **[2026-05-02]** Homepage remediation **Phase 11** (search suggest row cap verification) — see Work execution log below
+- **[2026-05-02]** Homepage remediation **Phase 2** (YouTube hero `hqdefault` fallback when `hero_thumb_url` missing) — see Work execution log below
 
 ## Work execution log (review trail)
 
@@ -29,6 +30,19 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 **Verification**
 - `npm run build` → **exit 0** (Next.js 16.2.4, this session)
 - Optional before merge: `GET /api/search/suggest?q=te&stream=standard` → `suggestions.length <= 8`
+
+### 2026-05-02 — Phase 2 (after Phase 11 pushed to `main`)
+- **Executed:** YouTube card hero fallback in `components/ui/article-card.tsx`; shared **`youTubePosterHqUrl`** in `lib/ui/excerpt-card.ts`; remediation plan **§0f** + Phase 2 section marked complete; changelog snapshot updated.
+- **Commits:** Phase 11 on `main` as `f11b342`; Phase 2 — `feat(homepage): YouTube hqdefault fallback when hero thumb missing` (tip SHA: `git log -1 --oneline` after pull — avoid self-edit loops in this log).
+
+**Files touched this batch**
+- `components/ui/article-card.tsx` — derive `heroThumbForCard` from stored thumb or `hqdefault` when `hero_media_kind === 'youtube'` and `hero_video_id` present
+- `lib/ui/excerpt-card.ts` — `youTubePosterHqUrl(videoId)`
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` — §0, **§0f**, §5 Phase 2, resolved build order
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md` — this log, Remaining To-Do, Commits list, Phase 2 shipped section
+
+**Verification**
+- Run `npm run build` before merge (local full build can take several minutes on cold compile).
 
 ## Baseline and Measured Deltas
 Measured with local production Lighthouse runs on `/`:
@@ -113,9 +127,11 @@ Measured with local production Lighthouse runs on `/`:
 - `7ed99ec` fix: respect reduced-motion in card interactions
 - `3e42bf8` feat(homepage): ship remediation Phases 1, 13, 14 (Tier 1), 16
 - `19c4754` feat(homepage): ship Phase 15 — sheet/parallel-route detail
+- `f11b342` fix(search): enforce suggest row cap and document Phase 11
+- _(Phase 2026-05-02)_ `feat(homepage): YouTube hqdefault fallback when hero thumb missing` — see `git log` on `main` for exact SHA.
 
 ## Pending (Not Yet Committed)
-Working tree is clean. The card-image / CSP / focus-visible polish items previously listed here all shipped in `3e42bf8`.
+Working tree clean after Phase 2 commit (confirm with `git status`).
 
 ## Latest Regression Validation (Post-Polish)
 - Production build status: pass.
@@ -154,12 +170,12 @@ Working tree is clean. The card-image / CSP / focus-visible polish items previou
 Source-of-truth status table for remediation phases is in `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` §0. Snapshot:
 
 **Shipped 2026-05-01:** Phases 1, 13, 14 (Tier 1), 15, 16.  
-**Verified / completed 2026-05-02:** Phase 11 (suggest cap — see plan **§0e** and Work execution log above).
+**Verified / completed 2026-05-02:** Phase 11 (suggest cap — plan **§0e**).  
+**Shipped code 2026-05-02:** Phase 2 — YouTube **`hqdefault`** fallback (plan **§0f**).
 
 **Explicit sequencing (2026-05-02):** Prerequisite **QA** (Phase 14/15 smoke, cross-cutting checklist rows) and **Lighthouse** re-baseline/triage were intentionally **not** run in this batch; they remain open in **QA Checklist for Final Verification** and **Latest Regression Validation** until the operator runs them or a later session does.
 
 **Pending:**
-- **P0** — Phase 2 (YouTube hero fallback, single-file, LOW risk).
 - **P1** — Phase 3 (header strip + auth island), Phase 4 (stream tabs restyle + mobile bottom nav, depends on Phase 3), Phase 5 (site footer), Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
 - **P2** — Phase 9 (active filters bar), Phase 10 (filters popover + tag counts), Phase 12 (infinite scroll diagnostic).
 - **Follow-up** — Phase 14.5 (Cloudinary `image/fetch` proxy, ~2 weeks after Phase 14 Tier 1).
@@ -264,4 +280,19 @@ Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` §0e + Phase 11 section (
 ### Verification
 - **`npm run build`** → exit 0 (this session).
 - Optional: **`GET /api/search/suggest?q=…&stream=standard`** → **`suggestions.length ≤ 8`**.
+
+---
+
+## Remediation Plan — Phase 2 shipped (2026-05-02)
+
+Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` **§0f** + Phase 2 section §5.
+
+### What changed
+- **`youTubePosterHqUrl`** in `lib/ui/excerpt-card.ts` — `https://i.ytimg.com/vi/{id}/hqdefault.jpg` with **`encodeURIComponent`** on the trimmed `hero_video_id`.
+- **`ArticleCard`** builds **`heroThumbForCard`**: non-empty **`hero_thumb_url`** wins; else when **`hero_media_kind === 'youtube'`** and **`hero_video_id`** is non-empty after trim, use the **`hqdefault`** URL.
+- **`ytMedia`** includes **`hero_media_kind === 'youtube'`** so the ▶ overlay shows for fallback posters, not only when **`source_url`** is YouTube-mapped.
+
+### Verification
+- `npm run build` on agent environment (recommended before tagging).
+- Spot-check one published article with **`hero_media_kind = youtube`**, **`hero_video_id`** set, **`hero_thumb_url` null** → card shows YouTube CDN image + overlay.
 
