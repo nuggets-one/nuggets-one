@@ -60,7 +60,7 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 - `npm run build` → exit 0; `node scripts/check-bundle-budget.mjs` → `Home=43117B` `Detail=38472B`.
 - Manual: anon → **Sign in** only; signed-in reader → Bookmarks + Collections, no Admin/Create; admin → Admin + Create nugget present.
 
-### 2026-05-02 — Phase 4 (stream tabs + mobile bottom nav)
+### 2026-05-02 — Phase 4 (stream tabs + mobile bottom nav); **`90bc463`** on `main`
 - **Executed:** **`StreamTabs`** magazine underline style (§2.A); full-gutter strip on **`/`**; new **`MobileBottomNav`** (`lg:hidden`, 4 destinations, `usePathname` + `stream`); **`main`** **`pb-20`** + **`Suspense`** for client nav; plan **§0h**, **M2**, §5 Phase 4; this changelog.
 
 **Files touched**
@@ -163,9 +163,10 @@ Measured with local production Lighthouse runs on `/`:
 - `f11b342` fix(search): enforce suggest row cap and document Phase 11
 - _(Phase 2026-05-02)_ `feat(homepage): YouTube hqdefault fallback when hero thumb missing` — see `git log` on `main` for exact SHA.
 - `bb44fee` feat(homepage): Phase 3 header strip and auth island (isAdmin)
+- `90bc463` feat(homepage): Phase 4 magazine stream tabs and mobile bottom nav
 
 ## Pending (Not Yet Committed)
-Run `git status` after committing Phase 4 (`git push` clears review).
+Working tree clean after **`90bc463`** aside from local-only files (`git status`).
 
 ## Latest Regression Validation (Post-Polish)
 - Production build status: pass.
