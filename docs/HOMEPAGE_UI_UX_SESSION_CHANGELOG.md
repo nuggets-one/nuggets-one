@@ -14,6 +14,7 @@ Track all homepage-focused UI/UX, performance, and interaction changes made duri
 - **[2026-05-02]** Homepage remediation **Phase 2** (YouTube hero `hqdefault` fallback when `hero_thumb_url` missing) — see Work execution log below
 - **[2026-05-02]** Homepage remediation **Phase 3** (`PRODUCT` §3.3 header strip + auth island **`isAdmin`**) — see Work execution log below
 - **[2026-05-02]** Homepage remediation **Phase 4** (magazine **StreamTabs** + **`MobileBottomNav`**) — see Work execution log below
+- **[2026-05-02]** Homepage remediation **Phase 5** (**M1** site footer, `legal_pages` + **`Footer`**) — see Work execution log below
 
 ## Work execution log (review trail)
 
@@ -74,6 +75,23 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 **Verification**
 - `npm run build` → exit 0
 - **`node scripts/check-bundle-budget.mjs`** → `Home=43534B` `Detail=38839B`
+
+### 2026-05-02 — Phase 5 (site footer / M1; `legal_pages`)
+- **Executed:** **`legal_pages`** migration + **`listLegalFooterLinks`**, **`components/layout/footer.tsx`** (async, disclaimer + links + ©), **`Suspense`** + skeleton in **`app/(main)/layout.tsx`**, wrapper **`pb-20 lg:pb-6`** for **`main`** + footer vs **`MobileBottomNav`**; **`/legal/contact`** placeholder; remediation plan **§0i**, Phase 5 · **M1**; this changelog; **Remaining To-Do** snapshot.
+
+**Files touched this batch**
+- `supabase/migrations/20240001000008_legal_pages.sql` (new)
+- `lib/queries/legal-pages.ts` (new)
+- `lib/supabase/types.ts` — **`legal_pages`** stub
+- `components/layout/footer.tsx` (new)
+- `app/(main)/layout.tsx`
+- `app/(main)/legal/contact/page.tsx` (new)
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md`
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
+
+**Verification**
+- `npm run build` → exit 0 (Next.js 16.2.4; no expected noise from **`legal_pages`** missing before migration — query falls back quietly)
+- **`node scripts/check-bundle-budget.mjs`** → **`Home=43534B` `Detail=38839B`** — unchanged vs Phase 4
 
 ## Baseline and Measured Deltas
 Measured with local production Lighthouse runs on `/`:
@@ -206,12 +224,12 @@ Source-of-truth status table for remediation phases is in `docs/HOMEPAGE_UI_UX_R
 
 **Shipped 2026-05-01:** Phases 1, 13, 14 (Tier 1), 15, 16.  
 **Verified / completed 2026-05-02:** Phase 11 (suggest cap — plan **§0e**).  
-**Shipped code 2026-05-02:** Phase 2 (**§0f**), Phase 3 (**§0g**), Phase 4 — **§0h**.
+**Shipped code 2026-05-02:** Phase 2 (**§0f**), Phase 3 (**§0g**), Phase 4 — **§0h**, Phase 5 — **§0i**.
 
 **Explicit sequencing (2026-05-02):** Prerequisite **QA** (Phase 14/15 smoke, cross-cutting checklist rows) and **Lighthouse** re-baseline/triage were intentionally **not** run in this batch; they remain open in **QA Checklist for Final Verification** and **Latest Regression Validation** until the operator runs them or a later session does.
 
 **Pending:**
-- **P1** — Phase 5 (site footer), Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
+- **P1** — Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
 - **P2** — Phase 9 (active filters bar), Phase 10 (filters popover + tag counts), Phase 12 (infinite scroll diagnostic).
 - **Follow-up** — Phase 14.5 (Cloudinary `image/fetch` proxy, ~2 weeks after Phase 14 Tier 1).
 

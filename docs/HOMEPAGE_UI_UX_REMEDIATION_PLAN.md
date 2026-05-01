@@ -1,6 +1,6 @@
 # Homepage UI/UX Remediation Plan
 
-**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). **Phase 4 shipped 2026-05-02** (§0h). Phases 5–10, 12, 14.5 pending.
+**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). **Phase 4 shipped 2026-05-02** (§0h). **Phase 5 shipped 2026-05-02** (§0i). Phases 6–10, 12, 14.5 pending.
 **Author:** Claude (audit + design pass, 2026-05-01)
 **Source audit:** in-conversation audit covering L1–L4, S1, C1–C6, SR1, AV1, F1.
 **Doc precedence (per `AGENTS.md`):** Migration Plan → Blueprint → Product Behavior & UI → Build Execution → Replication Spec.
@@ -16,7 +16,7 @@
 | 2 | YouTube hero fallback (C1) | ✅ **DONE 2026-05-02** | §0f — `youTubePosterHqUrl` when `hero_thumb_url` empty |
 | 3 | Header strip + auth island extension | ✅ **DONE 2026-05-02** | §0g — PRODUCT §3.3 / §2.B |
 | 4 | Stream tabs restyle + mobile bottom nav | ✅ **DONE 2026-05-02** | §0h · magazine tabs + **`MobileBottomNav`** |
-| 5 | Site footer | ⏳ PENDING | |
+| 5 | Site footer | ✅ **DONE 2026-05-02** | §0i — `legal_pages` + `Footer` + `/legal/contact` |
 | 6 | YouTube state machine on detail | ⏳ PENDING | Largest single phase |
 | 7 | Card source badge | ⏳ PENDING | Depends on Phase 1 |
 | 8 | Share button (card + detail) | ⏳ PENDING | |
@@ -259,6 +259,24 @@ components/ui/sheet.tsx (new — single client island)
 **Files:** `components/feed/stream-tabs.tsx`, `components/layout/mobile-bottom-nav.tsx` (new), `app/(main)/layout.tsx`, `app/(main)/page.tsx`.
 
 **Verification (2026-05-02):** `npm run build` exit 0; **`node scripts/check-bundle-budget.mjs`** → **`Home=43534B` `Detail=38839B`** — within caps.
+
+---
+
+### 0i. Phase 5 — site footer (M1) — shipped 2026-05-02
+
+**(a)** **`legal_pages`** table + RLS `SELECT USING (true)` + seed rows (**terms**, **privacy**, **contact**); `GRANT SELECT` to **`anon`** / **`authenticated`**.
+
+**(b)** **`listLegalFooterLinks()`** — single `.select('slug, label').order('sort_order')`; hard-coded fallback if the query fails or the table is empty.
+
+**(c)** **`components/layout/footer.tsx`** — disclaimer line (`text-xs text-muted`), `<nav>` of `next/link` to **`/legal/[slug]`**, © **Nuggets** line. Wrapped in **`Suspense`** in **`app/(main)/layout.tsx`** with a skeleton fallback.
+
+**(d)** **`app/(main)/layout.tsx`** — outer **`div`** **`pb-20 lg:pb-6`** wraps **`main`** + footer so **`MobileBottomNav`** does not cover the footer on small viewports (**main** loses bottom padding; footer inherits column clearance).
+
+**(e)** New **`app/(main)/legal/contact/page.tsx`** placeholder (terms/privacy unchanged).
+
+**Files:** `supabase/migrations/20240001000008_legal_pages.sql`, `lib/queries/legal-pages.ts`, `lib/supabase/types.ts` (**`legal_pages`** row stub), `components/layout/footer.tsx`, `app/(main)/layout.tsx`, `app/(main)/legal/contact/page.tsx`.
+
+**Verification (2026-05-02):** `npm run build` exit 0; `node scripts/check-bundle-budget.mjs` → **`Home=43534B` `Detail=38839B`** — within caps (unchanged vs §0h).
 
 ---
 
@@ -531,7 +549,7 @@ These were not in the original L/S/C/SR/AV/F scheme.
 
 ### M1 — Site footer (every page)
 - **Spec:** `PRODUCT` §3.3 — disclaimer + legal links (Terms · Privacy · Contact from `legal_pages`) + brand line. Server Component, no client JS. Mounts on every route. Replication spec §8 confirms placement and density.
-- **State today:** no footer component exists (`Glob components/layout/footer*.tsx` → none). `app/(main)/legal/` is in the `??` list — the legal pages directory has been added but nothing surfaces them.
+- **Shipped 2026-05-02 (Phase 5 / §0i):** `components/layout/footer.tsx` (async Server Component, `Suspense` in layout); `lib/queries/legal-pages.ts` (`listLegalFooterLinks`); migration `20240001000008_legal_pages.sql` (RLS + seed rows); `/legal/contact` placeholder alongside terms/privacy.
 - **PMF requirement:** required.
 
 ### M2 — Mobile bottom nav
@@ -661,7 +679,6 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 - Authenticated non-admin header dropdown shows: Bookmarks · Collections · Sign out (no Admin, no Create).
 - Admin header dropdown additionally shows: Admin · Create nugget.
 - No `/account` link.
-- `Glob components/layout/footer*.tsx` still empty (Phase 5).
 
 **Risk:** LOW — confined to header surfaces.
 
@@ -702,17 +719,16 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 5 — Footer (M1)
-- Server Component, mounts in `app/(main)/layout.tsx` after `<main>`.
-- Pulls legal pages from `legal_pages` table (already migrated per `BLUEPRINT` §15) — single SQL select.
-- Disclaimer line + Terms · Privacy · Contact links + © brand line.
-- No client JS.
+### Phase 5 — Footer (M1) ✅ **COMPLETE 2026-05-02** — **§0i**
+- Async Server Component, mounts in `app/(main)/layout.tsx` after `<main>` (inside **`Suspense`**).
+- Pulls footer links from **`legal_pages`** — single select (`sort_order` ascending); fallback labels if unavailable.
+- Disclaimer line + legal nav + © brand line (`PRODUCT` §3.3).
 
-**Files:** new `components/layout/footer.tsx`; new `lib/queries/legal-pages.ts` (or reuse existing if present in `app/(main)/legal/`).
+**Files:** `supabase/migrations/20240001000008_legal_pages.sql`, `components/layout/footer.tsx`, `lib/queries/legal-pages.ts`, `app/(main)/layout.tsx`, `app/(main)/legal/contact/page.tsx`, `lib/supabase/types.ts`.
 
-**Acceptance:** renders on every `(main)` route; no hydration; bundle delta = 0 (Server Component).
+**Acceptance:** renders on every `(main)` route; no new client bundles for the footer shell.
 
-**Risk:** LOW.
+**Risk:** LOW — **COMPLETE**.
 
 ---
 
