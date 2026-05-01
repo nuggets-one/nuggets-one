@@ -96,17 +96,7 @@ Measured with local production Lighthouse runs on `/`:
 - `19c4754` feat(homepage): ship Phase 15 — sheet/parallel-route detail
 
 ## Pending (Not Yet Committed)
-Current local changes to include in next commit:
-- `components/ui/article-card.tsx`
-  - Guard `next/image` usage to avoid invalid/non-image URL crashes (e.g. PDF URLs).
-- `next.config.ts`
-  - Dev-only CSP `unsafe-eval` allowance to satisfy React dev mode requirements while keeping production CSP strict.
-- `components/feed/stream-tabs.tsx`
-  - Focus-visible ring polish for keyboard navigation.
-- `components/feed/tag-chip-rail.tsx`
-  - Focus-visible ring polish for chips and expand/collapse control.
-- `components/layout/header-search.tsx`
-  - Focus-visible ring polish for clear action and suggestion list items.
+Working tree is clean. The card-image / CSP / focus-visible polish items previously listed here all shipped in `3e42bf8`.
 
 ## Latest Regression Validation (Post-Polish)
 - Production build status: pass.
@@ -137,35 +127,28 @@ Current local changes to include in next commit:
 - [ ] Reduced-motion preference disables non-essential motion.
 - [ ] Keyboard focus ring visibility is clear on stream tabs, chips, and search suggestions.
 - [ ] Lighthouse does not regress from session best known snapshot. (currently failing in latest local runs)
+- [ ] Phase 14 (Tier 1) multi-image grid renders correctly on Twitter / Reddit / Imgur / LinkedIn samples (2/3/4-image cases + `+N` overlay); Cloudinary-only LCP regression unchanged.
+- [ ] Phase 15 sheet smoke checklist (plan §0d): card-click → sheet opens with grid/scroll preserved; Escape & backdrop close; second card click swaps; direct URL paste shows canonical page (no sheet); back/forward toggles; filter change behind open sheet; reduced-motion snap; mobile swipe-down dismiss; tab cycles inside sheet; body scroll locked while open.
 
 ## Remaining To-Do (Plan Completion)
 
-### 1) Performance regression closure (highest priority)
-- [ ] Investigate and resolve Lighthouse regression from best-known snapshot.
-- [ ] Reduce `unused-javascript` opportunity in homepage critical path.
-- [ ] Improve `server-response-time` for homepage path where feasible.
-- [ ] Re-run Lighthouse to establish new stable baseline for launch.
+Source-of-truth status table for remediation phases is in `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` §0. Snapshot:
 
-### 2) Final UX consistency sweep
-- [ ] Verify card action hierarchy is consistent across:
-      `/`, paginated feed, `/bookmarks`, `/collections/[id]`.
-- [ ] Validate tag rail collapse/expand behavior with many selected tags.
-- [ ] Confirm footer action/meta alignment and readability in all feed contexts.
+**Shipped 2026-05-01:** Phases 1, 13, 14 (Tier 1), 15, 16.
+**Pending:**
+- **P0** — Phase 2 (YouTube hero fallback, single-file, LOW risk).
+- **P1** — Phase 3 (header strip + auth island), Phase 4 (stream tabs restyle + mobile bottom nav, depends on Phase 3), Phase 5 (site footer), Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
+- **P2** — Phase 9 (active filters bar), Phase 10 (filters popover + tag counts), Phase 11 (suggest cap verification), Phase 12 (infinite scroll diagnostic).
+- **Follow-up** — Phase 14.5 (Cloudinary `image/fetch` proxy, ~2 weeks after Phase 14 Tier 1).
 
-### 3) Accessibility QA completion
-- [ ] Complete keyboard-only navigation pass across homepage controls.
-- [ ] Verify reduced-motion behavior in browser with system preference enabled.
-- [ ] Run quick contrast pass for active/inactive chips, tabs, and action links.
-
-### 4) Mobile/tablet ergonomic QA
-- [ ] Validate sticky header/search/chip behavior on narrow breakpoints.
-- [ ] Confirm tap target reliability and absence of overlap/mis-taps.
-- [ ] Verify smooth scroll and interaction responsiveness on mobile/tablet.
-
-### 5) Documentation and sign-off package
-- [ ] Update this changelog with final commit hashes and final metrics snapshot.
-- [ ] Add final pass/fail + known risks section for launch readiness.
-- [ ] Link final validation outputs in launch docs/checklist as needed.
+### Cross-cutting QA (still owed before launch sign-off)
+- Phase 14 (Tier 1) browser smoke on Twitter / Reddit / Imgur / LinkedIn samples.
+- Phase 15 sheet smoke checklist (plan §0d).
+- Lighthouse re-baseline after Phases 14 + 15 land — current best snapshot was pre-Phase-14.
+- Card action hierarchy consistency across `/`, paginated feed, `/bookmarks`, `/collections/[id]` (still owed from Phase 16; Phase 7 + Phase 8 will affect this).
+- Keyboard-only navigation pass.
+- Reduced-motion verification in-browser with system preference enabled.
+- Mobile/tablet ergonomic QA (sticky header, tap targets, scroll).
 
 ## Recommended Execution Order
 1. Performance regression closure
