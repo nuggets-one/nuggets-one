@@ -1,6 +1,6 @@
 # Homepage UI/UX Remediation Plan
 
-**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 16 SHIPPED 2026-05-01.** Phases 2–12, 14.5, 15 pending.
+**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** Phases 2–12, 14.5 pending.
 **Author:** Claude (audit + design pass, 2026-05-01)
 **Source audit:** in-conversation audit covering L1–L4, S1, C1–C6, SR1, AV1, F1.
 **Doc precedence (per `AGENTS.md`):** Migration Plan → Blueprint → Product Behavior & UI → Build Execution → Replication Spec.
@@ -26,7 +26,7 @@
 | 12 | Infinite scroll diagnostic | ⏳ PENDING | Only if data shows real failure |
 | 13 | Card-excerpt markdown JIT (§2.I) | ✅ **DONE 2026-05-01** | Server-only via query layer; cache keyed on content hash (deviation — see §0b) |
 | 14 | Multi-image card rendering (§2.J) — Tier 1 | ✅ **DONE 2026-05-01** | Feed-only; bookmarks/collections stay single-hero. See §0c. Phase 14.5 (Cloudinary `image/fetch`) pending ~2 weeks out. |
-| 15 | Sheet/parallel-route detail (§2.K) | ⏳ PENDING | New phase — overrides §7 frozen-out; lifts CLAUDE.md modal ban (scoped) |
+| 15 | Sheet/parallel-route detail (§2.K) | ✅ **DONE 2026-05-01** | See §0d. Smoke checklist must pass before merge. |
 | 16 | Card typography + componentization (§2.L) | ✅ **DONE 2026-05-01** | Card decomposed into media/body/footer; body `text-sm leading-snug tracking-tight`; CTA → quiet `rounded-full` pill |
 
 ### 0a. Phase 1 — what shipped, what deviated
@@ -163,6 +163,43 @@ next.config.ts (remotePatterns + CSP img-src)
 - `<CardThumbnailGrid/>` + `<CardMedia/>` switch external URLs through that helper; drop `unoptimized={true}`.
 - `next.config.ts` `remotePatterns` shrinks back to single entry (`res.cloudinary.com`); CSP `img-src` follows.
 - `lib/ui/card-image-host.ts` becomes effectively a one-host predicate.
+
+### 0d. Phase 15 — what shipped
+
+**Phase 15 shipped 2026-05-01 (build green, Home=42,952B / Detail=38,404B unchanged — sheet ships on the intercept route entrypoint, not the home or canonical-detail bundles):**
+- New `components/ui/article-content.tsx` (Server Component) — extracted from `app/(main)/nuggets/[id]/[slug]/page.tsx`. Same render surface, same slug-canonicalize `permanentRedirect` (close-and-redirect from inside the sheet works because `permanentRedirect` traverses to the canonical URL, exiting the parallel slot).
+- Canonical route `app/(main)/nuggets/[id]/[slug]/page.tsx` slimmed to the `<Suspense>` + metadata wrapper + `<ArticleContent/>` consumer.
+- New `components/ui/sheet.tsx` (`'use client'`, single client island) — bottom sheet on `<lg`, right-anchored side panel on `lg+`. Focus trap (cycles tab inside the panel), Escape closes via `router.back()`, backdrop click closes, swipe-down on mobile dismisses past 80px. Two-frame `requestAnimationFrame` mount toggle drives a `translate-y-full → translate-y-0` (or `translate-x-full → translate-x-0` desktop) transition; `motion-reduce:` snaps without slide. Body scroll locked while open; prior focus restored on unmount.
+- `app/(main)/layout.tsx` accepts the `modal` slot prop and renders it after `<main>`.
+- New `app/(main)/@modal/default.tsx` returning `null` — required so the slot doesn't leak into direct URL hits.
+- New `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` — interceptor; renders `<Sheet>` containing the same `<ArticleContent/>` used by the canonical page.
+
+**Why this is the scoped lift, not a blanket modal ban lift:** the lift is *route-pattern-specific*. `<Sheet>` consumes a route via parallel slots; it is not a `<ModalProvider>` above the grid. The v1 click-lag failure mechanism (FilterStateContext cascade above a fully-hydrated client tree) is structurally absent. Other modal bans (add-to-collection, report, admin CRUD) remain in force.
+
+**Files touched in Phase 15:**
+```
+app/(main)/layout.tsx (modal slot prop)
+app/(main)/nuggets/[id]/[slug]/page.tsx (consumes extracted ArticleContent)
+app/(main)/@modal/default.tsx (new)
+app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx (new)
+components/ui/article-content.tsx (new — extracted Server Component)
+components/ui/sheet.tsx (new — single client island)
+```
+
+**Smoke test required before merge** (per §2.K):
+- Click card from `/?stream=pulse&tags=macro` → sheet opens; URL `/nuggets/[id]/[slug]`; grid behind preserved; scroll position preserved.
+- Press Escape → sheet closes; URL returns to `/?stream=pulse&tags=macro`; scroll preserved; filters preserved.
+- Backdrop click closes sheet.
+- Click another card while sheet open → first sheet closes, second opens.
+- Direct URL paste of `/nuggets/[id]/[slug]` in fresh tab → canonical full page renders, no sheet.
+- Browser back → closes sheet; forward → reopens sheet.
+- Filter change from chip rail with sheet open → grid behind re-fetches; sheet stays open.
+- Reduced-motion: sheet snaps without animation.
+- Mobile (`<lg`): sheet anchors bottom; swipe-down past 80px dismisses.
+- Tab cycles inside sheet (focus trap).
+- Body scroll locked while sheet open.
+
+**Rollback:** revert the Phase 15 commit. `@modal` slot returns to a `null` default; intercept route file removed; canonical route stops consuming the extracted `<ArticleContent/>` (or keeps consuming it — either is fine).
 
 **Verification performed:**
 - `npm run build` exit 0; TypeScript clean.
@@ -969,4 +1006,4 @@ Headline findings:
 | 14 | Multi-image card rendering | P1 | LOW–MED | Phase 16 |
 | 15 | Sheet/parallel-route detail | P1 | MED | Phase 16, Phase 13 |
 
-**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → 15 → 14.5. Phases 16, 13, and 14 (Tier 1) shipped 2026-05-01 (see §0b, §0c). Phase 15 is the largest UX win and consumes the extracted `<ArticleContent/>` plus the sheet primitive. Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1 ships.
+**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.

@@ -92,6 +92,7 @@ Measured with local production Lighthouse runs on `/`:
 - `e3cbd8d` docs: add Vercel hobby follow-up guidance
 - `d1486d3` fix: standardize feed status surfaces with StatusBlock
 - `7ed99ec` fix: respect reduced-motion in card interactions
+- `3e42bf8` feat(homepage): ship remediation Phases 1, 13, 14 (Tier 1), 16
 
 ## Pending (Not Yet Committed)
 Current local changes to include in next commit:
@@ -219,4 +220,26 @@ Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` §2.J + §0c (LOCKED 2026
 
 ### Phase 14.5 follow-up (~2 weeks)
 Wire Cloudinary `image/fetch` proxy: external URLs route through `res.cloudinary.com/{cloud}/image/fetch/...`; `unoptimized={true}` is removed; `remotePatterns` shrinks back to a single entry. Tracked in plan §2.J Tier 2 / §0c.
+
+---
+
+## Remediation Plan — Phase 15 shipped (2026-05-01)
+
+Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` §2.K + §0d (LOCKED 2026-05-01).
+
+### What changed
+- New `components/ui/article-content.tsx` — Server Component extracted from the canonical detail route; consumed by both the canonical page and the intercept slot.
+- `app/(main)/nuggets/[id]/[slug]/page.tsx` slimmed to a `<Suspense>` + metadata wrapper that renders `<ArticleContent/>`.
+- New `components/ui/sheet.tsx` — single `'use client'` island. Bottom sheet on `<lg`, right-anchored side panel on `lg+`. Focus trap, Escape and backdrop close (via `router.back()`), mobile swipe-down dismiss past 80px, body-scroll lock, prior-focus restore. Two-frame RAF mount toggle drives the slide-in transition; `motion-reduce:` snaps.
+- `app/(main)/layout.tsx` accepts the `modal` slot prop and renders it alongside `<main>`.
+- New `app/(main)/@modal/default.tsx` returning `null` (required so the slot doesn't leak into direct URL hits).
+- New `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` — intercept route rendering `<Sheet>` around `<ArticleContent/>`.
+
+### Scope of the modal-ban lift
+Route-pattern-specific. `<Sheet>` is fed by Next 15 parallel slots, not by a context above the grid. The CLAUDE.md "ArticleModal / ArticleDrawer → use /nuggets/[id]/[slug]" rule is overridden only for this route pattern; context-driven modals and the add-to-collection / report / admin-CRUD bans remain in force.
+
+### Verification
+- `npm run build` → exit 0. Intercept route registered as `/(.)nuggets/[id]/[slug]`; canonical `/nuggets/[id]/[slug]` preserved.
+- `node scripts/check-bundle-budget.mjs` → `Home=42952B  Detail=38404B`. Both unchanged from Phase 14 (Tier 1) baseline. Sheet ships in the intercept-route entrypoint, not on Home or canonical Detail.
+- Manual smoke test required before merge — checklist in plan §0d.
 
