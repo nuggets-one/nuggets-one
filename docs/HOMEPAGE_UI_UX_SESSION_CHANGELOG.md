@@ -76,7 +76,7 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 - `npm run build` → exit 0
 - **`node scripts/check-bundle-budget.mjs`** → `Home=43534B` `Detail=38839B`
 
-### 2026-05-02 — Phase 5 (site footer / M1; `legal_pages`)
+### 2026-05-02 — Phase 5 (site footer / M1; `legal_pages`); **`3e76009`** on `main`
 - **Executed:** **`legal_pages`** migration + **`listLegalFooterLinks`**, **`components/layout/footer.tsx`** (async, disclaimer + links + ©), **`Suspense`** + skeleton in **`app/(main)/layout.tsx`**, wrapper **`pb-20 lg:pb-6`** for **`main`** + footer vs **`MobileBottomNav`**; **`/legal/contact`** placeholder; remediation plan **§0i**, Phase 5 · **M1**; this changelog; **Remaining To-Do** snapshot.
 
 **Files touched this batch**
@@ -182,9 +182,10 @@ Measured with local production Lighthouse runs on `/`:
 - _(Phase 2026-05-02)_ `feat(homepage): YouTube hqdefault fallback when hero thumb missing` — see `git log` on `main` for exact SHA.
 - `bb44fee` feat(homepage): Phase 3 header strip and auth island (isAdmin)
 - `90bc463` feat(homepage): Phase 4 magazine stream tabs and mobile bottom nav
+- `3e76009` feat(homepage): Phase 5 site footer with legal_pages and /legal/contact
 
 ## Pending (Not Yet Committed)
-Working tree clean after **`90bc463`** aside from local-only files (`git status`).
+Working tree clean after **`3e76009`** aside from local-only files (`git status`).
 
 ## Latest Regression Validation (Post-Polish)
 - Production build status: pass.
