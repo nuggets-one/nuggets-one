@@ -10,6 +10,25 @@ Track all homepage-focused UI/UX, performance, and interaction changes made duri
 - Header/auth responsiveness and payload reduction
 - Performance and Lighthouse regression checks
 - Accessibility and reduced-motion compliance updates
+- **[2026-05-02]** Homepage remediation **Phase 11** (search suggest row cap verification) — see Work execution log below
+
+## Work execution log (review trail)
+
+Use this section for **time-ordered, reviewable notes** on each batch of work (what was done, why, what was explicitly deferred). Older shipped phases above remain the historical record; new entries append here.
+
+### 2026-05-02 — Phase 11 only (operator request)
+- **Executed:** `suggestArticles` cap verification and hard cap in `lib/queries/article.ts`; docs sync in `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` (**§0e**, status table, Phase 11 section) and this changelog.
+- **Deferred (unchanged, still blocking launch sign-off until run):** prerequisite **QA checklist** items (Phase 14 Tier 1 smoke, Phase 15 sheet smoke, keyboard/reduced-motion/card hierarchy, etc.) — already listed under **QA Checklist for Final Verification**. **Lighthouse** regression triage — already under **Latest Regression Validation**. No duplicate procedure text added; sequencing note under **Remaining To-Do** below.
+
+**Files touched this batch**
+- `lib/queries/article.ts` — `SEARCH_SUGGEST_ROW_CAP`, `.limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))`
+- `lib/queries/index.ts` — re-export `SEARCH_SUGGEST_ROW_CAP`
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` — §0 status, new **§0e**, Phase 11 section marked complete
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md` — this log + pending snapshot update
+
+**Verification**
+- `npm run build` → **exit 0** (Next.js 16.2.4, this session)
+- Optional before merge: `GET /api/search/suggest?q=te&stream=standard` → `suggestions.length <= 8`
 
 ## Baseline and Measured Deltas
 Measured with local production Lighthouse runs on `/`:
@@ -134,11 +153,15 @@ Working tree is clean. The card-image / CSP / focus-visible polish items previou
 
 Source-of-truth status table for remediation phases is in `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` §0. Snapshot:
 
-**Shipped 2026-05-01:** Phases 1, 13, 14 (Tier 1), 15, 16.
+**Shipped 2026-05-01:** Phases 1, 13, 14 (Tier 1), 15, 16.  
+**Verified / completed 2026-05-02:** Phase 11 (suggest cap — see plan **§0e** and Work execution log above).
+
+**Explicit sequencing (2026-05-02):** Prerequisite **QA** (Phase 14/15 smoke, cross-cutting checklist rows) and **Lighthouse** re-baseline/triage were intentionally **not** run in this batch; they remain open in **QA Checklist for Final Verification** and **Latest Regression Validation** until the operator runs them or a later session does.
+
 **Pending:**
 - **P0** — Phase 2 (YouTube hero fallback, single-file, LOW risk).
 - **P1** — Phase 3 (header strip + auth island), Phase 4 (stream tabs restyle + mobile bottom nav, depends on Phase 3), Phase 5 (site footer), Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
-- **P2** — Phase 9 (active filters bar), Phase 10 (filters popover + tag counts), Phase 11 (suggest cap verification), Phase 12 (infinite scroll diagnostic).
+- **P2** — Phase 9 (active filters bar), Phase 10 (filters popover + tag counts), Phase 12 (infinite scroll diagnostic).
 - **Follow-up** — Phase 14.5 (Cloudinary `image/fetch` proxy, ~2 weeks after Phase 14 Tier 1).
 
 ### Cross-cutting QA (still owed before launch sign-off)
@@ -226,4 +249,19 @@ Route-pattern-specific. `<Sheet>` is fed by Next 15 parallel slots, not by a con
 - `npm run build` → exit 0. Intercept route registered as `/(.)nuggets/[id]/[slug]`; canonical `/nuggets/[id]/[slug]` preserved.
 - `node scripts/check-bundle-budget.mjs` → `Home=42952B  Detail=38404B`. Both unchanged from Phase 14 (Tier 1) baseline. Sheet ships in the intercept-route entrypoint, not on Home or canonical Detail.
 - Manual smoke test required before merge — checklist in plan §0d.
+
+---
+
+## Remediation Plan — Phase 11 verified (2026-05-02)
+
+Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` §0e + Phase 11 section (LOCKED plan, amended by audit trail).
+
+### What changed
+- **`SEARCH_SUGGEST_ROW_CAP = 8`** exported from `lib/queries/article.ts` (barrel **`lib/queries/index.ts`**) with doc pointers to Blueprint §6.2a and Product §11.
+- **`suggestArticles`** uses **`.limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))`** so the PMF **8-row** cap cannot be exceeded accidentally by a higher `limit` argument.
+- Confirmed suggest path uses **`textSearch` on `search_vector`** (FTS per blueprint), not title **`ilike`** — no change to ranking shape.
+
+### Verification
+- **`npm run build`** → exit 0 (this session).
+- Optional: **`GET /api/search/suggest?q=…&stream=standard`** → **`suggestions.length ≤ 8`**.
 

@@ -1,6 +1,6 @@
 # Homepage UI/UX Remediation Plan
 
-**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** Phases 2–12, 14.5 pending.
+**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (see §0e). Phases 2–10, 12, 14.5 pending.
 **Author:** Claude (audit + design pass, 2026-05-01)
 **Source audit:** in-conversation audit covering L1–L4, S1, C1–C6, SR1, AV1, F1.
 **Doc precedence (per `AGENTS.md`):** Migration Plan → Blueprint → Product Behavior & UI → Build Execution → Replication Spec.
@@ -22,7 +22,7 @@
 | 8 | Share button (card + detail) | ⏳ PENDING | |
 | 9 | Active filters bar | ⏳ PENDING | Depends on Phase 1 |
 | 10 | Filter popover + tag counts | ⏳ PENDING | Wires the `More` rail trigger (deferred from Phase 1) |
-| 11 | Suggest cap verification | ⏳ PENDING | |
+| 11 | Suggest cap verification | ✅ **DONE 2026-05-02** | Verified + hard cap — see §0e |
 | 12 | Infinite scroll diagnostic | ⏳ PENDING | Only if data shows real failure |
 | 13 | Card-excerpt markdown JIT (§2.I) | ✅ **DONE 2026-05-01** | Server-only via query layer; cache keyed on content hash (deviation — see §0b) |
 | 14 | Multi-image card rendering (§2.J) — Tier 1 | ✅ **DONE 2026-05-01** | Feed-only; bookmarks/collections stay single-hero. See §0c. Phase 14.5 (Cloudinary `image/fetch`) pending ~2 weeks out. |
@@ -205,6 +205,25 @@ components/ui/sheet.tsx (new — single client island)
 - `npm run build` exit 0; TypeScript clean.
 - `node scripts/check-bundle-budget.mjs` → Home=42535B, Detail=38404B — well under 85/60 KiB caps. Phase 13 added 0 KB to client (server-only).
 - Manual browser smoke: not yet performed in this session — recommend before merging Phase 16+13 PR.
+
+### 0e. Phase 11 — suggest row cap verified (2026-05-02)
+
+**Outcome:** **`suggestArticles`** already applied `.limit` with default **8**; enforcement is now explicit for audit and future callers.
+
+**What changed (engineering):**
+- `lib/queries/article.ts` exports **`SEARCH_SUGGEST_ROW_CAP = 8`** with citations to **`NUGGETS_V2_BLUEPRINT.md` §6.2a** and **`NUGGETS_V2_PRODUCT_BEHAVIOR_AND_UI.md` §11**.
+- Query uses **`.limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))`** so no caller can exceed the frozen cap without changing this constant.
+
+**Search shape (verification, no change required):**
+- Suggestions filter via **`textSearch('search_vector', …)`** (weighted **`tsvector`** per blueprint §6.2 / DDL), not **`ilike('%q%', title)`**. The phased plan’s one-line **`ilike` spot-check** was a diagnostic prompt; authoritative contract is FTS on **`search_vector`** per blueprint.
+
+**Files touched:** `lib/queries/article.ts`, `lib/queries/index.ts` (re-export `SEARCH_SUGGEST_ROW_CAP`).
+
+**Manual API check (recommended for PR notes):** `GET /api/search/suggest?q=ab&stream=standard` → **≤ 8** objects in **`suggestions`**.
+
+**Automated check:** `npm run build` → exit 0 (2026-05-02).
+
+---
 
 This plan exists because the user requested a holistic, second/third-order-aware roadmap rather than a piecemeal patch. Implementation proceeds **only after §2 conflicts are resolved**. Phases below are designed to ship independently; each is one PR with a complete vertical (no half-baked features).
 
@@ -506,7 +525,7 @@ These were not in the original L/S/C/SR/AV/F scheme.
 - **My recommendation:** defer. Adds homepage code surface for an onboarding strip that v2 didn't freeze in. Revisit post-PMF.
 
 ### M8 — Suggest endpoint result cap
-- **Spec:** `PRODUCT` §11 — cap 8 rows. Need to verify `suggestArticles` enforces `.limit(8)`. Trivial check.
+- **Spec:** `PRODUCT` §11 — cap 8 rows. **Verified 2026-05-02** — `SEARCH_SUGGEST_ROW_CAP` + `.limit(Math.min(...))` in **`suggestArticles`**; details **§0e**.
 
 ### M9 — `/admin/articles/new` link admin-gate
 - See §2.G.
@@ -548,7 +567,7 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 **Scope:**
 - L2 — `max-w-[1800px]` in `app/(main)/layout.tsx`.
 - L1 — grid breakpoints: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4` everywhere the grid is declared (page, pager, skeleton).
-- L3 — tag rail: drop collapse + Show-more, single horizontal scroll, hide native scrollbar, left/right edge fade pseudo-elements (only show when overflow). End-of-rail `More (N)` chip is a placeholder button (no popover wired yet — that's Phase 11).
+- L3 — tag rail: drop collapse + Show-more, single horizontal scroll, hide native scrollbar, left/right edge fade pseudo-elements (only show when overflow). End-of-rail `More (N)` chip is a placeholder button (no popover wired yet — that's **Phase 10**).
 - C2 — `stripMarkdown` rewrite per spec (links, bold, italic, `[[ts]]`, line markers, newlines) in `lib/ui/excerpt-card.ts` + 120-char ellipsis truncation in `article-card.tsx`.
 - C6 — move date from top meta row to footer meta row on card.
 - C3 — defensive tag filter (`!== 'nuggets' && !== 'pulse'`) + `+N` overflow chip.
@@ -755,12 +774,13 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 11 — Suggest cap verification (M8 / SR1)
-- Confirm `suggestArticles` enforces `.limit(8)`. Add if missing. Spot-check `ilike` vs `textSearch` — `ilike('title', '%q%')` per §11.
+### Phase 11 — Suggest cap verification (M8 / SR1) ✅ **COMPLETE 2026-05-02** — details in **§0e**
+- Confirmed **`suggestArticles`** enforces the **8-row** PMF cap (now **`SEARCH_SUGGEST_ROW_CAP`** + **`.limit(Math.min(…))`**).
+- Spot-check **`ilike` vs `textSearch`:** production path correctly uses FTS on **`search_vector`** per blueprint §6.2a — **do not replace with title `ilike` without explicit product/schema change.**
 
-**Files:** `lib/queries/article.ts`.
+**Files:** `lib/queries/article.ts`, `lib/queries/index.ts` (constant re-export).
 
-**Risk:** LOW — diagnostic + 1-line fix at most.
+**Risk:** LOW — diagnostic + explicit cap enforcement.
 
 ---
 
@@ -1006,4 +1026,6 @@ Headline findings:
 | 14 | Multi-image card rendering | P1 | LOW–MED | Phase 16 |
 | 15 | Sheet/parallel-route detail | P1 | MED | Phase 16, Phase 13 |
 
-**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.
+*Phase 11 is complete (2026-05-02) — see **§0e**.*
+
+**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.

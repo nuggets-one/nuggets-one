@@ -9,10 +9,13 @@ export type SuggestionRow = {
   content_stream: ContentStream
 }
 
+/** PMF cap — `docs/NUGGETS_V2_BLUEPRINT.md` §6.2a · `docs/NUGGETS_V2_PRODUCT_BEHAVIOR_AND_UI.md` §11 */
+export const SEARCH_SUGGEST_ROW_CAP = 8
+
 export async function suggestArticles({
   q,
   stream,
-  limit = 8,
+  limit = SEARCH_SUGGEST_ROW_CAP,
 }: {
   q: string
   stream: ContentStream
@@ -31,7 +34,7 @@ export async function suggestArticles({
       type: 'plain',
       config: 'english',
     })
-    .limit(limit)
+    .limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))
 
   if (error || !data) {
     console.error('suggestArticles error:', error?.message)
