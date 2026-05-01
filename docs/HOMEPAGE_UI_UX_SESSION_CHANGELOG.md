@@ -93,6 +93,7 @@ Measured with local production Lighthouse runs on `/`:
 - `d1486d3` fix: standardize feed status surfaces with StatusBlock
 - `7ed99ec` fix: respect reduced-motion in card interactions
 - `3e42bf8` feat(homepage): ship remediation Phases 1, 13, 14 (Tier 1), 16
+- `19c4754` feat(homepage): ship Phase 15 — sheet/parallel-route detail
 
 ## Pending (Not Yet Committed)
 Current local changes to include in next commit:
