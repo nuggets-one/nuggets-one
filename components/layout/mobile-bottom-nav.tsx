@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 
-function collectionsPathActive(pathname: string) {
-  return pathname === '/collections' || pathname.startsWith('/collections/')
+function pathActive(pathname: string, base: string) {
+  return pathname === base || pathname.startsWith(`${base}/`)
 }
 
 export function MobileBottomNav() {
@@ -15,8 +15,8 @@ export function MobileBottomNav() {
   const onHome = pathname === '/'
   const nuggetsActive = onHome && stream !== 'pulse'
   const pulseActive = onHome && stream === 'pulse'
-  const collectionsActive = collectionsPathActive(pathname)
-  const bookmarksActive = pathname === '/bookmarks'
+  const collectionsActive = pathActive(pathname, '/collections')
+  const bookmarksActive = pathActive(pathname, '/bookmarks')
 
   const cls = (active: boolean) =>
     `flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center px-1.5 pb-2 pt-[10px] text-center text-xs font-semibold leading-tight tracking-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
@@ -35,10 +35,10 @@ export function MobileBottomNav() {
         <Link href="/?stream=pulse" scroll={false} className={cls(pulseActive)}>
           Pulse
         </Link>
-        <Link href="/collections" scroll={false} className={cls(collectionsActive)}>
+        <Link href="/collections" className={cls(collectionsActive)}>
           Collections
         </Link>
-        <Link href="/bookmarks" scroll={false} className={cls(bookmarksActive)}>
+        <Link href="/bookmarks" className={cls(bookmarksActive)}>
           Bookmarks
         </Link>
       </div>

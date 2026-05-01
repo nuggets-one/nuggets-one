@@ -20,6 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_legal_pages_sort ON legal_pages (sort_order ASC);
 
 ALTER TABLE legal_pages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "legal_pages: public read" ON legal_pages;
 CREATE POLICY "legal_pages: public read"
   ON legal_pages FOR SELECT
   USING (true);

@@ -24,7 +24,14 @@ export type Database = {
       community_collection_entries: { Row: Record<string, unknown> }
       article_media: { Row: Record<string, unknown> }
       article_tags: { Row: Record<string, unknown> }
-      legal_pages: { Row: Record<string, unknown> }
+      legal_pages: {
+        Row: {
+          id: string
+          slug: string
+          label: string
+          sort_order: number
+        }
+      }
     }
   }
 }

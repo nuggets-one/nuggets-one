@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Contact — Nuggets',
+  robots: { index: false, follow: false },
 }
 
 export default function ContactLegalPage() {

@@ -36,10 +36,19 @@ if (!databaseUrl) {
 
 const sql = fs.readFileSync(full, 'utf8')
 const pool = new pg.Pool({ connectionString: databaseUrl })
+const client = await pool.connect()
 
 try {
-  await pool.query(sql)
+  await client.query('BEGIN')
+  await client.query(sql)
+  await client.query('COMMIT')
   console.log('OK — applied:', path.relative(ROOT, full))
+} catch (err) {
+  await client.query('ROLLBACK').catch(() => {})
+  console.error('FAILED — rolled back:', path.relative(ROOT, full))
+  console.error(err instanceof Error ? err.message : err)
+  process.exitCode = 1
 } finally {
+  client.release()
   await pool.end()
 }

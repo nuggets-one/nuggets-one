@@ -134,6 +134,14 @@ export function HeaderAuthIsland() {
             Collections
           </Link>
 
+          <Link
+            href="/account"
+            role="menuitem"
+            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+          >
+            Account settings
+          </Link>
+
           {auth.isAdmin ? (
             <>
               <Link
