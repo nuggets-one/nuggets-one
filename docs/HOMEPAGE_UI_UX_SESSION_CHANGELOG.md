@@ -12,6 +12,7 @@ Track all homepage-focused UI/UX, performance, and interaction changes made duri
 - Accessibility and reduced-motion compliance updates
 - **[2026-05-02]** Homepage remediation **Phase 11** (search suggest row cap verification) — see Work execution log below
 - **[2026-05-02]** Homepage remediation **Phase 2** (YouTube hero `hqdefault` fallback when `hero_thumb_url` missing) — see Work execution log below
+- **[2026-05-02]** Homepage remediation **Phase 3** (`PRODUCT` §3.3 header strip + auth island **`isAdmin`**) — see Work execution log below
 
 ## Work execution log (review trail)
 
@@ -43,6 +44,20 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 
 **Verification**
 - Run `npm run build` before merge (local full build can take several minutes on cold compile).
+
+### 2026-05-02 — Phase 3 (header + auth island)
+- **Executed:** Removed masthead **`Home` / `Collections` / `Create nugget`** (desktop + mobile rows). **`GET /api/auth/status`** returns **`isAdmin`**. Avatar menu: **Bookmarks**, **Collections**, **Admin** + **Create nugget** (admin-only), Legal, **Sign out**; **`/account`** removed. Docs: remediation plan **§0g**, §5 Phase 3, **M6**; this changelog.
+
+**Files touched**
+- `components/layout/header.tsx`
+- `components/layout/header-auth-island.tsx`
+- `app/api/auth/status/route.ts`
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md`
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
+
+**Verification**
+- `npm run build` before merge / push.
+- Manual: anon → **Sign in** only; signed-in reader → Bookmarks + Collections, no Admin/Create; admin → Admin + Create nugget present.
 
 ## Baseline and Measured Deltas
 Measured with local production Lighthouse runs on `/`:
@@ -101,6 +116,7 @@ Measured with local production Lighthouse runs on `/`:
 - Added immediate feedback states to header controls.
 - Moved header auth state to server-rendered props (removed client auth sync path).
 - Added auth cookie short-circuit to skip unnecessary auth calls for anonymous requests.
+- **[2026-05-02 Phase 3]** Stripped **`Home` / `Collections` / `Create nugget`** from header; **`isAdmin`** on **`/api/auth/status`**; avatar menu destinations + admin-gated Admin/Create (**`/account`** link dropped per plan).
 
 ### E) Empty/error status consistency
 - Standardized feed empty and pager error surfaces with shared `StatusBlock`.
@@ -129,9 +145,10 @@ Measured with local production Lighthouse runs on `/`:
 - `19c4754` feat(homepage): ship Phase 15 — sheet/parallel-route detail
 - `f11b342` fix(search): enforce suggest row cap and document Phase 11
 - _(Phase 2026-05-02)_ `feat(homepage): YouTube hqdefault fallback when hero thumb missing` — see `git log` on `main` for exact SHA.
+- _(Phase 2026-05-02)_ `feat(homepage): Phase 3 header strip and auth island` — see `git log` on `main` after push.
 
 ## Pending (Not Yet Committed)
-Working tree clean after Phase 2 commit (confirm with `git status`).
+Run `git status` after committing Phase 3 (should be clean once pushed).
 
 ## Latest Regression Validation (Post-Polish)
 - Production build status: pass.
@@ -171,12 +188,12 @@ Source-of-truth status table for remediation phases is in `docs/HOMEPAGE_UI_UX_R
 
 **Shipped 2026-05-01:** Phases 1, 13, 14 (Tier 1), 15, 16.  
 **Verified / completed 2026-05-02:** Phase 11 (suggest cap — plan **§0e**).  
-**Shipped code 2026-05-02:** Phase 2 — YouTube **`hqdefault`** fallback (plan **§0f**).
+**Shipped code 2026-05-02:** Phase 2 — YouTube **`hqdefault`** fallback (plan **§0f**); Phase 3 — header strip + auth **`isAdmin`** (plan **§0g**).
 
 **Explicit sequencing (2026-05-02):** Prerequisite **QA** (Phase 14/15 smoke, cross-cutting checklist rows) and **Lighthouse** re-baseline/triage were intentionally **not** run in this batch; they remain open in **QA Checklist for Final Verification** and **Latest Regression Validation** until the operator runs them or a later session does.
 
 **Pending:**
-- **P1** — Phase 3 (header strip + auth island), Phase 4 (stream tabs restyle + mobile bottom nav, depends on Phase 3), Phase 5 (site footer), Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
+- **P1** — Phase 4 (stream tabs restyle + mobile bottom nav — Phase 3 satisfied), Phase 5 (site footer), Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
 - **P2** — Phase 9 (active filters bar), Phase 10 (filters popover + tag counts), Phase 12 (infinite scroll diagnostic).
 - **Follow-up** — Phase 14.5 (Cloudinary `image/fetch` proxy, ~2 weeks after Phase 14 Tier 1).
 
@@ -295,4 +312,19 @@ Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` **§0f** + Phase 2 sectio
 ### Verification
 - `npm run build` on agent environment (recommended before tagging).
 - Spot-check one published article with **`hero_media_kind = youtube`**, **`hero_video_id`** set, **`hero_thumb_url` null** → card shows YouTube CDN image + overlay.
+
+---
+
+## Remediation Plan — Phase 3 shipped (2026-05-02)
+
+Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` **§0g** + §5 Phase 3.
+
+### What changed
+- **`header.tsx`** — logo, search, theme, auth only; removed primary link `<nav>` (including mobile overflow row).
+- **`/api/auth/status`** — **`isAdmin: user?.app_metadata?.is_admin === true`**.
+- **`header-auth-island.tsx`** — menu links per acceptance; **`/account`** removed.
+
+### Verification
+- `npm run build` before release.
+- Three-role smoke: anonymous / authenticated reader / **`is_admin`** user.
 

@@ -7,10 +7,13 @@ export async function GET() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const isAdmin = user?.app_metadata?.is_admin === true
+
   return NextResponse.json(
     {
       authenticated: !!user,
       email: user?.email ?? null,
+      isAdmin,
     },
     { headers: { 'Cache-Control': 'private, no-store' } }
   )

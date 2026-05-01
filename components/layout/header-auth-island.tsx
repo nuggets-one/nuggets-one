@@ -26,7 +26,7 @@ const NotificationPanel = dynamic(
 type AuthState =
   | { status: 'loading' }
   | { status: 'anonymous' }
-  | { status: 'authenticated'; email: string | null }
+  | { status: 'authenticated'; email: string | null; isAdmin: boolean }
 
 function MenuHeading({ children }: { children: ReactNode }) {
   return (
@@ -44,10 +44,19 @@ export function HeaderAuthIsland() {
 
     fetch('/api/auth/status', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : { authenticated: false }))
-      .then((data: { authenticated?: boolean; email?: string | null }) => {
+      .then(
+        (data: {
+          authenticated?: boolean
+          email?: string | null
+          isAdmin?: boolean
+        }) => {
         if (cancelled) return
         if (data.authenticated) {
-          setAuth({ status: 'authenticated', email: data.email ?? null })
+          setAuth({
+            status: 'authenticated',
+            email: data.email ?? null,
+            isAdmin: data.isAdmin === true,
+          })
         } else {
           setAuth({ status: 'anonymous' })
         }
@@ -110,20 +119,39 @@ export function HeaderAuthIsland() {
           )}
 
           <Link
-            href="/account"
-            role="menuitem"
-            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
-          >
-            Account
-          </Link>
-
-          <Link
             href="/bookmarks"
             role="menuitem"
             className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
           >
             Bookmarks
           </Link>
+
+          <Link
+            href="/collections"
+            role="menuitem"
+            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+          >
+            Collections
+          </Link>
+
+          {auth.isAdmin ? (
+            <>
+              <Link
+                href="/admin/articles"
+                role="menuitem"
+                className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+              >
+                Admin
+              </Link>
+              <Link
+                href="/admin/articles/new"
+                role="menuitem"
+                className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+              >
+                Create nugget
+              </Link>
+            </>
+          ) : null}
 
           <div className="my-2 border-t border-border" />
 

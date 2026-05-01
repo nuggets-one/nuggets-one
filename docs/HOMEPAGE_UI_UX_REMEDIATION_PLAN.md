@@ -1,6 +1,6 @@
 # Homepage UI/UX Remediation Plan
 
-**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). Phases 3–10, 12, 14.5 pending.
+**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). Phases 4–10, 12, 14.5 pending.
 **Author:** Claude (audit + design pass, 2026-05-01)
 **Source audit:** in-conversation audit covering L1–L4, S1, C1–C6, SR1, AV1, F1.
 **Doc precedence (per `AGENTS.md`):** Migration Plan → Blueprint → Product Behavior & UI → Build Execution → Replication Spec.
@@ -14,8 +14,8 @@
 |---|---|---|---|
 | 1 | P0 visual fixes (L1, L2, L3, C2, C3, C6) | ✅ **DONE 2026-05-01** | One scope deviation — see §0a below |
 | 2 | YouTube hero fallback (C1) | ✅ **DONE 2026-05-02** | §0f — `youTubePosterHqUrl` when `hero_thumb_url` empty |
-| 3 | Header strip + auth island extension | ⏳ PENDING | |
-| 4 | Stream tabs restyle + mobile bottom nav | ⏳ PENDING | Depends on Phase 3 |
+| 3 | Header strip + auth island extension | ✅ **DONE 2026-05-02** | §0g — PRODUCT §3.3 / §2.B |
+| 4 | Stream tabs restyle + mobile bottom nav | ⏳ PENDING | Depends on Phase 3 (done) |
 | 5 | Site footer | ⏳ PENDING | |
 | 6 | YouTube state machine on detail | ⏳ PENDING | Largest single phase |
 | 7 | Card source badge | ⏳ PENDING | Depends on Phase 1 |
@@ -230,6 +230,21 @@ components/ui/sheet.tsx (new — single client island)
 **Files:** `components/ui/article-card.tsx`, `lib/ui/excerpt-card.ts` (shared URL helper next to `isYouTubeUrl`).
 
 **`ytMedia` / play overlay:** `hero_media_kind === 'youtube'` is included in **`ytMedia`** so the poster + ▶ treatment applies for the fallback thumb, not only when `source_url` is a YouTube host.
+
+### 0g. Phase 3 — header strip + auth island (2026-05-02)
+
+**Outcome:** Masthead aligns with **`PRODUCT` §3.3 / plan §2.B** — **`Home` / `Collections` / `Create nugget`** removed from header chrome; destinations for signed-in readers move into the avatar menu (and **`Create nugget`** + **`Admin`** gate on **`app_metadata.is_admin`**). Mobile inline nav row under the header (**Home / Collections / Create**) removed; **Phase 4** adds **`MobileBottomNav`** for thumb reach (<`lg`).
+
+**What shipped:**
+- **`components/layout/header.tsx`** — logo + **`HeaderSearch`** + theme + **`HeaderAuthIsland`** only (no `<nav>` link rows).
+- **`app/api/auth/status/route.ts`** — adds **`isAdmin: user?.app_metadata?.is_admin === true`** (same predicate as **`app/admin/layout.tsx`** / **`updateArticleAction`**).
+- **`components/layout/header-auth-island.tsx`** — consumes **`isAdmin`**; menu: **Bookmarks**, **Collections**, **Admin** + **Create nugget** when admin, **Legal** block + **Sign out**; **`/account`** link dropped.
+
+**Files:** `components/layout/header.tsx`, `components/layout/header-auth-island.tsx`, `app/api/auth/status/route.ts`.
+
+**Verification (2026-05-02):** `npm run build` exit 0; **`node scripts/check-bundle-budget.mjs`** → `Home=43117B` `Detail=38472B` (within 85/60 KiB caps).
+
+**Follow-up UX:** Below the **`lg`** breakpoint, anonymous users have no header nav chips until Phase 4 bottom nav; logo → **`/`**, direct **`/collections`** URL still works.
 
 ---
 
@@ -526,7 +541,7 @@ These were not in the original L/S/C/SR/AV/F scheme.
 - **PMF requirement:** required.
 
 ### M6 — Header alignment with §3.3 (cleanup)
-- Today's header has `Home / Collections / Create nugget` links and a `<ThemeToggle/>` in the right cluster — close to spec but the nav links violate §3.3. Resolution depends on §2.B above.
+- **Resolved 2026-05-02** — inline **`Home` / `Collections` / `Create nugget`** chrome removed (**Phase 3 / §0g**); auth island extended per §2.B. Mobile bottom nav waits on **Phase 4**.
 
 ### M7 — Anonymous PublicHomeIntro / ValueStrip / PulseIntroBanner
 - **Source:** Replication spec §3-4 only (v1 onboarding strip). **Not** in `PRODUCT` or `BLUEPRINT` as a PMF requirement.
@@ -612,7 +627,7 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 3 — Header alignment with §3.3 (strip nav, extend auth island)
+### Phase 3 — Header alignment with §3.3 (strip nav, extend auth island) ✅ **COMPLETE 2026-05-02** — **§0g**
 **Scope:**
 - Strip header nav links (`Home`, `Collections`, `Create nugget`) per §2.B.
 - Header reduces to: Logomark + wordmark (left) · `<HeaderSearch/>` (center) · Theme toggle · `<HeaderAuthIsland/>` (right cluster).
@@ -1036,4 +1051,4 @@ Headline findings:
 
 *Phase 11 is complete (2026-05-02) — see **§0e**.*
 
-**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.
+**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → ~~3~~ → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). **Phase 3** shipped 2026-05-02 (§0g). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.
