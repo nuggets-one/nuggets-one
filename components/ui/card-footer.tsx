@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { BookmarkButton } from '@/components/ui/bookmark-button'
+import { ShareButton } from '@/components/ui/share-button'
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -11,6 +12,7 @@ function formatDate(iso: string): string {
 
 type Props = {
   href: string
+  title: string
   published_at: string
   articleId: string
   isAuthenticated: boolean
@@ -19,6 +21,7 @@ type Props = {
 
 export function CardFooter({
   href,
+  title,
   published_at,
   articleId,
   isAuthenticated,
@@ -35,6 +38,9 @@ export function CardFooter({
       <span className="ml-auto shrink-0 text-muted">
         {formatDate(published_at)}
       </span>
+      <div className="shrink-0">
+        <ShareButton title={title} href={href} variant="card" />
+      </div>
       <div className="shrink-0">
         <BookmarkButton
           articleId={articleId}

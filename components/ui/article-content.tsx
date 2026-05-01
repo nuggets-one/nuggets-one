@@ -4,6 +4,7 @@ import { getArticleById } from '@/lib/queries/article'
 import { ArticleBody } from '@/components/ui/article-body'
 import { BookmarkButton } from '@/components/ui/bookmark-button'
 import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
+import { ShareButton } from '@/components/ui/share-button'
 import { TimestampLinkInterceptor } from '@/components/ui/timestamp-link-interceptor'
 import { YouTubePlayer } from '@/components/ui/youtube-player'
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
@@ -130,6 +131,11 @@ export async function ArticleContent({ id, slug }: Props) {
           <BookmarkButton
             articleId={article.id}
             initialBookmarked={false}
+            variant="detail"
+          />
+          <ShareButton
+            title={article.title}
+            href={`/nuggets/${article.id}/${article.slug}`}
             variant="detail"
           />
           <BookmarkBatchHydrator articleIds={[article.id]} />

@@ -104,6 +104,7 @@ export function ArticleCard({
 
       <CardFooter
         href={href}
+        title={title}
         published_at={published_at}
         articleId={id}
         isAuthenticated={isAuthenticated}
