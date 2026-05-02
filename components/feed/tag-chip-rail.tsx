@@ -3,12 +3,15 @@
 import { useQueryState } from 'nuqs'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { TagSummary } from '@/types/article'
+import type { TagCounts } from '@/lib/queries/tag-counts'
+import { FilterPopover } from '@/components/feed/filter-popover'
 
 type Props = {
   tags: TagSummary[]
+  counts?: TagCounts
 }
 
-export function TagChipRail({ tags }: Props) {
+export function TagChipRail({ tags, counts }: Props) {
   const [selectedRaw, setSelected] = useQueryState('tags', {
     defaultValue: '',
     shallow: false,
@@ -82,6 +85,7 @@ export function TagChipRail({ tags }: Props) {
             </button>
           )
         })}
+        <FilterPopover tags={tags} counts={counts ?? {}} />
       </div>
       {showLeftFade && (
         <span

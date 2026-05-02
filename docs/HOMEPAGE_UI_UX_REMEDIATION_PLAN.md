@@ -1,6 +1,6 @@
 # Homepage UI/UX Remediation Plan
 
-**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). **Phase 4 shipped 2026-05-02** (§0h). **Phase 5 shipped 2026-05-02** (§0i). **Phase 7 shipped 2026-05-02** (§0j). **Phase 8 shipped 2026-05-02** (§0k). **Phase 6 shipped 2026-05-02** (§0l). Phases 9, 10, 12, 14.5 pending.
+**Status:** LOCKED — design decisions resolved 2026-05-01. **Amended 2026-05-01 (later)** with §2.I–§2.L (markdown JIT, multi-image, sheet/parallel-route detail, typography). **Phases 1, 13, 14 (Tier 1), 15, 16 SHIPPED 2026-05-01.** **Phase 11 verified 2026-05-02** (§0e). **Phase 2 shipped 2026-05-02** (§0f). **Phase 3 shipped 2026-05-02** (§0g). **Phase 4 shipped 2026-05-02** (§0h). **Phase 5 shipped 2026-05-02** (§0i). **Phase 7 shipped 2026-05-02** (§0j). **Phase 8 shipped 2026-05-02** (§0k). **Phase 6 shipped 2026-05-02** (§0l). **Phase 9 shipped 2026-05-02** (§0m). **Phase 10 shipped 2026-05-02** (§0n). Phase 12 deferred (diagnostic-only, awaits real failure data — §0o); **Phase 14.5 follow-up scheduled remote agent** `trig_01SDqvQfNqxCYY7ySpinPrY6` to fire **2026-05-15T03:30:00Z** (Fri 09:00 IST) — see §0p for prompt + handoff contract.
 **Author:** Claude (audit + design pass, 2026-05-01)
 **Source audit:** in-conversation audit covering L1–L4, S1, C1–C6, SR1, AV1, F1.
 **Doc precedence (per `AGENTS.md`):** Migration Plan → Blueprint → Product Behavior & UI → Build Execution → Replication Spec.
@@ -20,12 +20,12 @@
 | 6 | YouTube state machine on detail | ✅ **DONE 2026-05-02** | §0l — facade poster + lazy iframe + `youtube-seek` event |
 | 7 | Card source badge | ✅ **DONE 2026-05-02** | §0j — top-right pill on media; footer `Source:` link removed |
 | 8 | Share button (card + detail) | ✅ **DONE 2026-05-02** | §0k — `navigator.share` → clipboard fallback with inline label |
-| 9 | Active filters bar | ⏳ PENDING | Depends on Phase 1 |
-| 10 | Filter popover + tag counts | ⏳ PENDING | Wires the `More` rail trigger (deferred from Phase 1) |
+| 9 | Active filters bar | ✅ **DONE 2026-05-02** | §0m — `ActiveFiltersBar` between rail + grid; removable pills + Clear all |
+| 10 | Filter popover + tag counts | ✅ **DONE 2026-05-02** | §0n — `FilterPopover` end-of-rail trigger + `<dialog>` + `getTagCountsForStream` |
 | 11 | Suggest cap verification | ✅ **DONE 2026-05-02** | Verified + hard cap — see §0e |
-| 12 | Infinite scroll diagnostic | ⏳ PENDING | Only if data shows real failure |
+| 12 | Infinite scroll diagnostic | ⏸ DEFERRED | §0o — diagnostic-only; awaits real failure data |
 | 13 | Card-excerpt markdown JIT (§2.I) | ✅ **DONE 2026-05-01** | Server-only via query layer; cache keyed on content hash (deviation — see §0b) |
-| 14 | Multi-image card rendering (§2.J) — Tier 1 | ✅ **DONE 2026-05-01** | Feed-only; bookmarks/collections stay single-hero. See §0c. Phase 14.5 (Cloudinary `image/fetch`) pending ~2 weeks out. |
+| 14 | Multi-image card rendering (§2.J) — Tier 1 | ✅ **DONE 2026-05-01** | Feed-only; bookmarks/collections stay single-hero. See §0c. **Phase 14.5 scheduled** — remote agent `trig_01SDqvQfNqxCYY7ySpinPrY6` fires 2026-05-15T03:30:00Z; see §0p. |
 | 15 | Sheet/parallel-route detail (§2.K) | ✅ **DONE 2026-05-01** | See §0d. Smoke checklist must pass before merge. |
 | 16 | Card typography + componentization (§2.L) | ✅ **DONE 2026-05-01** | Card decomposed into media/body/footer; body `text-sm leading-snug tracking-tight`; CTA → quiet `rounded-full` pill |
 
@@ -330,6 +330,124 @@ components/ui/sheet.tsx (new — single client island)
 **Manual smoke matrix (recommended before merge):** sample articles with (a) YT hero + body timestamps, (b) YT hero + no timestamps, (c) image hero + body timestamps that should be ignored, (d) YT hero with `hero_thumb_url = null` (verify `hqdefault` fallback). On each: poster paints, ▶ overlay visible, iframe absent until first click; click poster → autoplay starts; click `[label](#yt=120)` in body → embed mounts/seeks and scrolls into view; subsequent timestamp click while embed is mounted → seekTo postMessage works (verify in DevTools Console, not Network).
 
 **Follow-up:** wire real telemetry POST when the helper exists — replace `console.log('[telemetry]', …)` in both `youtube-player.tsx` and `share-button.tsx`.
+
+---
+
+### 0m. Phase 9 — active filters bar (M3) — shipped 2026-05-02
+
+**Outcome:** Removable filter pills now sit between the chip rail and the grid, with a right-aligned **Clear all** action. Renders only when `tags.length > 0 || q.length > 0` (stream alone does not count). Result-summary line trimmed to `{N results} | {streamLabel}` since search/tag context is conveyed by the pills.
+
+**What shipped:**
+- New `components/feed/active-filters-bar.tsx` (`'use client'`) — reads `tags` + `q` via `useQueryState({ shallow: false })`; renders `Search: "{q}" ×` pill + one pill per selected tag (label resolved from `TagSummary[]`, slug fallback). Each pill is a `<button>` with `aria-label` for screen readers; click removes that single filter (`startTransition` + `setTagsParam(next.length ? next.join(',') : null)` / `setQ(null)`). **Clear all** writes `null` to both params; `stream` is preserved automatically (different nuqs key).
+- `app/(main)/page.tsx` — imports and mounts `<ActiveFiltersBar tags={officialTags}/>` between `<TagChipRail/>` and the result-summary line. Summary line trimmed: dropped `Search: "{q}"` and `{N} tag filter{s}` parts (now duplicated by the bar) — kept `{resultLabel} | {streamLabel}`.
+
+**Why this matches plan §9 / M3 contract:**
+- Position: between chip rail and grid; not sticky. ✓
+- Removable pill per active filter (`Search: "..." ×`, `{label} ×`). ✓
+- Right-aligned **Clear all**, clears `tags` + `q`, preserves `stream`. ✓
+- All wiring via `nuqs` — no new state. ✓
+- Renders only when filters are active. ✓
+
+**Files:** new `components/feed/active-filters-bar.tsx`; modified `app/(main)/page.tsx`.
+
+**Verification (2026-05-02):** `npm run build` exit 0; `node scripts/check-bundle-budget.mjs` → **`Home=44527B`** (+333 B vs §0l), **`Detail=40615B`** (unchanged — bar ships only on Home). Within 85/60 KiB caps.
+
+**Manual smoke (recommended before merge):**
+- `/?q=taiwan` → `Search: "taiwan" ×` pill + Clear all visible; click ×, q clears, bar disappears.
+- `/?tags=macro,markets` → two tag pills + Clear all; click one × → only that tag removed; click Clear all → both removed.
+- `/?stream=pulse&tags=macro&q=fed` → stream preserved through Clear all; URL becomes `/?stream=pulse`.
+- Anonymous + signed-in: identical (no auth coupling).
+- Reduced-motion: no animation regressions (pills are static, text-only buttons).
+- Keyboard: Tab cycles into each pill; Enter / Space removes; focus visible (`focus-visible:ring-2`).
+
+---
+
+### 0n. Phase 10 — filters popover + tag counts (F1, flat) — shipped 2026-05-02
+
+**Outcome:** End-of-rail `More (N)` chip opens a native `<dialog>` listing every official tag with its published-article count. Search-within-tags input + flat checkbox list (no dimension grouping) + Apply / Cancel / Clear. Selection is staged locally and committed to the `tags` nuqs param on Apply only — Cancel / Esc / backdrop click discard pending changes.
+
+**What shipped:**
+- New `lib/queries/tag-counts.ts` — `getTagCountsForStream(stream)` returns `Record<slug, count>`. In-memory aggregation over `articles.tag_slugs` for `status='published'` rows in the active stream; cached via two `unstable_cache` entries (`['tag-counts','standard']`, `['tag-counts','pulse']`) with `revalidate: 3600`. PostgREST schema-cache misses (`PGRST205` / `42P01`) fail open with `{}`.
+- New `components/feed/filter-popover.tsx` (`'use client'`) — owns both the `More (N)` trigger button (chip-styled) and the `<dialog>`. Trigger fires `dialogRef.current.showModal()`; close fires `dialogRef.current.close()`. `Escape` close + focus trap come from the native dialog top-layer behaviour. Backdrop click is detected by `e.target === dialogRef.current`. On open, local state syncs from the URL (`useQueryState('tags', { shallow: false })`) and the search input is auto-focused next animation frame. Apply commits via `startTransition(() => setTagsParam(...))`; Cancel discards. Clear button (footer) zeroes local selection; disabled when nothing is selected. Apply is disabled until the selection has actually changed.
+- `components/feed/tag-chip-rail.tsx` — accepts optional `counts?: TagCounts` prop and renders `<FilterPopover/>` as the last item in the scroll lane. No expand-in-place behaviour was ever shipped (Phase 1 §0a deviation), so no removal needed.
+- `app/(main)/page.tsx` — fetches `getTagCountsForStream(stream)` in parallel with feed + official tags; passes to `<TagChipRail counts={tagCounts}/>`.
+
+**Why this matches plan §10 / §2.D contract:**
+- Trigger appears at end of rail (`More (N)`) — the chip layout reuses the existing `flex-nowrap` scroll lane. ✓
+- Flat checkbox list, no dimension grouping. ✓
+- Apply commits to URL (`startTransition` so the RSC re-render streams in). ✓
+- Clear resets local selection (Apply still required to commit). ✓
+- Tag counts inline (`{label}` + right-aligned `{count}`). ✓
+- Search-within-tags input filters on label + slug substring (case-insensitive). ✓
+- `nuqs`-only state for the URL; local React state for the unconfirmed selection. ✓
+- Focus trap on open + restore focus to trigger on close (native dialog handles trap; component re-focuses trigger explicitly on `closeDialog`). ✓
+- Mobile sheet: same dialog rendered as a fixed bottom panel via Tailwind overrides (`fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[80vh]`). ✓ Backdrop click closes (no swipe-down dismiss — see deviation below).
+
+**Deviations from §2.D / §10 spec:**
+1. **Counts query — JS aggregation instead of `select unnest(tag_slugs), count(*) ... group by 1`.** Reason: PostgREST does not expose `unnest` aggregation, and the public anon role cannot run arbitrary SQL. The literal SQL would require a Postgres function + a migration, which §2.D did not pre-authorize. The JS aggregation is equivalent in correctness, has identical caching semantics, and ships zero new schema. Cost is one `select tag_slugs from articles where status='published' and content_stream=$1` per stream per cache miss (≤ 1/h), which is small at PMF scale (a few thousand string-array rows). If feed grows to where this becomes costly, the follow-up is to ship an RPC + replace the body of `fetchTagCountsForStream`.
+2. **Desktop placement — centered modal instead of "anchored popover".** Reason: CSS anchor-positioning support is still uneven across browsers (esp. older Safari / Firefox versions in the supported matrix), and a portal-free anchored popover via JS-computed `getBoundingClientRect` fights the native `<dialog>::showModal()` top-layer auto-centering. A centered modal preserves the spec's intent (flat list, search, Apply/Clear, focus trap, no portal lib) and matches mobile bottom-sheet behaviour conceptually (one dialog component, two layouts via Tailwind overrides). If anchored desktop placement becomes a follow-up requirement, the cleanest path is the new CSS Anchor Positioning module on a feature-detect.
+3. **Mobile bottom sheet — no swipe-down dismiss.** The existing `components/ui/sheet.tsx` (Phase 15) implements swipe-down-to-dismiss for the article reader; replicating it inside a `<dialog>` requires either fighting the dialog's `transform` baseline or duplicating the sheet's gesture machinery. PMF scope: backdrop tap + Cancel button + Escape are sufficient close affordances. Swipe-down can be added as a follow-up if user testing shows demand.
+
+**Files:** new `lib/queries/tag-counts.ts`, new `components/feed/filter-popover.tsx`; modified `components/feed/tag-chip-rail.tsx`, `app/(main)/page.tsx`.
+
+**Verification (2026-05-02):** `npm run build` exit 0; `node scripts/check-bundle-budget.mjs` → **`Home=45554B`** (+1027 B vs §0m baseline; well under 85 KiB cap and the §10 acceptance budget of < 4 KiB gzip), **`Detail=40615B`** (unchanged — popover ships only on Home).
+
+**Manual smoke (recommended before merge):**
+- Click `More (N)` chip → dialog opens; search input is auto-focused; existing rail-selected tags appear as pre-checked rows.
+- Type partial label/slug in search → list filters to matches; "No tags match" shown when empty.
+- Toggle a checkbox; Apply enables. Click Cancel → dialog closes, URL `tags` unchanged.
+- Toggle a checkbox; click Apply → dialog closes, URL `tags` reflects new selection, feed re-renders.
+- Click Clear (footer) with selections → all checkboxes clear; Apply commits empty selection (`tags` removed from URL).
+- Press Escape → dialog closes, focus returns to `More (N)` trigger.
+- Click backdrop → dialog closes, focus returns to trigger.
+- Mobile (`<lg`): dialog renders as bottom sheet; same close affordances; max-height 80vh with internal scroll.
+- Reduced-motion: no animation regressions (no transforms applied — opens via dialog default + Tailwind position classes only).
+- Keyboard pass: Tab cycles trigger → search → list checkboxes → Clear → Cancel → Apply; native focus trap keeps cycling inside the dialog.
+
+---
+
+### 0o. Phase 12 — infinite scroll diagnostic — deferred 2026-05-02
+
+**Status:** **DEFERRED — no code change today.** Per §5 / §10, Phase 12 is diagnostic-only ("Only if data shows the issue is real (count > 24 in active stream and sentinel still doesn't trigger). No code change unless evidence demands.").
+
+**Why no work today:** No regression report has been filed against `<FeedPager/>` in this batch; no count-> 24 stream is on hand to reproduce. Shipping speculative `console.debug` + ancestor-overflow probes without a failing case adds noise to a healthy code path and risks landing the diagnostic instrumentation forever (production logs gain noise; future PRs have to clean up). Better to keep the phase open, attached to its trigger ("real failure data"), and revisit when an actual report lands.
+
+**What's pre-positioned (no code yet):** if a report lands, the workflow is:
+1. Reproduce locally with a stream whose published count exceeds 24.
+2. Add a one-shot `console.debug('[feed-pager] io', { intersecting, nextCursor })` inside the `IntersectionObserver` callback in `components/feed/feed-pager.tsx`.
+3. Audit `<FeedPager/>` ancestors for `overflow-hidden` / `contain` — the most common silent breakage.
+4. Confirm the API returns a non-null `nextCursor` for page 2.
+5. Remove the diagnostic before merge.
+
+**Files (when triggered):** `components/feed/feed-pager.tsx` (temporary instrumentation only).
+
+---
+
+### 0p. Phase 14.5 — Cloudinary `image/fetch` proxy — scheduled 2026-05-15
+
+**Status:** **SCHEDULED** — remote routine `trig_01SDqvQfNqxCYY7ySpinPrY6` fires once at **2026-05-15T03:30:00Z** (Friday 09:00 IST), ~2 weeks after Phase 14 Tier 1 shipped (2026-05-01) per §2.J Tier 2 cadence. Manage at https://claude.ai/code/routines/trig_01SDqvQfNqxCYY7ySpinPrY6.
+
+**Why this is a scheduled remote agent rather than a manual pickup:** §2.J Tier 2 was always a "~2 weeks after Tier 1" follow-up — long enough for the Tier 1 `unoptimized={true}` posture to soak in production, short enough to avoid drift. Letting the cadence ride on a one-time routine is more reliable than a calendar reminder, and the work is mechanical enough (URL-template helper + lockstep three-list shrink + smoke verification) for an unattended remote agent given a self-contained brief.
+
+**Pre-flight blockers the operator should resolve before the routine fires:**
+1. **GitHub auth** — at scheduling time, claude.ai flagged `GitHub not connected for nuggets-one/nuggets-one`. The remote agent cannot push a branch or open a PR until the operator runs `/web-setup` or installs the Claude GitHub App on the repo. If still missing on 2026-05-15, the agent will fail at `git push` and surface the failure in its run log.
+2. **Cloudinary cloud name** — Phase 14.5 requires the Cloudinary cloud name available at URL-construction time (suggested env var `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`). The agent's prompt instructs it to open a **draft PR with a blocker note** if no value is configured, rather than invent one.
+3. **Cloudinary `fetch_url_enabled` flag** — must be on for the account. Agent will spot-check and flag in PR description if it cannot verify.
+
+**What the agent will do (full prompt is captured in the routine):**
+1. Read `AGENTS.md`, `CLAUDE.md`, plan §2.J Tier 2, plan §0c, and the Phase 14 Tier 1 git history before writing code.
+2. Run the pre-flight blocker check.
+3. New `lib/ui/cloudinary-fetch.ts` exposing `cloudinaryFetchUrl(externalUrl, opts?)` returning `https://res.cloudinary.com/{cloud}/image/fetch/f_auto,q_auto,w_{opts.width ?? 768}/{encodeURIComponent(externalUrl)}` with graceful fallback when the env var is missing.
+4. `components/ui/card-thumbnail-grid.tsx` + `components/ui/card-media.tsx` — wrap non-Cloudinary, non-`i.ytimg.com` URLs through the helper; drop `unoptimized={true}` and `unoptimized={!shouldOptimizeImage(host)}`.
+5. `lib/ui/card-image-host.ts` — collapse the host predicate to `res.cloudinary.com` + `i.ytimg.com`. Update the three-list lockstep comment.
+6. `next.config.ts` — `images.remotePatterns` shrinks to `res.cloudinary.com` + `i.ytimg.com`. CSP `img-src` mirrors the shrink (drop `pbs.twimg.com`, `i.redd.it`, `preview.redd.it`, `i.imgur.com`, `media.licdn.com`).
+7. Verify: `npm run build` + `node scripts/check-bundle-budget.mjs` + `grep -r 'unoptimized' components/ lib/` returns zero hits in card paths.
+8. Update plan (status table row 14, new §0p body replacing this scheduling note, §10 build order) + changelog (top bullet, work-execution-log entry, Pending snapshot trim).
+9. Open PR `feat(homepage): Phase 14.5 Cloudinary image/fetch proxy` on branch `feat/phase-14-5-cloudinary-fetch`. Draft if any verification step did not pass.
+
+**What this section becomes after the routine runs:** the agent is instructed to **replace this scheduling note with the post-ship body** (outcome, what shipped, files, verification, deviations) when it updates the plan. If the agent leaves a draft PR for blocker reasons, this scheduling note remains and the §0 status table row stays open.
+
+**If the routine fails before the operator notices:** rerun via `https://claude.ai/code/routines/trig_01SDqvQfNqxCYY7ySpinPrY6` ("Run now") after fixing the underlying blocker (GitHub auth / Cloudinary env). The routine is one-shot and auto-disables after the first fire; re-arming requires a `run_once_at` update via the same UI or `RemoteTrigger` API.
 
 ---
 
@@ -846,27 +964,27 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 9 — Active filters bar (M3)
+### Phase 9 — Active filters bar (M3) ✅ **COMPLETE 2026-05-02** — details in **§0m**
 - Renders only when `tags.length > 0 || q.length > 0` (stream alone doesn't count).
-- Removable pill per active filter (`macro ✕`, `q="taiwan" ✕`).
+- Removable pill per active filter (`{label} ✕`, `Search: "{q}" ✕`).
 - Right-aligned **Clear all** clears `tags` + `q`, preserves `stream`.
 - Position: between chip rail and grid; not sticky.
 - All wiring via `nuqs` — no new state.
 
-**Files:** new `components/feed/active-filters-bar.tsx`; modify `app/(main)/page.tsx`.
+**Files:** new `components/feed/active-filters-bar.tsx`; modified `app/(main)/page.tsx`.
 
 **Risk:** LOW.
 
 ---
 
-### Phase 10 — Filters popover with tag counts (F1, flat)
+### Phase 10 — Filters popover with tag counts (F1, flat) ✅ **COMPLETE 2026-05-02** — details in **§0n**
 - Trigger: end-of-rail `More (N)` chip in `tag-chip-rail.tsx` (replaces the current Show-more expand).
-- Desktop: anchored popover (`<details>` + `<dialog>` polyfill, no portal lib) with: search-within-tags input, **flat** checkbox list (no dimension grouping per §2.D), **Apply** and **Clear** buttons.
+- Desktop: anchored popover (`<details>` + `<dialog>` polyfill, no portal lib) with: search-within-tags input, **flat** checkbox list (no dimension grouping per §2.D), **Apply** and **Clear** buttons. (Shipped as centered modal — see §0n deviation.)
 - Mobile: same `<dialog>` rendered as a bottom sheet (`position:fixed; inset-x-0; bottom-0; rounded-t-xl`).
-- **Tag counts inline**: each row shows `Macro · 14`. Counts computed by `select unnest(tag_slugs), count(*) from articles where status='published' and content_stream=$1 group by 1` — cached for 1h via `unstable_cache`.
+- **Tag counts inline**: each row shows `Macro · 14`. Counts computed by `select unnest(tag_slugs), count(*) from articles where status='published' and content_stream=$1 group by 1` — cached for 1h via `unstable_cache`. (Shipped as JS aggregation — see §0n deviation.)
 - Selection writes to `tags` nuqs param. No new deps.
 - Focus trap on open, restore focus to trigger on close.
-- Mobile sheet: swipe-down or backdrop-click closes.
+- Mobile sheet: swipe-down or backdrop-click closes. (Backdrop only — see §0n deviation.)
 
 **Files:** new `components/feed/filter-popover.tsx`; modify `components/feed/tag-chip-rail.tsx`; new `lib/queries/tag-counts.ts`; modify `app/(main)/page.tsx` to pass counts.
 
@@ -890,7 +1008,7 @@ Each phase is one shippable PR. Order is dependency-driven; perf and visible-imp
 
 ---
 
-### Phase 12 — Infinite scroll diagnostic (S1)
+### Phase 12 — Infinite scroll diagnostic (S1) ⏸ **DEFERRED 2026-05-02** — details in **§0o**
 - Only if data shows the issue is real (count > 24 in active stream and sentinel still doesn't trigger).
 - Add a one-shot `console.debug` in the IO callback in dev; verify `nextCursor` is non-null after page 1; check ancestors of `<FeedPager/>` for `overflow-hidden`.
 - No code change unless evidence demands.
@@ -1134,4 +1252,4 @@ Headline findings:
 
 *Phase 11 is complete (2026-05-02) — see **§0e**.*
 
-**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → ~~3~~ → ~~4~~ → ~~5~~ → ~~7~~ → ~~8~~ → ~~6~~ → 9 → 10 → 12 → 14.5. Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). **Phase 3** shipped 2026-05-02 (§0g). **Phase 4** shipped 2026-05-02 (§0h). **Phase 5** shipped 2026-05-02 (§0i). **Phase 7** shipped 2026-05-02 (§0j). **Phase 8** shipped 2026-05-02 (§0k). **Phase 6** shipped 2026-05-02 (§0l). Phase 14.5 (Cloudinary `image/fetch` proxy) remains a follow-up ticket scheduled ~2 weeks after Phase 14 Tier 1.
+**Resolved build order (amendment batch):** ~~16~~ → ~~13~~ → ~~14 (Tier 1)~~ → ~~15~~ → ~~11~~ → ~~2~~ → ~~3~~ → ~~4~~ → ~~5~~ → ~~7~~ → ~~8~~ → ~~6~~ → ~~9~~ → ~~10~~ → ~~12 (deferred)~~ → 14.5 (scheduled). Phases 16, 13, 14 (Tier 1), and 15 shipped 2026-05-01 (see §0b, §0c, §0d). **Phase 11** verified 2026-05-02 (§0e). **Phase 2** shipped 2026-05-02 (§0f). **Phase 3** shipped 2026-05-02 (§0g). **Phase 4** shipped 2026-05-02 (§0h). **Phase 5** shipped 2026-05-02 (§0i). **Phase 7** shipped 2026-05-02 (§0j). **Phase 8** shipped 2026-05-02 (§0k). **Phase 6** shipped 2026-05-02 (§0l). **Phase 9** shipped 2026-05-02 (§0m). **Phase 10** shipped 2026-05-02 (§0n). **Phase 12** deferred 2026-05-02 (§0o — diagnostic-only, awaits real failure data). **Phase 14.5** scheduled 2026-05-02 to fire 2026-05-15T03:30:00Z via remote routine `trig_01SDqvQfNqxCYY7ySpinPrY6` (see §0p).

@@ -19,6 +19,10 @@ Track all homepage-focused UI/UX, performance, and interaction changes made duri
 - **[2026-05-02]** Homepage remediation **Phase 7** (card source badge **C5.2**, footer `Source:` link removed) — `887b2c0`
 - **[2026-05-02]** Homepage remediation **Phase 8** (share button **M5 + 2.G**, both surfaces) — see Work execution log below
 - **[2026-05-02]** Homepage remediation **Phase 6** (**M4 / C4** YouTube state machine on detail page) — see Work execution log below
+- **[2026-05-02]** Homepage remediation **Phase 9** (**M3** active filters bar — removable pills + Clear all between rail and grid) — see Work execution log below
+- **[2026-05-02]** Homepage remediation **Phase 10** (filters popover + tag counts — `More (N)` chip + native `<dialog>` + `getTagCountsForStream`) — see Work execution log below
+- **[2026-05-02]** Homepage remediation **Phase 12** (infinite scroll diagnostic) — **deferred** by design; no real failure data on hand. Plan **§0o**.
+- **[2026-05-02]** Homepage remediation **Phase 14.5** (Cloudinary `image/fetch` proxy) — **scheduled** as one-time remote agent `trig_01SDqvQfNqxCYY7ySpinPrY6` for **2026-05-15T03:30:00Z** (Fri 09:00 IST). Plan **§0p**.
 
 ## Work execution log (review trail)
 
@@ -175,6 +179,73 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 
 **Follow-up:** wire real telemetry POST when the helper exists — replaces `console.log('[telemetry]', …)` in `youtube-player.tsx` (`youtube_play`) and `share-button.tsx` (`share_initiated`).
 
+### 2026-05-02 — Phase 9 (active filters bar / M3)
+- **Executed:** New `components/feed/active-filters-bar.tsx` (`'use client'`) — reads `tags` + `q` via `useQueryState({ shallow: false })`, renders one removable pill per active tag (label resolved from the official `TagSummary[]`, slug fallback) plus a `Search: "{q}" ×` pill, with a right-aligned **Clear all** that nulls both params and preserves `stream`. Each removal wraps in `startTransition` so the URL update streams the new RSC render. `app/(main)/page.tsx` mounts the bar between `<TagChipRail/>` and the result-summary line; the summary line is trimmed to `{N results} | {streamLabel}` since the bar now conveys search/tag context (no more duplicated `Search: "..."` / `{N} tag filter{s}` substring). Plan **§0m**, status table, §5 Phase 9, §10 build order; this changelog.
+
+**Files touched this batch**
+- `components/feed/active-filters-bar.tsx` (new)
+- `app/(main)/page.tsx`
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md`
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
+
+**Verification**
+- `npm run build` → exit 0 (Next.js 16.2.4 Turbopack)
+- `node scripts/check-bundle-budget.mjs` → **`Home=44527B`** (+333 B vs Phase 6 baseline; well under 85 KiB cap), **`Detail=40615B`** (unchanged — bar ships only on Home)
+
+**Manual smoke matrix (recommended before merge):**
+- `/?q=taiwan` → `Search: "taiwan" ×` pill renders + Clear all visible; click × → q clears, bar disappears, summary line shows `{N} results | Nuggets`.
+- `/?tags=macro,markets` → two tag pills (using each tag's official label) + Clear all; click one × → that tag removed, others remain; click Clear all → both removed.
+- `/?stream=pulse&tags=macro&q=fed` → bar shows search pill + macro pill; Clear all → URL becomes `/?stream=pulse` (stream preserved).
+- Anonymous + signed-in: identical (no auth coupling).
+- Keyboard pass: Tab cycles into each pill and into Clear all; Enter / Space removes; focus visible (`focus-visible:ring-2 focus-visible:ring-focus/60`).
+- `aria-label` on every pill + `role="region"` + `aria-label="Active filters"` on the wrapper.
+
+### 2026-05-02 — Phase 10 (filters popover + tag counts)
+- **Executed:** Two new modules + two edits. `lib/queries/tag-counts.ts` exposes `getTagCountsForStream(stream)` returning `Record<slug, count>`; computed in JS (`select tag_slugs from articles where status='published' and content_stream=$1` → group in memory) and cached for 1h via two `unstable_cache` entries (`['tag-counts','standard']`, `['tag-counts','pulse']`). PostgREST schema-cache misses (`PGRST205` / `42P01`) fail open with `{}`. `components/feed/filter-popover.tsx` (`'use client'`) owns the `More (N)` chip-styled trigger and the native `<dialog>` (opened via `showModal()` for free focus trap + Escape close); search-within-tags input filters on label + slug substring; flat checkbox list with right-aligned count; Apply (only enabled when selection differs from URL) commits via `startTransition(() => setTagsParam(...))`; Cancel / backdrop / Escape close without committing; Clear (footer) zeroes local selection. `components/feed/tag-chip-rail.tsx` renders `<FilterPopover/>` as the trailing item in the existing flex-nowrap scroll lane; accepts optional `counts?: TagCounts` prop. `app/(main)/page.tsx` fetches tag counts in parallel with the feed and official tags, passes them through. Plan **§0n**, status table, §5 Phase 10, §10 build order; this changelog.
+- **Deferred (by design):** Phase 12 — diagnostic-only, no real failure data; plan **§0o** documents the trigger + workflow when an actual report lands. Phase 14.5 — Cloudinary `image/fetch` proxy still on its own ~2-week-out follow-up cadence (Phase 14 Tier 1 shipped 2026-05-01).
+
+**Files touched this batch**
+- `lib/queries/tag-counts.ts` (new)
+- `components/feed/filter-popover.tsx` (new)
+- `components/feed/tag-chip-rail.tsx`
+- `app/(main)/page.tsx`
+- `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md`
+- `docs/HOMEPAGE_UI_UX_SESSION_CHANGELOG.md`
+
+**Verification**
+- `npm run build` → exit 0 (Next.js 16.2.4 Turbopack)
+- `node scripts/check-bundle-budget.mjs` → **`Home=45554B`** (+1027 B vs Phase 9; under §10's < 4 KiB acceptance budget and well under 85 KiB cap), **`Detail=40615B`** (unchanged — popover ships only on Home)
+
+**Deviations documented in §0n:**
+1. Counts query is in-memory aggregation, not `select unnest(tag_slugs), count(*) ... group by 1`. PostgREST does not expose `unnest`; the literal SQL would require a Postgres function + migration. JS aggregation is equivalent in correctness with identical caching semantics; no schema change.
+2. Desktop placement is centered modal, not anchored popover. CSS Anchor Positioning support is uneven; portal-free anchored layout via `getBoundingClientRect` fights `<dialog>::showModal()` top-layer auto-centering. Centered modal preserves the spec's intent (flat list + search + Apply/Clear + focus trap + no portal lib) and gives one-component / two-layout symmetry with the mobile bottom sheet.
+3. Mobile bottom sheet has no swipe-down dismiss. Backdrop tap + Cancel + Escape are sufficient close affordances at PMF; replicating Phase 15's swipe gesture inside a dialog would duplicate machinery without clear user-tested demand.
+
+**Manual smoke matrix (recommended before merge):**
+- Click `More (N)` → dialog opens; search input is auto-focused; rail-selected tags appear pre-checked.
+- Type substring in search → list filters to label + slug matches; "No tags match" shown when empty.
+- Toggle a checkbox → Apply enables; Cancel → close without commit, URL `tags` unchanged.
+- Toggle + Apply → close + URL reflects new selection + feed re-renders without full nav.
+- Clear (footer) with selections → all checkboxes zeroed; Apply commits empty (URL `tags` removed entirely).
+- Press Escape → close + focus returns to `More (N)` trigger.
+- Click backdrop → close + focus returns to trigger.
+- Mobile (`<lg`): dialog renders as bottom sheet (full-width, max-h 80vh, internal scroll); same close affordances.
+- Reduced-motion: no animation regressions (no transforms applied).
+- Keyboard cycle: Tab traverses trigger → search → list checkboxes → Clear → Cancel → Apply; native focus trap inside the dialog.
+
+### 2026-05-02 — Phase 12 (infinite scroll diagnostic) — deferred
+- **Executed:** No code change. Phase 12 is **diagnostic-only** per §5 / §10: "No code change unless evidence demands." No regression report has been filed against `<FeedPager/>` in this batch and no count-> 24 stream is on hand to reproduce. Shipping speculative `console.debug` + ancestor-overflow probes adds noise to a healthy code path. Plan **§0o** documents the trigger ("real failure data") and the workflow (reproduce locally → instrument the IO callback → audit ancestors → confirm `nextCursor` non-null → remove diagnostic before merge) so the phase can be picked up immediately once a report lands.
+- **Status:** Marked DEFERRED in the §0 status table; build order updated to skip Phase 12 in the active sequence.
+
+### 2026-05-02 — Phase 14.5 (Cloudinary `image/fetch` proxy) — scheduled remote agent
+- **Executed:** Created one-time scheduled routine via the claude.ai remote-trigger API. Routine `trig_01SDqvQfNqxCYY7ySpinPrY6` fires once at **2026-05-15T03:30:00Z** (Friday 09:00 IST), ~2 weeks after Phase 14 Tier 1 shipped (2026-05-01) — matches the §2.J Tier 2 cadence. Model: `claude-sonnet-4-6`. Repo source: `https://github.com/nuggets-one/nuggets-one`. Allowed tools: `Bash, Read, Write, Edit, Glob, Grep`. No MCP connectors required.
+- **Prompt contract:** the agent reads `AGENTS.md` + `CLAUDE.md` + plan §2.J Tier 2 + §0c + Phase 14 Tier 1 git history before writing code; runs a pre-flight Cloudinary cloud-name + `fetch_url_enabled` blocker check; if blocked, opens a draft PR with a clear blocker note and stops (does not invent a cloud name). On the happy path: ships `lib/ui/cloudinary-fetch.ts` (URL helper), routes external URLs through it from `card-thumbnail-grid.tsx` + `card-media.tsx`, drops `unoptimized={true}` paths, shrinks `next.config.ts` `remotePatterns` + CSP `img-src` back to `res.cloudinary.com` + `i.ytimg.com`, collapses `lib/ui/card-image-host.ts` predicate, verifies via `npm run build` + bundle budget, updates plan §0p body + status table + §10 build order + this changelog, and opens PR `feat(homepage): Phase 14.5 Cloudinary image/fetch proxy` on branch `feat/phase-14-5-cloudinary-fetch` (draft if any verification step fails).
+- **Operator pre-flight (must complete before 2026-05-15):**
+  1. Run `/web-setup` or install the Claude GitHub App on `nuggets-one/nuggets-one` — claude.ai flagged GitHub-not-connected at scheduling time. Without it the routine cannot push or open a PR.
+  2. Confirm `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` (or equivalent) is set in `.env.local` and Vercel project env. If unset, the agent will draft-PR with a blocker note rather than guess.
+  3. Confirm Cloudinary `fetch_url_enabled` is on for the account.
+- **Manage:** https://claude.ai/code/routines/trig_01SDqvQfNqxCYY7ySpinPrY6 (rerun, edit `run_once_at`, disable). The routine auto-disables after the first fire; re-arming requires a new `run_once_at` via the same UI or `RemoteTrigger` API.
+
 ## Baseline and Measured Deltas
 Measured with local production Lighthouse runs on `/`:
 
@@ -307,14 +378,14 @@ Source-of-truth status table for remediation phases is in `docs/HOMEPAGE_UI_UX_R
 
 **Shipped 2026-05-01:** Phases 1, 13, 14 (Tier 1), 15, 16.  
 **Verified / completed 2026-05-02:** Phase 11 (suggest cap — plan **§0e**).  
-**Shipped code 2026-05-02:** Phase 2 (**§0f**), Phase 3 (**§0g**), Phase 4 — **§0h**, Phase 5 — **§0i**.
+**Shipped code 2026-05-02:** Phase 2 (**§0f**), Phase 3 (**§0g**), Phase 4 — **§0h**, Phase 5 — **§0i**, Phase 7 — **§0j**, Phase 8 — **§0k**, Phase 6 — **§0l**, Phase 9 — **§0m**, Phase 10 — **§0n**.  
+**Deferred 2026-05-02:** Phase 12 — diagnostic-only, awaits real failure data (**§0o**).
 
 **Explicit sequencing (2026-05-02):** Prerequisite **QA** (Phase 14/15 smoke, cross-cutting checklist rows) and **Lighthouse** re-baseline/triage were intentionally **not** run in this batch; they remain open in **QA Checklist for Final Verification** and **Latest Regression Validation** until the operator runs them or a later session does.
 
 **Pending:**
-- **P1** — Phase 6 (YouTube state machine on detail), Phase 7 (card source badge), Phase 8 (share button, card + detail).
-- **P2** — Phase 9 (active filters bar), Phase 10 (filters popover + tag counts), Phase 12 (infinite scroll diagnostic).
-- **Follow-up** — Phase 14.5 (Cloudinary `image/fetch` proxy, ~2 weeks after Phase 14 Tier 1).
+- **Scheduled** — Phase 14.5 (Cloudinary `image/fetch` proxy) handed off to remote routine `trig_01SDqvQfNqxCYY7ySpinPrY6` firing **2026-05-15T03:30:00Z**. Operator pre-flight: GitHub auth + `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` + Cloudinary `fetch_url_enabled`. Plan **§0p**.
+- **Open by trigger** — Phase 12 (resume only when a real `<FeedPager/>` failure is reported).
 
 ### Cross-cutting QA (still owed before launch sign-off)
 - Phase 14 (Tier 1) browser smoke on Twitter / Reddit / Imgur / LinkedIn samples.

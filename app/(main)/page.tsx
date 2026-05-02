@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 import { unstable_noStore } from 'next/cache'
 import { getFeedPage } from '@/lib/queries/feed'
 import { listOfficialTags } from '@/lib/queries/tags'
+import { getTagCountsForStream } from '@/lib/queries/tag-counts'
 import { ArticleCard } from '@/components/ui/article-card'
 import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
@@ -31,6 +32,7 @@ import { FeedPager } from '@/components/feed/feed-pager'
 import { FeedEmpty } from '@/components/feed/feed-empty'
 import { StreamTabs } from '@/components/feed/stream-tabs'
 import { TagChipRail } from '@/components/feed/tag-chip-rail'
+import { ActiveFiltersBar } from '@/components/feed/active-filters-bar'
 import { DEFAULT_STREAM } from '@/types/article'
 import type { ContentStream } from '@/types/article'
 
@@ -57,21 +59,17 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
     unstable_noStore()
   }
 
-  const [feedResult, officialTags] = await Promise.all([
+  const [feedResult, officialTags, tagCounts] = await Promise.all([
     hasFilters
       ? getFeedPage({ stream, tags, q })
       : getFeedPage({ stream, tags: [], q: '' }),
     listOfficialTags(),
+    getTagCountsForStream(stream),
   ])
 
   const { articles, nextCursor } = feedResult
   const streamLabel = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
   const resultLabel = `${articles.length} result${articles.length === 1 ? '' : 's'}`
-  const contextParts = [
-    streamLabel,
-    q ? `Search: "${q}"` : null,
-    tags.length ? `${tags.length} tag filter${tags.length === 1 ? '' : 's'}` : null,
-  ].filter(Boolean)
 
   // Batch bookmark check — BLUEPRINT: "one batched GET per feed page (24 IDs max)"
   return (
@@ -95,11 +93,12 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
           </Link>
           .
         </p>
-        <TagChipRail tags={officialTags} />
+        <TagChipRail tags={officialTags} counts={tagCounts} />
+        <ActiveFiltersBar tags={officialTags} />
         <p className="text-xs text-muted">
           <span className="font-medium text-primary/85">{resultLabel}</span>
           <span className="mx-1.5 text-muted/70">|</span>
-          <span>{contextParts.join(' · ')}</span>
+          <span>{streamLabel}</span>
         </p>
       </div>
 
