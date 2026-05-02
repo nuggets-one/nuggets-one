@@ -9,6 +9,7 @@ import {
   updatePreferencesAction,
 } from '@/lib/actions/notifications'
 import type { NotificationRow } from '@/lib/queries/notifications'
+import { readResponseJson } from '@/lib/http/parse-json-response'
 
 type Prefs = {
   mute_all: boolean
@@ -238,8 +239,8 @@ export function NotificationPanel({
     setError(null)
     try {
       const res = await fetch('/api/notifications/list', { cache: 'no-store' })
-      if (!res.ok) throw new Error('Failed to load')
-      const json: ListResponse = await res.json()
+      const json = await readResponseJson<ListResponse>(res)
+      if (!res.ok || !json) throw new Error('Failed to load')
       setNotifications(json.notifications)
       setUnreadCount(json.unreadCount)
       if (json.preferences) setPrefs(json.preferences)

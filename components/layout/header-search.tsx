@@ -6,6 +6,7 @@ import { useQueryState } from 'nuqs'
 import Link from 'next/link'
 import type { ContentStream } from '@/types/article'
 import type { SuggestionRow } from '@/lib/queries/article'
+import { readResponseJson } from '@/lib/http/parse-json-response'
 
 const DEBOUNCE_MS = 180
 
@@ -70,22 +71,27 @@ export function HeaderSearch() {
 
     const params = new URLSearchParams({ q: qTrim, stream })
     fetch(`/api/search/suggest?${params}`)
-      .then((r) => {
+      .then(async (r) => {
         if (cancelled) return
         if (!r.ok) {
           setSuggestions([])
           setActiveIndex(-1)
-          return undefined
+          return
         }
-        return r.json()
-      })
-      .then((data) => {
-        if (cancelled || !data) return
+        const data = await readResponseJson<{ suggestions?: SuggestionRow[] }>(r)
+        if (cancelled || !data) {
+          setSuggestions([])
+          setActiveIndex(-1)
+          return
+        }
         setSuggestions(data.suggestions ?? [])
         setActiveIndex(-1)
       })
       .catch(() => {
-        if (!cancelled) setSuggestions([])
+        if (!cancelled) {
+          setSuggestions([])
+          setActiveIndex(-1)
+        }
       })
       .finally(() => {
         if (!cancelled) setSuggestionsPending(false)

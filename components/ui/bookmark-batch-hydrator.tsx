@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { readResponseJson } from '@/lib/http/parse-json-response'
 
 type Props = {
   articleIds: string[]
@@ -25,7 +26,11 @@ export function BookmarkBatchHydrator({ articleIds }: Props) {
     fetch(`/api/bookmarks/check?ids=${encodeURIComponent(ids)}`, {
       cache: 'no-store',
     })
-      .then((res) => (res.ok ? res.json() : { bookmarkedArticleIds: [] }))
+      .then(async (res) => {
+        if (!res.ok) return { bookmarkedArticleIds: [] as string[] }
+        const data = await readResponseJson<{ bookmarkedArticleIds?: string[] }>(res)
+        return { bookmarkedArticleIds: data?.bookmarkedArticleIds ?? [] }
+      })
       .then((data: { bookmarkedArticleIds?: string[] }) => {
         if (cancelled) return
         window.dispatchEvent(

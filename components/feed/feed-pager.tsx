@@ -6,6 +6,7 @@ import { ArticleCardSkeleton } from '@/components/ui/article-card-skeleton'
 import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 import { StatusBlock } from '@/components/ui/status-block'
 import type { ArticleCardProps, FeedCursor, ContentStream } from '@/types/article'
+import { readResponseJson } from '@/lib/http/parse-json-response'
 
 type Props = {
   initialCursor: FeedCursor | null
@@ -52,7 +53,10 @@ export function FeedPager({ initialCursor, stream, tags, q }: Props) {
       })
       if (!res.ok) throw new Error(`Feed fetch failed: ${res.status}`)
 
-      const data: FeedApiResponse = await res.json()
+      const data = await readResponseJson<FeedApiResponse>(res)
+      if (!data?.articles) {
+        throw new Error('Feed response was not valid JSON')
+      }
 
       setCards((prev) => [...prev, ...data.articles])
       setCursor(data.nextCursor)

@@ -8,6 +8,7 @@ import { useState, useEffect, type ReactNode } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { logoutAction } from '@/lib/actions/auth'
+import { readResponseJson } from '@/lib/http/parse-json-response'
 
 // S2-F5: lazy-load the notification panel — must not block / first-byte path
 const NotificationPanel = dynamic(
@@ -43,7 +44,15 @@ export function HeaderAuthIsland() {
     let cancelled = false
 
     fetch('/api/auth/status', { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : { authenticated: false }))
+      .then(async (res) => {
+        if (!res.ok) return { authenticated: false as const }
+        const data = await readResponseJson<{
+          authenticated?: boolean
+          email?: string | null
+          isAdmin?: boolean
+        }>(res)
+        return data ?? { authenticated: false as const }
+      })
       .then(
         (data: {
           authenticated?: boolean
