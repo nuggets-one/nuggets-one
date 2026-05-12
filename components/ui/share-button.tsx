@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 
-type Variant = 'card' | 'detail'
+type Variant = 'card' | 'detail' | 'footer'
 type Status = 'idle' | 'copied' | 'failed'
 
 type Props = {
@@ -78,16 +78,24 @@ export function ShareButton({ title, href, variant = 'card' }: Props) {
       className={`inline-flex items-center gap-1.5 transition-colors min-h-[44px] min-w-[44px] justify-center ${
         variant === 'detail'
           ? 'px-3 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-surface-raised active:bg-surface-raised/80'
-          : 'p-1 rounded hover:bg-surface-raised active:bg-surface-raised/80'
+          : variant === 'footer'
+            ? 'rounded-full text-slate-400 transition-all duration-150 hover:scale-105 hover:bg-slate-100 hover:text-slate-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300'
+            : 'h-8 w-8 min-h-[32px] min-w-[32px] rounded-lg border border-border bg-transparent hover:bg-surface-raised active:bg-surface-raised/80'
       } ${
-        status === 'failed' ? 'text-muted' : 'text-muted hover:text-primary'
+        variant === 'footer'
+          ? status === 'failed'
+            ? 'text-slate-400 dark:text-slate-500'
+            : ''
+          : status === 'failed'
+            ? 'text-muted'
+            : 'text-muted hover:text-primary'
       } ${pending ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <svg
-        className="h-4 w-4"
+        className={variant === 'footer' ? 'h-3.5 w-3.5' : 'h-4 w-4'}
         fill="none"
         stroke="currentColor"
-        strokeWidth={2}
+        strokeWidth={variant === 'footer' ? 1.5 : 2}
         viewBox="0 0 24 24"
         aria-hidden="true"
       >

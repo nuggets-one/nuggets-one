@@ -2,8 +2,13 @@
 // Environment config for ETL scripts — loaded via dotenv, not Next.js runtime
 import * as dotenv from 'dotenv'
 import * as path from 'path'
+import { fileURLToPath } from 'url'
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const ROOT = path.resolve(__dirname, '..', '..')
+
+dotenv.config({ path: path.join(ROOT, '.env.local'), override: false })
+dotenv.config({ path: path.join(ROOT, '.env'), override: false })
 
 export function requireEnv(key: string): string {
   const val = process.env[key]
@@ -12,7 +17,13 @@ export function requireEnv(key: string): string {
 }
 
 export const config = {
-  mongoUri: requireEnv('MONGODB_URI'),
-  supabaseUrl: requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-  supabaseServiceKey: requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
+  get mongoUri() {
+    return requireEnv('MONGODB_URI')
+  },
+  get supabaseUrl() {
+    return requireEnv('NEXT_PUBLIC_SUPABASE_URL')
+  },
+  get supabaseServiceKey() {
+    return requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+  },
 }

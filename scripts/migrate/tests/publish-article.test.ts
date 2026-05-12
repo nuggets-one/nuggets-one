@@ -38,4 +38,5 @@ test('S6-F3: excerpt auto-fills when blank', () => {
   })
 
   assert.equal(payload.excerpt.startsWith('This is a markdown body'), true)
+  assert.equal(payload.card_preview?.startsWith('This is a markdown body'), true)
 })

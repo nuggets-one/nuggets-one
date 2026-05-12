@@ -28,14 +28,14 @@ const processor = unified()
   .use(rehypeSanitize, SCHEMA)
   .use(rehypeStringify)
 
-function truncateAtWordBoundary(s: string, max: number): string {
-  if (s.length <= max) return s
-  const cut = s.slice(0, max).replace(/\s+\S*$/, '')
-  return (cut || s.slice(0, max)).trimEnd()
+function truncateAtWordBoundary(value: string, max: number): string {
+  if (value.length <= max) return value
+  const cut = value.slice(0, max).replace(/\s+\S*$/, '')
+  return (cut || value.slice(0, max)).trimEnd()
 }
 
-function hashKey(s: string): string {
-  return createHash('sha1').update(s).digest('hex').slice(0, 12)
+function hashKey(value: string): string {
+  return createHash('sha1').update(value).digest('hex').slice(0, 12)
 }
 
 async function compile(markdown: string): Promise<string> {
@@ -43,7 +43,7 @@ async function compile(markdown: string): Promise<string> {
   return String(file)
 }
 
-export async function renderExcerptMarkdown(markdown: string | null | undefined): Promise<string> {
+export async function renderCardPreviewMarkdown(markdown: string | null | undefined): Promise<string> {
   if (!markdown) return ''
 
   const trimmed = truncateAtWordBoundary(markdown.trim(), MAX_INPUT_CHARS)
@@ -52,7 +52,7 @@ export async function renderExcerptMarkdown(markdown: string | null | undefined)
   const key = hashKey(trimmed)
   const cached = unstable_cache(
     async () => compile(trimmed),
-    ['excerpt-html', key],
+    ['card-preview-html', key],
     { revalidate: 86400 }
   )
 
@@ -60,7 +60,7 @@ export async function renderExcerptMarkdown(markdown: string | null | undefined)
 }
 
 /**
- * Attach `excerptHtml` to each article via the markdown JIT pipeline.
+ * Attach `cardPreviewHtml` to each article via the markdown JIT pipeline.
  * Runs in parallel so per-card rendering is concurrent, not serial.
  *
  * Called by every query path that produces ArticleCardProps:
@@ -71,13 +71,13 @@ export async function renderExcerptMarkdown(markdown: string | null | undefined)
  * Keeps ArticleCard a sync Server Component so it can render inside
  * client trees (e.g. FeedPager).
  */
-export async function attachExcerptHtml<T extends { excerpt: string | null }>(
+export async function attachCardPreviewHtml<T extends { card_preview: string | null }>(
   articles: T[]
-): Promise<Array<T & { excerptHtml: string }>> {
+): Promise<Array<T & { cardPreviewHtml: string }>> {
   return Promise.all(
-    articles.map(async (a) => ({
-      ...a,
-      excerptHtml: await renderExcerptMarkdown(a.excerpt),
+    articles.map(async (article) => ({
+      ...article,
+      cardPreviewHtml: await renderCardPreviewMarkdown(article.card_preview),
     }))
   )
 }

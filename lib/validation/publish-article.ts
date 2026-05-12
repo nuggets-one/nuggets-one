@@ -1,8 +1,7 @@
+import { buildExcerptFromMarkdown, collapseWhitespace, resolveCardPreview } from '@shared/article-preview'
 import { z } from 'zod'
 
 const CONTENT_STREAM_VALUES = ['standard', 'pulse'] as const
-const EXCERPT_MAX_LEN = 240
-
 export const publishArticleSchema = z.object({
   title: z.string().trim().min(1, 'title_required').max(300, 'title_too_long'),
   content_markdown: z.string().trim().min(1, 'body_required'),
@@ -17,16 +16,6 @@ export const publishArticleSchema = z.object({
     .refine((value) => !value || z.string().url().safeParse(value).success, 'source_url_invalid'),
   excerpt: z.string().optional().nullable(),
 })
-
-function collapseWhitespace(value: string): string {
-  return value.replace(/\s+/g, ' ').trim()
-}
-
-export function buildExcerptFromMarkdown(markdown: string): string {
-  const plain = collapseWhitespace(markdown.replace(/[#*_`>\-\[\]\(\)!]/g, ' '))
-  if (plain.length <= EXCERPT_MAX_LEN) return plain
-  return `${plain.slice(0, EXCERPT_MAX_LEN - 1).trimEnd()}…`
-}
 
 export function normalizePublishPayload(input: {
   title: string
@@ -44,10 +33,15 @@ export function normalizePublishPayload(input: {
   })
 
   const cleanedExcerpt = collapseWhitespace(parsed.excerpt ?? '')
+  const resolvedExcerpt = cleanedExcerpt || buildExcerptFromMarkdown(parsed.content_markdown)
 
   return {
     ...parsed,
-    excerpt: cleanedExcerpt || buildExcerptFromMarkdown(parsed.content_markdown),
+    excerpt: resolvedExcerpt,
+    card_preview: resolveCardPreview({
+      content_markdown: parsed.content_markdown,
+      excerpt: resolvedExcerpt,
+    }),
   }
 }
 

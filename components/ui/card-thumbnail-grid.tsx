@@ -1,6 +1,5 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { CardSourceBadge } from '@/components/ui/card-source-badge'
 import {
   canRenderWithNextImage,
   safeHostname,
@@ -14,8 +13,6 @@ type Props = {
   images: CardImage[]
   /** Total available image count — used to render the "+N" overlay when > 4. */
   totalCount?: number
-  sourceHost: string | null
-  source_url: string | null
 }
 
 /**
@@ -38,8 +35,6 @@ export function CardThumbnailGrid({
   title,
   images,
   totalCount,
-  sourceHost,
-  source_url,
 }: Props) {
   if (images.length < 2) return null
 
@@ -48,38 +43,37 @@ export function CardThumbnailGrid({
   const layout = cells.length === 2 ? 'two' : cells.length === 3 ? 'three' : 'four'
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden bg-surface-raised">
-      <Link
-        href={href}
-        className="block h-full w-full"
-        tabIndex={-1}
-        aria-hidden="true"
-      >
-        <div className={gridClass(layout)}>
-          {cells.map((img, idx) => {
-            const isOverflowCell = layout === 'four' && idx === 3 && overflow > 0
-            return (
-              <div
-                key={`${img.url}-${idx}`}
-                className={`relative overflow-hidden bg-surface-raised ${cellClass(layout, idx)}`}
-              >
-                <CellImage url={img.url} alt={img.alt ?? title} />
-                {isOverflowCell && (
-                  <span
-                    className="absolute inset-0 flex items-center justify-center bg-black/55 text-base font-semibold text-white"
-                    aria-hidden="true"
-                  >
-                    +{overflow}
-                  </span>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </Link>
-      {sourceHost && source_url && (
-        <CardSourceBadge sourceHost={sourceHost} source_url={source_url} />
-      )}
+    <div className="relative w-full overflow-hidden rounded-t-xl pt-2 px-2 pb-2">
+      <div className="aspect-video rounded-lg overflow-hidden w-full bg-surface-raised">
+        <Link
+          href={href}
+          className="block h-full w-full"
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          <div className={gridClass(layout)}>
+            {cells.map((img, idx) => {
+              const isOverflowCell = layout === 'four' && idx === 3 && overflow > 0
+              return (
+                <div
+                  key={`${img.url}-${idx}`}
+                  className={`relative overflow-hidden bg-surface-raised ${cellClass(layout, idx)}`}
+                >
+                  <CellImage url={img.url} alt={img.alt ?? title} />
+                  {isOverflowCell && (
+                    <span
+                      className="absolute inset-0 flex items-center justify-center bg-overlay-strong text-base font-semibold text-inverse"
+                      aria-hidden="true"
+                    >
+                      +{overflow}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Link>
+      </div>
     </div>
   )
 }

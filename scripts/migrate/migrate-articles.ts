@@ -17,6 +17,7 @@
 import { connectMongo, disconnectMongo } from './mongo-client'
 import { db } from './supabase-client'
 import { generateArticleSlug } from '../shared/slug'
+import { resolveCardPreview } from '../shared/article-preview'
 import mongoose from 'mongoose'
 import crypto from 'crypto'
 
@@ -386,6 +387,9 @@ async function main() {
 
     const { hero_thumb_url, hero_alt_text, hero_media_kind, hero_video_id, mediaRow } =
       deriveMedia(pickPrimaryMedia(doc))
+    const excerpt = ((doc.excerpt as string) ?? '').trim() || null
+    const content_markdown = ((doc.content as string) ?? '').trim() || null
+    const card_preview = resolveCardPreview({ content_markdown, excerpt })
 
     const id = crypto.randomUUID()
     const slug = generateArticleSlug(title, id)
@@ -404,8 +408,9 @@ async function main() {
       id,
       slug,
       title,
-      excerpt: ((doc.excerpt as string) ?? '').trim() || null,
-      content_markdown: ((doc.content as string) ?? '').trim() || null,
+      excerpt,
+      card_preview,
+      content_markdown,
       content_stream,
       status,
       published_at,

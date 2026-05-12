@@ -9,9 +9,9 @@ export type ArticleCardProps = {
   id: string
   slug: string
   title: string
-  excerpt: string | null
-  /** Sanitized HTML from markdown excerpt — populated by attachExcerptHtml in lib/ui/excerpt-markdown.ts. Empty string when excerpt is null/empty. */
-  excerptHtml: string
+  card_preview: string | null
+  /** Sanitized HTML from markdown card preview — populated by attachCardPreviewHtml in lib/ui/card-preview-markdown.ts. Empty string when card_preview is null/empty. */
+  cardPreviewHtml: string
   content_stream: 'standard' | 'pulse'
   published_at: string        // ISO string — DB timestamptz serialized
   hero_thumb_url: string | null
@@ -19,6 +19,8 @@ export type ArticleCardProps = {
   hero_media_kind: 'image' | 'youtube' | null
   hero_video_id: string | null
   tag_slugs: string[]
+  /** Display labels aligned to `tag_slugs` order. Derived from `tags.label`; fallback formatting is only used when a label lookup is unavailable. */
+  tag_labels: string[]
   source_url: string | null
   /**
    * Up to 4 image rows from `article_media` (kind='image', sort_order ASC).

@@ -14,7 +14,7 @@ type Props = {
   articleId: string
   initialBookmarked: boolean
   isAuthenticated?: boolean
-  variant?: 'card' | 'detail'
+  variant?: 'card' | 'detail' | 'footer'
 }
 
 export function BookmarkButton({
@@ -79,16 +79,26 @@ export function BookmarkButton({
       className={`inline-flex items-center gap-1.5 transition-colors min-h-[44px] min-w-[44px] justify-center ${
         variant === 'detail'
           ? 'px-3 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-surface-raised active:bg-surface-raised/80'
-          : 'p-1 rounded hover:bg-surface-raised active:bg-surface-raised/80'
-      } ${bookmarked ? 'text-accent' : 'text-muted hover:text-primary'} ${
+          : variant === 'footer'
+            ? 'rounded-full hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface dark:hover:bg-slate-800'
+            : 'h-8 w-8 min-h-[32px] min-w-[32px] rounded-lg border border-border bg-transparent hover:bg-surface-raised active:bg-surface-raised/80'
+      } ${
+        variant === 'footer'
+          ? bookmarked
+            ? 'text-[#ca8a04] dark:text-[#eab308]'
+            : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'
+          : bookmarked
+            ? 'text-accent'
+            : 'text-muted hover:text-primary'
+      } ${
         isPending ? 'opacity-50 cursor-not-allowed' : ''
       }`}
     >
       <svg
-        className="w-4 h-4"
+        className={variant === 'footer' ? 'h-4 w-4' : 'w-4 h-4'}
         fill={bookmarked ? 'currentColor' : 'none'}
         stroke="currentColor"
-        strokeWidth={2}
+        strokeWidth={variant === 'footer' ? 1.5 : 2}
         viewBox="0 0 24 24"
         aria-hidden="true"
       >

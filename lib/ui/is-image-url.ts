@@ -32,6 +32,7 @@ export function isImageUrl(url: string): boolean {
   }
 
   // §3 — Social / platform image CDNs (host-based)
+  if (host === 'video.twimg.com') return false
   if (host === 'pbs.twimg.com' && path.startsWith('/media/')) return true
   if (host.includes('media.licdn.com') && path.includes('/image/')) return true
   if (host === 'i.redd.it' || host === 'preview.redd.it') return true

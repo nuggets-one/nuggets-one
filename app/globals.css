@@ -4,58 +4,158 @@
 
 :root {
   /* Background */
-  --color-bg: theme('colors.zinc.50');
-  --color-bg-page: #ffffff;
+  --color-bg: theme('colors.slate.100');
+  --color-bg-page: theme('colors.slate.100');
 
   /* Surface / card */
-  --color-surface: #ffffff;
-  --color-surface-raised: theme('colors.zinc.50');
+  --color-surface: theme('colors.white');
+  --color-surface-raised: theme('colors.white');
+  --color-header: color-mix(in srgb, theme('colors.white') 80%, transparent);
+  --color-rail: color-mix(in srgb, theme('colors.white') 95%, transparent);
 
   /* Border */
-  --color-border: theme('colors.zinc.200');
+  --color-border: theme('colors.slate.200');
+  --color-border-strong: theme('colors.slate.300');
 
   /* Text */
-  --color-text-primary: theme('colors.zinc.900');
-  --color-text-muted: theme('colors.zinc.500');
+  --color-text-primary: theme('colors.slate.900');
+  --color-text-muted: theme('colors.slate.500');
+  --color-text-inverse: theme('colors.white');
+  --color-card-title: theme('colors.slate.900');
+  --color-body-link: theme('colors.primary.600');
 
   /* Brand accent */
-  --color-accent: #F5B800;
-  --color-accent-hover: #D4A000;
+  --color-accent: theme('colors.primary.400');
+  --color-accent-hover: theme('colors.primary.500');
+  --color-accent-soft: theme('colors.primary.100');
+  --color-accent-strong: theme('colors.primary.700');
+  --color-accent-emphasis: theme('colors.primary.900');
+  --color-accent-foreground: theme('colors.primary.900');
+  --color-chip-active-bg: theme('colors.primary.100');
+  --color-chip-active-border: color-mix(in srgb, theme('colors.primary.400') 48%, theme('colors.primary.100'));
+  --color-chip-active-text: theme('colors.primary.900');
+  --color-chip-inactive-border: theme('colors.slate.200');
+  --color-chip-inactive-text: theme('colors.slate.500');
+  --color-chip-hover-bg: color-mix(in srgb, theme('colors.white') 72%, transparent);
+  --color-chip-hover-text: theme('colors.slate.900');
+  --color-card-tag-bg: theme('colors.slate.100');
+  --color-card-tag-border: theme('colors.slate.200');
+  --color-card-tag-text: theme('colors.slate.600');
+  --color-card-tag-hover-bg: theme('colors.slate.100');
+  --color-card-tag-hover-border: theme('colors.slate.300');
+  --color-card-tag-hover-text: theme('colors.slate.700');
 
   /* Semantic */
-  --color-focus-ring: #F5B800;
+  --color-focus-ring: theme('colors.primary.400');
+  --color-success-soft: theme('colors.green.100');
+  --color-success-border: theme('colors.green.200');
+  --color-success-fg: theme('colors.green.700');
+  --color-success: theme('colors.green.600');
+  --color-success-hover: theme('colors.green.700');
+  --color-danger-soft: theme('colors.red.50');
+  --color-danger-border: theme('colors.red.200');
+  --color-danger-fg: theme('colors.red.700');
+  --color-overlay: color-mix(in srgb, theme('colors.slate.950') 20%, transparent);
+  --color-overlay-hover: color-mix(in srgb, theme('colors.slate.950') 30%, transparent);
+  --color-overlay-strong: color-mix(in srgb, theme('colors.slate.950') 55%, transparent);
+  --color-scrim: color-mix(in srgb, theme('colors.slate.950') 50%, transparent);
+  --color-media-control: color-mix(in srgb, theme('colors.slate.950') 65%, transparent);
+  --color-media-control-ring: color-mix(in srgb, theme('colors.white') 80%, transparent);
+  --color-elevated-ring: color-mix(in srgb, theme('colors.slate.900') 6%, transparent);
+  --shadow-panel: 0 -4px 24px color-mix(in srgb, theme('colors.slate.950') 12%, transparent);
+  --shadow-chip-active:
+    inset 0 1px 0 color-mix(in srgb, theme('colors.white') 72%, theme('colors.primary.100')),
+    0 1px 2px color-mix(in srgb, theme('colors.slate.900') 8%, transparent);
+  --color-google-blue: #4285f4;
+  --color-google-green: #34a853;
+  --color-google-yellow: #fbbc05;
+  --color-google-red: #ea4335;
+
+  /* Gradient placeholders */
+  --color-placeholder-saturation-start: 40%;
+  --color-placeholder-lightness-start: 85%;
+  --color-placeholder-saturation-end: 30%;
+  --color-placeholder-lightness-end: 75%;
 
   /* S9-F1: Pulse stream chip — token table §3.2 */
-  --color-pulse-chip-bg: theme('colors.amber.100');
-  --color-pulse-chip-fg: theme('colors.amber.700');
+  --color-pulse-chip-bg: theme('colors.primary.100');
+  --color-pulse-chip-fg: theme('colors.primary.700');
 }
 
 .dark {
   /* Background */
-  --color-bg: theme('colors.zinc.950');
-  --color-bg-page: theme('colors.zinc.950');
+  --color-bg: theme('colors.slate.950');
+  --color-bg-page: theme('colors.slate.950');
 
   /* Surface / card */
-  --color-surface: theme('colors.zinc.900');
-  --color-surface-raised: theme('colors.zinc.800');
+  --color-surface: color-mix(in srgb, theme('colors.slate.900') 80%, transparent);
+  --color-surface-raised: color-mix(in srgb, theme('colors.slate.800') 80%, transparent);
+  --color-header: color-mix(in srgb, theme('colors.slate.900') 80%, transparent);
+  --color-rail: color-mix(in srgb, theme('colors.slate.900') 95%, transparent);
 
   /* Border */
-  --color-border: theme('colors.zinc.800');
+  --color-border: theme('colors.slate.800');
+  --color-border-strong: theme('colors.slate.700');
 
   /* Text */
-  --color-text-primary: theme('colors.zinc.100');
-  --color-text-muted: theme('colors.zinc.400');
+  --color-text-primary: theme('colors.slate.100');
+  --color-text-muted: theme('colors.slate.400');
+  --color-text-inverse: theme('colors.white');
+  --color-card-title: theme('colors.slate.50');
+  --color-body-link: theme('colors.primary.400');
 
   /* Brand accent */
-  --color-accent: #F5B800;
-  --color-accent-hover: #E5AC00;
+  --color-accent: theme('colors.primary.400');
+  --color-accent-hover: theme('colors.primary.500');
+  --color-accent-soft: color-mix(in srgb, theme('colors.primary.700') 28%, transparent);
+  --color-accent-strong: theme('colors.primary.700');
+  --color-accent-emphasis: theme('colors.primary.100');
+  --color-accent-foreground: theme('colors.primary.100');
+  --color-chip-active-bg: color-mix(in srgb, theme('colors.primary.700') 28%, transparent);
+  --color-chip-active-border: color-mix(in srgb, theme('colors.primary.400') 42%, transparent);
+  --color-chip-active-text: theme('colors.primary.100');
+  --color-chip-inactive-border: theme('colors.slate.700');
+  --color-chip-inactive-text: theme('colors.slate.400');
+  --color-chip-hover-bg: color-mix(in srgb, theme('colors.slate.800') 72%, transparent);
+  --color-chip-hover-text: theme('colors.slate.100');
+  --color-card-tag-bg: theme('colors.slate.800');
+  --color-card-tag-border: theme('colors.slate.700');
+  --color-card-tag-text: theme('colors.slate.400');
+  --color-card-tag-hover-bg: theme('colors.slate.700');
+  --color-card-tag-hover-border: theme('colors.slate.600');
+  --color-card-tag-hover-text: theme('colors.slate.300');
 
   /* Semantic */
-  --color-focus-ring: #F5B800;
+  --color-focus-ring: theme('colors.primary.400');
+  --color-success-soft: color-mix(in srgb, theme('colors.green.900') 35%, transparent);
+  --color-success-border: color-mix(in srgb, theme('colors.green.700') 45%, transparent);
+  --color-success-fg: theme('colors.green.400');
+  --color-success: theme('colors.green.600');
+  --color-success-hover: theme('colors.green.500');
+  --color-danger-soft: color-mix(in srgb, theme('colors.red.900') 32%, transparent);
+  --color-danger-border: color-mix(in srgb, theme('colors.red.800') 45%, transparent);
+  --color-danger-fg: theme('colors.red.300');
+  --color-overlay: color-mix(in srgb, theme('colors.slate.950') 22%, transparent);
+  --color-overlay-hover: color-mix(in srgb, theme('colors.slate.950') 35%, transparent);
+  --color-overlay-strong: color-mix(in srgb, theme('colors.slate.950') 68%, transparent);
+  --color-scrim: color-mix(in srgb, theme('colors.slate.950') 68%, transparent);
+  --color-media-control: color-mix(in srgb, theme('colors.slate.950') 72%, transparent);
+  --color-media-control-ring: color-mix(in srgb, theme('colors.slate.100') 80%, transparent);
+  --color-elevated-ring: color-mix(in srgb, theme('colors.slate.400') 14%, transparent);
+  --shadow-panel: 0 -4px 24px color-mix(in srgb, theme('colors.slate.950') 42%, transparent);
+  --shadow-chip-active:
+    inset 0 1px 0 color-mix(in srgb, theme('colors.primary.100') 24%, transparent),
+    0 1px 2px color-mix(in srgb, theme('colors.slate.950') 30%, transparent);
+
+  /* Gradient placeholders */
+  --color-placeholder-saturation-start: 35%;
+  --color-placeholder-lightness-start: 40%;
+  --color-placeholder-saturation-end: 25%;
+  --color-placeholder-lightness-end: 28%;
 
   /* S9-F1: Pulse chip dark overrides */
-  --color-pulse-chip-bg: rgb(120 53 15 / 0.3);
-  --color-pulse-chip-fg: theme('colors.amber.400');
+  --color-pulse-chip-bg: color-mix(in srgb, theme('colors.primary.700') 32%, transparent);
+  --color-pulse-chip-fg: theme('colors.primary.400');
 }
 
 /* S9-F3: respect prefers-reduced-motion — disable non-essential animations */

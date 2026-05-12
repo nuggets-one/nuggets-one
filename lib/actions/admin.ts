@@ -7,10 +7,21 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateArticle, revalidateOfficialTags } from '@/lib/cache'
 import { generateArticleSlug, slugify } from '@shared/slug'
+import { resolveCardPreview } from '@shared/article-preview'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
 import { normalizePublishPayload } from '@/lib/validation/publish-article'
 import type { ContentStream } from '@/types/article'
 import { ZodError } from 'zod'
+
+function isMissingCardPreviewError(message: string): boolean {
+  return /card_preview/i.test(message)
+}
+
+function withoutCardPreview<T extends { card_preview?: unknown }>(payload: T): Omit<T, 'card_preview'> {
+  const copy = { ...payload }
+  delete (copy as { card_preview?: unknown }).card_preview
+  return copy
+}
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -37,6 +48,7 @@ export async function createArticleAction(formData: FormData) {
   const tag_slugs = tag_slugs_raw
     ? tag_slugs_raw.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
     : []
+  const card_preview = resolveCardPreview({ content_markdown, excerpt })
 
   if (!title) throw new Error('Title is required')
 
@@ -44,11 +56,12 @@ export async function createArticleAction(formData: FormData) {
   const slug = generateArticleSlug(title, id)
 
   // S6-F4: insert with empty tag_slugs; RPC populates article_tags and recomputes the array
-  const { error } = await db.from('articles').insert({
+  const insertPayload = {
     id,
     slug,
     title,
     excerpt,
+    card_preview,
     content_markdown,
     content_stream,
     source_url,
@@ -57,7 +70,13 @@ export async function createArticleAction(formData: FormData) {
     tag_slugs: [],
     created_by: user.id,
     status: 'draft',
-  })
+  }
+
+  let { error } = await db.from('articles').insert(insertPayload)
+  if (error && isMissingCardPreviewError(error.message)) {
+    const legacyInsertPayload = withoutCardPreview(insertPayload)
+    ;({ error } = await db.from('articles').insert(legacyInsertPayload))
+  }
 
   if (error) throw new Error(error.message)
 
@@ -94,6 +113,7 @@ export async function updateArticleAction(formData: FormData) {
   const tag_slugs = tag_slugs_raw
     ? tag_slugs_raw.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
     : []
+  const card_preview = resolveCardPreview({ content_markdown, excerpt })
 
   if (!title || !id) throw new Error('Missing required fields')
 
@@ -101,16 +121,23 @@ export async function updateArticleAction(formData: FormData) {
   const slug = generateArticleSlug(title, id)
 
   // S6-F4: tag_slugs excluded from direct update; RPC recomputes from article_tags
-  const { error } = await db.from('articles').update({
+  const updatePayload = {
     slug,
     title,
     excerpt,
+    card_preview,
     content_markdown,
     content_stream,
     source_url,
     hero_thumb_url,
     hero_alt_text,
-  }).eq('id', id)
+  }
+
+  let { error } = await db.from('articles').update(updatePayload).eq('id', id)
+  if (error && isMissingCardPreviewError(error.message)) {
+    const legacyUpdatePayload = withoutCardPreview(updatePayload)
+    ;({ error } = await db.from('articles').update(legacyUpdatePayload).eq('id', id))
+  }
 
   if (error) throw new Error(error.message)
 
@@ -165,11 +192,18 @@ export async function publishArticleAction(formData: FormData) {
   // Blueprint §15.1: published_at set once on first publish — never overwritten
   const published_at = (existing?.published_at as string | null) ?? new Date().toISOString()
 
-  const { error } = await db.from('articles').update({
+  const publishUpdatePayload = {
     status: 'published',
     published_at,
     excerpt: publishPayload.excerpt,
-  }).eq('id', id)
+    card_preview: publishPayload.card_preview,
+  }
+
+  let { error } = await db.from('articles').update(publishUpdatePayload).eq('id', id)
+  if (error && isMissingCardPreviewError(error.message)) {
+    const legacyPublishUpdatePayload = withoutCardPreview(publishUpdatePayload)
+    ;({ error } = await db.from('articles').update(legacyPublishUpdatePayload).eq('id', id))
+  }
 
   if (error) throw new Error(error.message)
 

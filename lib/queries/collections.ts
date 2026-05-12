@@ -2,14 +2,18 @@
 
 import { notFound } from 'next/navigation'
 import { getPublicClient } from '@/lib/supabase/public'
-import { attachExcerptHtml } from '@/lib/ui/excerpt-markdown'
+import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
+import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
+import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
 import type { CollectionSummary, CollectionDetail } from '@/types/collection'
 import type { ArticleCardProps } from '@/types/article'
 
 // Phase 14: collections doesn't fetch `article_media`; cards stay single-hero.
 // `images: []` is appended in the mapping step below.
-type ArticleRowWithoutImages = Omit<ArticleCardProps, 'excerptHtml' | 'images'>
-type ArticleRow = Omit<ArticleCardProps, 'excerptHtml'>
+type ArticleRowWithoutImages = Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels'>
+type ArticleRowBase = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels'>
+type ArticleRowWithLabels = Omit<ArticleCardProps, 'cardPreviewHtml'>
+type TaggableRow = Record<string, unknown> & { tag_slugs: string[] }
 
 type CollectionEntryRow = {
   position: number
@@ -95,7 +99,7 @@ const ARTICLE_FIELDS = `
   id,
   slug,
   title,
-  excerpt,
+  card_preview,
   content_stream,
   published_at,
   hero_thumb_url,
@@ -106,39 +110,72 @@ const ARTICLE_FIELDS = `
   source_url
 `.trim()
 
+const LEGACY_ARTICLE_FIELDS = `
+  id,
+  slug,
+  title,
+  card_preview:excerpt,
+  content_stream,
+  published_at,
+  hero_thumb_url,
+  hero_alt_text,
+  hero_media_kind,
+  hero_video_id,
+  tag_slugs,
+  source_url
+`.trim()
+
+function isMissingCardPreviewError(message: string): boolean {
+  return /card_preview/i.test(message)
+}
+
 export async function getCollectionById(id: string): Promise<CollectionDetail> {
   const supabase = getPublicClient()
 
-  const { data, error } = await supabase
-    .from('community_collections')
-    .select(`
-      id,
-      title,
-      description,
-      curator_name,
-      cover_image_url,
-      created_at,
-      community_collection_entries (
-        position,
-        articles ( ${ARTICLE_FIELDS} )
-      )
-    `)
-    .eq('id', id)
-    .eq('status', 'published')
-    .single()
+  async function runQuery(articleFields: string) {
+    return supabase
+      .from('community_collections')
+      .select(`
+        id,
+        title,
+        description,
+        curator_name,
+        cover_image_url,
+        created_at,
+        community_collection_entries (
+          position,
+          articles ( ${articleFields} )
+        )
+      `)
+      .eq('id', id)
+      .eq('status', 'published')
+      .single()
+  }
 
-  if (error || !data) notFound()
+  let { data, error } = await runQuery(ARTICLE_FIELDS)
+  if (error && isMissingCardPreviewError(error.message)) {
+    ;({ data, error } = await runQuery(LEGACY_ARTICLE_FIELDS))
+  }
+
+  if (error) {
+    throw new Error(`getCollectionById error: ${error.message}`)
+  }
+  if (!data) notFound()
 
   const raw = data as unknown as CollectionDetailRow
   const entries: Array<{ position: number; articles: ArticleRowWithoutImages | null }> =
     raw.community_collection_entries ?? []
 
-  const rows: ArticleRow[] = entries
+  const rowsWithoutLabels: ArticleRowBase[] = entries
     .filter((e) => e.articles != null)
     .sort((a, b) => a.position - b.position)
     .map((e) => ({ ...(e.articles as ArticleRowWithoutImages), images: [] }))
 
-  const articles = await attachExcerptHtml(rows)
+  const rows = await attachTagLabelsToRows(
+    supabase as unknown as SupabaseLike,
+    rowsWithoutLabels as unknown as TaggableRow[]
+  ) as ArticleRowWithLabels[]
+  const articles = await attachCardPreviewHtml(rows)
 
   const coverEntries = entries.map((e) => ({
     position: e.position,

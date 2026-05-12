@@ -2,7 +2,8 @@ import { CardMedia } from '@/components/ui/card-media'
 import { CardBody } from '@/components/ui/card-body'
 import { CardFooter } from '@/components/ui/card-footer'
 import { CardThumbnailGrid } from '@/components/ui/card-thumbnail-grid'
-import { isYouTubeUrl, youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
+import { formatTagDisplayLabel } from '@/lib/ui/tag-display-label'
+import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import type { ArticleCardProps } from '@/types/article'
 
 function getSourceHostLabel(url: string | null): string | null {
@@ -32,25 +33,25 @@ export function ArticleCard({
     id,
     slug,
     title,
-    excerptHtml,
+    cardPreviewHtml,
     published_at,
     hero_thumb_url,
     hero_alt_text,
     hero_media_kind,
     hero_video_id,
     tag_slugs,
+    tag_labels,
     source_url,
     images,
   } = article
 
   const href = `/nuggets/${id}/${slug}`
-  const displayTagSlugs = tag_slugs.filter(
-    (t) => t !== 'nuggets' && t !== 'pulse'
-  )
-  const primaryTag = displayTagSlugs[0] ?? null
-  const secondaryTag = displayTagSlugs[1] ?? null
-  const overflowMobile = Math.max(0, displayTagSlugs.length - 1)
-  const overflowDesktop = Math.max(0, displayTagSlugs.length - 2)
+  const displayTags = tag_slugs
+    .map((slug, index) => ({
+      slug,
+      label: tag_labels[index] ?? formatTagDisplayLabel(slug),
+    }))
+    .filter((tag) => tag.slug !== 'nuggets' && tag.slug !== 'pulse')
   const sourceHost = getSourceHostLabel(source_url)
 
   const trimmedHeroThumb = hero_thumb_url?.trim() ?? ''
@@ -59,53 +60,44 @@ export function ArticleCard({
       ? youTubePosterHqUrl(hero_video_id)
       : null
   const heroThumbForCard = trimmedHeroThumb || youtubePosterFallback || null
-
-  const ytMedia =
-    hero_media_kind === 'youtube' ||
-    isYouTubeUrl(source_url) ||
-    (heroThumbForCard?.toLowerCase().includes('ytimg.com') ?? false)
   const useThumbnailGrid = images.length >= 2
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-transform duration-150 motion-reduce:transition-none motion-safe:hover:-translate-y-px hover:shadow-md dark:border-zinc-700/80 dark:shadow-black/20 focus-within:ring-2 focus-within:ring-accent">
+    <article
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-shadow duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-accent"
+      data-article-id={id}
+    >
       {useThumbnailGrid ? (
         <CardThumbnailGrid
           href={href}
           title={hero_alt_text ?? title}
           images={images}
           totalCount={images.length}
-          sourceHost={sourceHost}
-          source_url={source_url}
         />
       ) : (
         <CardMedia
           href={href}
-          id={id}
           title={title}
           hero_thumb_url={heroThumbForCard}
           hero_alt_text={hero_alt_text}
-          ytMedia={ytMedia}
           priority={priority}
-          sourceHost={sourceHost}
-          source_url={source_url}
         />
       )}
 
       <CardBody
         href={href}
         title={title}
-        excerptHtml={excerptHtml}
-        displayTagSlugs={displayTagSlugs}
-        primaryTag={primaryTag}
-        secondaryTag={secondaryTag}
-        overflowMobile={overflowMobile}
-        overflowDesktop={overflowDesktop}
+        cardPreviewHtml={cardPreviewHtml}
+        contentStream={article.content_stream}
+        displayTags={displayTags}
       />
 
       <CardFooter
         href={href}
         title={title}
         published_at={published_at}
+        sourceHost={sourceHost}
+        source_url={source_url}
         articleId={id}
         isAuthenticated={isAuthenticated}
         initialBookmarked={initialBookmarked}

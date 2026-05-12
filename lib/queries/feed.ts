@@ -1,5 +1,7 @@
 import { getPublicClient } from '@/lib/supabase/public'
-import { attachExcerptHtml } from '@/lib/ui/excerpt-markdown'
+import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
+import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
+import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
 import { isImageUrl } from '@/lib/ui/is-image-url'
 import type {
   ArticleCardProps,
@@ -10,7 +12,10 @@ import type {
   ContentStream,
 } from '@/types/article'
 
-type ArticleRow = Omit<ArticleCardProps, 'excerptHtml'>
+type ArticleRowWithLabels = Omit<ArticleCardProps, 'cardPreviewHtml'>
+type ArticleRowWithoutLabels = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels'>
+type RawArticleRow = Omit<ArticleRowWithoutLabels, 'images'>
+type TaggableRow = Record<string, unknown> & { tag_slugs: string[] }
 
 // Phase 14: cap at 4 images per card (2x2 grid + "+N" overlay if more exist).
 const MAX_IMAGES_PER_CARD = 4
@@ -19,7 +24,22 @@ const FEED_SELECT = `
   id,
   slug,
   title,
-  excerpt,
+  card_preview,
+  content_stream,
+  published_at,
+  hero_thumb_url,
+  hero_alt_text,
+  hero_media_kind,
+  hero_video_id,
+  tag_slugs,
+  source_url
+`.trim()
+
+const LEGACY_FEED_SELECT = `
+  id,
+  slug,
+  title,
+  card_preview:excerpt,
   content_stream,
   published_at,
   hero_thumb_url,
@@ -33,6 +53,10 @@ const FEED_SELECT = `
 // Never add content_markdown to FEED_SELECT.
 // Never add search_vector to FEED_SELECT.
 // These fields widen the RSC payload — keep cards lean.
+
+function isMissingCardPreviewError(message: string): boolean {
+  return /card_preview/i.test(message)
+}
 
 export async function getFeedPage({
   stream,
@@ -67,38 +91,47 @@ async function getFeedPageByCursor({
   cursor?: FeedCursor
   limit: number
 }): Promise<FeedPage> {
-  let query = supabase
-    .from('articles')
-    .select(FEED_SELECT)
-    .eq('status', 'published')
-    .eq('content_stream', stream)
-    .order('published_at', { ascending: false })
-    .order('id', { ascending: false })
-    .limit(limit)
+  async function runQuery(selectClause: string) {
+    let query = supabase
+      .from('articles')
+      .select(selectClause)
+      .eq('status', 'published')
+      .eq('content_stream', stream)
+      .order('published_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(limit)
 
-  // Multi-tag AND filter using GIN-indexed tag_slugs array
-  if (tags.length > 0) {
-    query = query.contains('tag_slugs', tags)
+    if (tags.length > 0) {
+      query = query.contains('tag_slugs', tags)
+    }
+
+    if (cursor) {
+      query = query.or(
+        `published_at.lt.${cursor.published_at},` +
+        `and(published_at.eq.${cursor.published_at},id.lt.${cursor.id})`
+      )
+    }
+
+    return query
   }
 
-  // Keyset cursor — both fields required for stable pagination
-  if (cursor) {
-    query = query.or(
-      `published_at.lt.${cursor.published_at},` +
-      `and(published_at.eq.${cursor.published_at},id.lt.${cursor.id})`
-    )
+  let { data, error } = await runQuery(FEED_SELECT)
+  if (error && isMissingCardPreviewError(error.message)) {
+    ;({ data, error } = await runQuery(LEGACY_FEED_SELECT))
   }
-
-  const { data, error } = await query
 
   if (error) {
     throw new Error(`getFeedPage error: ${error.message}`)
   }
 
   // TODO: replace with generated DB types in later PR
-  const rawRows = (data ?? []) as unknown as Omit<ArticleRow, 'images'>[]
-  const rows = await attachImagesToRows(supabase, rawRows)
-  const articles = await attachExcerptHtml(rows)
+  const rawRows = (data ?? []) as unknown as RawArticleRow[]
+  const rowsWithImages = await attachImagesToRows(supabase, rawRows)
+  const rows = await attachTagLabelsToRows(
+    supabase as unknown as SupabaseLike,
+    rowsWithImages as unknown as TaggableRow[]
+  ) as ArticleRowWithLabels[]
+  const articles = await attachCardPreviewHtml(rows)
 
   const nextCursor: FeedCursor | null =
     articles.length === limit
@@ -124,24 +157,31 @@ async function getFeedPageBySearch({
   q: string
   limit: number
 }): Promise<FeedPage> {
-  let query = supabase
-    .from('articles')
-    .select(FEED_SELECT)
-    .eq('status', 'published')
-    .eq('content_stream', stream)
-    .textSearch('search_vector', q, {
-      type: 'websearch',
-      config: 'english',
-    })
-    .order('published_at', { ascending: false })
-    .order('id', { ascending: false })
-    .limit(limit)
+  async function runQuery(selectClause: string) {
+    let query = supabase
+      .from('articles')
+      .select(selectClause)
+      .eq('status', 'published')
+      .eq('content_stream', stream)
+      .textSearch('search_vector', q, {
+        type: 'websearch',
+        config: 'english',
+      })
+      .order('published_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(limit)
 
-  if (tags.length > 0) {
-    query = query.contains('tag_slugs', tags)
+    if (tags.length > 0) {
+      query = query.contains('tag_slugs', tags)
+    }
+
+    return query
   }
 
-  const { data, error } = await query
+  let { data, error } = await runQuery(FEED_SELECT)
+  if (error && isMissingCardPreviewError(error.message)) {
+    ;({ data, error } = await runQuery(LEGACY_FEED_SELECT))
+  }
 
   if (error) {
     throw new Error(`getFeedPageBySearch error: ${error.message}`)
@@ -149,9 +189,13 @@ async function getFeedPageBySearch({
 
   // Search results have no stable cursor — return null
   // PR-09 can add pagination for search results if needed post-PMF
-  const rawRows = (data ?? []) as unknown as Omit<ArticleRow, 'images'>[]
-  const rows = await attachImagesToRows(supabase, rawRows)
-  const articles = await attachExcerptHtml(rows)
+  const rawRows = (data ?? []) as unknown as RawArticleRow[]
+  const rowsWithImages = await attachImagesToRows(supabase, rawRows)
+  const rows = await attachTagLabelsToRows(
+    supabase as unknown as SupabaseLike,
+    rowsWithImages as unknown as TaggableRow[]
+  ) as ArticleRowWithLabels[]
+  const articles = await attachCardPreviewHtml(rows)
   return {
     articles,
     nextCursor: null,
@@ -169,8 +213,8 @@ async function getFeedPageBySearch({
  */
 async function attachImagesToRows(
   supabase: ReturnType<typeof getPublicClient>,
-  rows: Omit<ArticleRow, 'images'>[]
-): Promise<ArticleRow[]> {
+  rows: RawArticleRow[]
+): Promise<ArticleRowWithoutLabels[]> {
   if (rows.length === 0) return []
 
   const ids = rows.map((r) => r.id)
