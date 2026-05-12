@@ -105,7 +105,7 @@ These are **closed decisions** added in this revision. They override any conflic
 | **Images** | Cloudinary URLs + **`next/image`** **custom loader** (avoid Vercel Image Optimization quota burn at scale) |
 | **Validation** | Zod |
 | **URL state** | `nuqs` on **`/`**: **`stream`**, **`tags`**, **`q`** — all URL-owned per §6.2 |
-| **Fonts** | `next/font` — never a `<link>` tag |
+| **Fonts** | System UI stack via Tailwind `font-sans` — never a `<link>` tag for the primary sans font |
 
 **Not in v2 core:** Express API as user-facing surface, MongoDB as system of record, Redis/BullMQ for feed paths, JWT cookie stack parity with v1, TanStack Query on public feed, bookmark folders, editorial curated bundles, **push notifications** (mobile/web push — deferred). **In-app notifications** (sticky header bell) **are in PMF** — §6.6.
 
@@ -683,9 +683,9 @@ function MarkdownImage({ src, alt }) {
 ## 10. Font loading rules
 
 ```
-- Use next/font (Google Fonts or local) — NEVER a <link> tag in layout.tsx
-- Preload: preload = true for body font
-- font-display: swap for all font variants
+- Use the system UI stack for the primary sans font — NEVER a <link> tag in layout.tsx
+- No preload is required for the primary sans font because it is not a webfont
+- If a custom font is introduced later, load it via next/font with font-display: swap
 - Tailwind: JIT mode (default in v3+) — ensure no purge misconfigs in production build
 ```
 

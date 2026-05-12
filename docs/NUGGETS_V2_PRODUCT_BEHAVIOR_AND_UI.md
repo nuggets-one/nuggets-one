@@ -172,7 +172,7 @@ Two interaction stories appeared across drafts; **only one is valid for v2**:
 
 ### Typography
 
-- **Sans:** **Inter** (or current v1 preference) via **`next/font`** — blueprint §10.
+- **Sans:** system UI stack via **`font-sans`** / Tailwind defaults — platform-native, no primary webfont required.
 - **Scale:** Title on card `text-sm`–`text-base` **semibold**; excerpt `text-xs`–`sm` **leading-relaxed**; detail page title `text-2xl`–`text-3xl`, body `text-base` `prose` max-width ~65ch.
 
 ### Spacing scale

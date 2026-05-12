@@ -3,8 +3,8 @@
 This document lists the URL kinds currently identified as **images** for rendering in the card media section.
 
 Primary source of truth:
-- `src/utils/urlUtils.ts` (`isImageUrl()` and `detectProviderFromUrl()`)
-- Secondary card ingestion behavior: `src/utils/mediaClassifier.ts` (`getAllImageUrls()`)
+- `lib/ui/is-image-url.ts` (`isImageUrl()`)
+- `lib/queries/feed.ts` (`attachImagesToRows()` usage in card ingestion)
 
 ## Purpose
 
@@ -118,15 +118,12 @@ This captures URLs without explicit file extension but with explicit image forma
 
 ## 7) Additional Card Ingestion Sources
 
-Beyond `isImageUrl()`, card image collection in `getAllImageUrls()` also includes:
-- `article.images[]` entries (explicit image list),
-- `primaryMedia`/`supportingMedia` items where:
-  - `media.type === "image"` **or**
-  - `isImageUrl(media.url) === true`,
-- legacy `article.media` where `media.type === "image"`,
-- `article.media.previewMetadata.imageUrl` (OG image fallback).
+Beyond `isImageUrl()`, card image collection in `attachImagesToRows()` includes:
+- batched `article_media` rows where `kind = 'image'`,
+- URL-filtered rows where `isImageUrl(url) === true`,
+- up to 4 images per article (card grid cap).
 
-So even if type metadata is imperfect, URL pattern matching still allows many image URLs to render.
+If the media query fails, feed cards fail open to `images: []` and fall back to single-hero rendering.
 
 ---
 
@@ -144,8 +141,8 @@ These are **not** image by default unless they match rules above:
 
 If another engineer/LLM needs card-media parity, provide:
 - This file (`docs/CARD_MEDIA_IMAGE_URL_PATTERNS.md`)
-- `src/utils/urlUtils.ts` (exact implementation)
-- `src/utils/mediaClassifier.ts` (card ingestion behavior)
+- `lib/ui/is-image-url.ts` (exact implementation)
+- `lib/queries/feed.ts` (`attachImagesToRows` card ingestion behavior)
 
 These three are sufficient to reproduce current image URL identification behavior.
 

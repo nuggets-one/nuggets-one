@@ -233,7 +233,7 @@ These are not "v1 problems" — they're recurring traps in any React + Next.js a
 
 ### 4.7 Web fonts blocking text paint
 - **Risk:** Self-hosted font files without `font-display: swap` block FCP.
-- **Discipline:** verify the font config in `app/layout.tsx` uses `next/font` (which auto-applies swap). Audit any future font additions.
+- **Discipline:** keep the primary sans font on the system UI stack with no `<link>`-loaded webfont. If a custom font is introduced later, load it via `next/font` with `font-display: swap`.
 
 ### 4.8 Long-running Server Action revalidation
 - **Risk:** `revalidatePath` / `revalidateTag` on a high-traffic route can stampede the cache.

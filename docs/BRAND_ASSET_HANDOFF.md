@@ -32,7 +32,7 @@ Production base URL for all public assets: `https://nuggets.one`
 ### Typography
 
 - Logo glyph family: `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
-- Header wordmark family: `'Inter', 'SF Pro Display', -apple-system, system-ui, sans-serif`
+- Header wordmark family: `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
 - Glyph: uppercase `N`, bold weight
 
 ## 3) Required Deliverables (Filenames + Specs)

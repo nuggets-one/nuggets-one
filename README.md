@@ -1,68 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nuggets v3.0
 
-## Getting Started
+Next.js 16 App Router application for Nuggets v2, built on Supabase, Vercel, Tailwind, and Playwright.
 
-First, run the development server:
+## Source Of Truth Docs
+Read these in order before making architectural or product-facing changes:
+
+1. `docs/NUGGETS_V2_MIGRATION_PLAN.md`
+2. `docs/NUGGETS_V2_BLUEPRINT.md`
+3. `docs/NUGGETS_V2_PRODUCT_BEHAVIOR_AND_UI.md`
+4. `docs/NUGGETS_V2_BUILD_EXECUTION.md`
+
+For launch and operations, use:
+
+- `docs/CUTOVER_RUNBOOK.md`
+- `docs/LAUNCH_DAY_CHECKLIST.md`
+- `docs/VERCEL_FREE_PLAN_FOLLOWUP.md`
+
+## Local Development
+Install dependencies, copy `.env.example` to `.env.local`, then start the app on port `3010`:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3010](http://localhost:3010).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Common Commands
+- `npm run dev`: local development server on `3010`
+- `npm run build`: production build
+- `npm run start`: start the production build locally
+- `npm run lint`: ESLint
+- `npm run release:check`: lint, banned-imports, build, bundle budget, and ETL handoff tests
+- `npm run test:feed-pagination`: Playwright check for feed continuation invariants
+- `npm run test:detail-visual`: Playwright detail-contract test suite
+- `npm run etl:tags`, `npm run etl:articles`, `npm run etl:collections`: staging or production ETL steps
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Launch-Critical Validation
+These are the repo-local checks to run before a production cutover:
 
-## Learn More
+1. `npm run release:check`
+2. `npm run test:feed-pagination`
+3. `node scripts/validate-og.mjs https://<deploy-url>`
+4. Manual share checks for WhatsApp, X, and LinkedIn using a real nugget URL
 
-To learn more about Next.js, take a look at the following resources:
+PowerShell example for validating home and detail paths:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## OG Validation Script
-
-Use `scripts/validate-og.mjs` to validate Open Graph and canonical metadata before launch.
-
-### Basic usage
-
-```bash
-node scripts/validate-og.mjs https://your-staging-url.vercel.app
+```powershell
+$env:OG_PATHS='/,/nuggets/<uuid>/<slug>'
+node scripts/validate-og.mjs https://<deploy-url>
 ```
 
-### Validate home + article paths
+The OG validator exits non-zero on failure and emits `::error` lines for CI consumption.
 
-```bash
-OG_PATHS="/,/nuggets/<uuid>/<slug>" node scripts/validate-og.mjs https://your-staging-url.vercel.app
-```
+## GitHub Workflows
+- `Spec Guards`: architecture and bundle-budget baseline on push and pull request
+- `Detail Visual Guard`: optional candidate validation for detail-route visual contracts
+- `Release Readiness`: manual launch gate that runs repo checks and, when given a deploy URL, candidate OG/detail checks
 
-Or pass paths directly:
-
-```bash
-node scripts/validate-og.mjs https://your-staging-url.vercel.app --paths="/,/nuggets/<uuid>/<slug>"
-```
-
-### CI-friendly modes
-
-- Emits `::error` lines for failed checks.
-- Exits with non-zero status if any check fails.
-- Use JSON output for machine parsing:
-
-```bash
-node scripts/validate-og.mjs https://your-staging-url.vercel.app --json
-```
+## Deployment Notes
+- Production hosting is Vercel.
+- The current repo is the greenfield Next.js app at the repository root; there is no legacy `server/` or `src/` app tree in this repo.
+- Above-cap notification fan-out currently follows the Vercel Hobby cron constraint documented in `docs/VERCEL_FREE_PLAN_FOLLOWUP.md`. Revisit that decision before launch if delayed notification drain is unacceptable.

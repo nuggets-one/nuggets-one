@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 // S7-F4: use the canonical site URL env var — never trust the Host header for
 // redirect construction (host-header poisoning → attacker controls reset link).
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3010'
 
 // PRODUCT §0.7: reject next values not starting with '/' OR starting with '//'
 // OR containing a scheme. Defense-in-depth against open redirects.

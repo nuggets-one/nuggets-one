@@ -1,21 +1,22 @@
 # Vercel Free Plan Follow-Up Notes
 
 ## Why this exists
-This document captures deployment-related changes made to get production deploys working on Vercel Hobby (free) and lists what to revisit later.
+This document captures the current production trade-offs when launching on Vercel Hobby and the follow-up decisions that must be revisited before or shortly after launch.
 
-## Changes made
+## Current state
 
-### 1) Cron schedule reduced for Hobby compatibility
+### 1) Cron schedule is reduced for Hobby compatibility
 - File: `vercel.json`
-- Changed notifications fan-out cron from `* * * * *` to `0 0 * * *`
+- Current schedule: `0 0 * * *`
 - Reason: Vercel Hobby does not allow high-frequency cron schedules.
 
-### 2) Custom Next.js image loader removed
+### 2) Custom Cloudinary image loader is currently enabled
 - File: `next.config.ts`
-- Removed:
+- Current config:
   - `images.loader = 'custom'`
   - `images.loaderFile = './lib/cloudinary-loader.ts'`
-- Reason: reduce runtime boundary/serialization risk and stabilize deploy/runtime behavior.
+  - `images.remotePatterns` allow `res.cloudinary.com` and `i.ytimg.com`
+- Reason: keep image delivery and transformation behavior aligned with the blueprint and card/detail media contracts.
 
 ## Current trade-offs
 
@@ -25,15 +26,15 @@ This document captures deployment-related changes made to get production deploys
 - In-cap synchronous fan-out behavior is unchanged.
 
 ### Image optimization trade-off
-- No global Cloudinary custom loader URL transform pipeline via `next.config.ts`.
-- App still uses `next/image` with allowed remote domains (`res.cloudinary.com`, `i.ytimg.com`).
-- Potential impact: less fine-grained Cloudinary transform tuning compared with a custom loader.
+- The custom Cloudinary loader is active again, so image delivery behavior depends on that loader remaining stable across local, preview, and production environments.
+- Potential impact: runtime or serialization regressions can show up only at deploy time if the loader and consuming components drift.
+- Mitigation: keep `npm run build`, preview smoke checks, and candidate-route validation in the release gate before launch.
 
 ## When to revisit
 - Upgrade to Vercel Pro (or another plan that supports higher-frequency cron).
 - Notification timeliness becomes a product issue for high-recipient publishes.
 - Performance monitoring shows image delivery needs further optimization.
-- Runtime/client boundary issues are fully understood and safe alternatives are validated.
+- Release validation shows loader-related regressions or runtime/client boundary issues.
 
 ## Revisit options
 
@@ -41,17 +42,24 @@ This document captures deployment-related changes made to get production deploys
 - Keep daily cron.
 - Add an admin/manual fan-out drain trigger for urgent sends.
 - Monitor queue age and publish-to-notification latency.
+- Explicitly accept that large-recipient publishes may notify users much later than the publish event.
 
 ### Option B: Upgrade Vercel plan
 - Restore frequent cron schedule (e.g., every minute) after plan change.
 - Re-validate fan-out drain behavior and duplicate protection.
 
-### Option C: Re-introduce Cloudinary optimization safely
-- Prefer string-based URL precompute path (no function props crossing boundaries).
+### Option C: Simplify image delivery if the custom loader becomes a liability
+- Fall back to the default Next.js loader or a simpler Cloudinary URL strategy only after validating bundle/runtime behavior.
 - Validate with:
   - local `npm run build`
   - preview deploy smoke test
   - homepage/detail runtime check
+
+## Launch decision checklist
+- [ ] Decide whether once-daily above-cap notification drain is acceptable for launch.
+- [ ] If not acceptable, upgrade plan or add a manual urgent-drain operator path before launch.
+- [ ] Run the `Release Readiness` workflow against a real deploy candidate.
+- [ ] Re-check `vercel.json` and `next.config.ts` before launch to confirm docs still match config.
 
 ## Verification checklist for future revisit
 - [ ] Deployment succeeds on Vercel.

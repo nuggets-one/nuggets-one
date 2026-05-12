@@ -20,10 +20,16 @@ Use this with `docs/CUTOVER_RUNBOOK.md`. This file is command-first and executio
 From repo root:
 
 ```bash
-npm run build
+npm run release:check
+npm run test:feed-pagination
 ```
 
-Expected: exit `0`.
+Expected: both commands exit `0`.
+
+Optional but recommended from GitHub before launch:
+
+- Run the `Release Readiness` workflow with a real preview or staging `deploy_url`
+- Supply `og_paths` that include `/` and at least one real nugget route
 
 Confirm OG fallback assets exist:
 
@@ -59,6 +65,9 @@ Manual in Supabase dashboard:
 - Verify RLS:
   - anon cannot read drafts
   - user A cannot read user B bookmarks
+- Confirm notification helpers exist:
+  - `get_notification_recipients` function
+  - `pending_fanout` table and undrained-row index
 - Set at least one admin user (`is_admin=true` in app metadata)
 - Configure Google OAuth provider
 - Configure email provider
@@ -79,7 +88,8 @@ Notes:
 
 - `CRON_SECRET` must match what cron-protected route expects.
 - Keep `NEXT_PUBLIC_GA_ID` empty in local; set real ID in production.
-- If deploying on Vercel Hobby/free plan, review `docs/VERCEL_FREE_PLAN_FOLLOWUP.md` before launch decisions (cron frequency and image-loader trade-offs).
+- If deploying on Vercel Hobby/free plan, review `docs/VERCEL_FREE_PLAN_FOLLOWUP.md` before launch decisions.
+- Confirm the team has explicitly accepted the current once-daily above-cap fan-out drain, or upgrade/add a manual urgent-drain path before launch.
 
 ## 5) OG validation (preview/prod candidate)
 
@@ -99,6 +109,8 @@ node scripts/validate-og.mjs https://<deploy-url>
 
 Expected: all checks pass.
 
+If running from GitHub Actions instead of a local terminal, use the `Release Readiness` workflow and pass the same base URL plus `og_paths`.
+
 ## 6) Manual share tests (launch-blocking)
 
 Test a real article URL on:
@@ -112,15 +124,16 @@ Expected: title + description + image render correctly.
 ## 7) Cutover preparation (external)
 
 - Lower DNS TTL to `60s` (at least ~1 hour ahead)
-- Freeze writes on old stack
+- Freeze writes on the legacy Mongo-backed production stack
 - Announce read-only window
 
 ## 8) Cutover execution
 
 1. Final ETL run (with old stack read-only)
 2. Deploy final v2 build
-3. Flip DNS to Vercel
-4. Run 30-minute post-cutover checks:
+3. Re-run OG validation against the production candidate URL
+4. Flip DNS to Vercel
+5. Run 30-minute post-cutover checks:
    - Home/detail load
    - Auth works
    - Admin publish works

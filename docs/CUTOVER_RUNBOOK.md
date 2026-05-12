@@ -1,8 +1,27 @@
 # Nuggets v2 — Cutover Runbook
 
-**Status:** Pre-launch draft — requires human sign-off before execution  
-**Last updated:** 2026-04-30  
+**Status:** Launch-ready draft — execute only after checklist completion and human sign-off  
+**Last updated:** 2026-05-12  
 **Owner:** Ujval Shah
+
+---
+
+## Deployment Posture
+
+- This repository is the greenfield Next.js production app at the repo root.
+- The legacy Mongo-backed production stack exists outside this repository and remains the rollback target until cutover is signed off.
+- Do not rely on repo-local `server/`, `src/`, or `vite.config.*` paths during launch; those artifacts are not present here.
+
+## Launch Owners
+
+Fill these in before launch day:
+
+| Role | Name | Responsibility |
+|---|---|---|
+| Founder / launch approver | | Final go / no-go |
+| Cutover operator | | Executes ETL, deploy, DNS flip |
+| Rollback owner | | Owns immediate rollback call if launch fails |
+| Infra observer | | Watches Vercel and Supabase during first 30 minutes |
 
 ---
 
@@ -24,7 +43,7 @@ All items must be checked before touching DNS.
 - [ ] RLS policies verified — anon cannot read drafts
 - [ ] RLS policies verified — user A cannot read user B's bookmarks
 - [ ] `get_notification_recipients` function deployed
-- [ ] `pending_fanout` table exists with partial index
+- [ ] `pending_fanout` table exists with undrained-row index
 - [ ] Google OAuth provider configured in Supabase Auth dashboard
 - [ ] Email provider configured (SMTP or Supabase default)
 - [ ] At least one admin user has `app_metadata.is_admin = true`
@@ -70,6 +89,7 @@ All items must be checked before touching DNS.
 - [ ] Publish an article in admin → `user_notifications` rows appear
 - [ ] Cron secret set in Vercel — cron route returns 401 without it
 - [ ] Vercel Cron schedule active (check Vercel dashboard → Cron Jobs)
+- [ ] Team has explicitly accepted the current once-daily above-cap drain on Vercel Hobby, or has upgraded / added an urgent manual drain path before launch
 
 ---
 
@@ -77,8 +97,8 @@ All items must be checked before touching DNS.
 
 Execute in this exact order. Do not skip steps.
 
-### 1. Freeze writes on old stack
-- Put Express API in read-only mode (disable POST/PUT/DELETE routes or take down write endpoints)
+### 1. Freeze writes on legacy stack
+- Put the current Mongo-backed production stack into read-only mode
 - Announce internally: "MongoDB is now read-only"
 - Note the exact timestamp
 
@@ -112,7 +132,7 @@ Execute in this exact order. Do not skip steps.
 
 If any post-cutover check fails:
 
-1. **DNS rollback** — point `nuggets.one` back to old Vite+Express deployment
+1. **DNS rollback** — point `nuggets.one` back to the previous production deployment
    - TTL was set to 60s — propagation is fast
    - MongoDB is still read-only but still authoritative
 2. **Root cause** — identify whether failure is in Next.js app, Supabase, or ETL data
@@ -130,27 +150,24 @@ If any post-cutover check fails:
 
 ## Files Retained Until Cutover (Do Not Delete)
 
-These files remain in the repository until cutover is signed off:
+These artifacts must remain available until cutover is signed off:
 
-- `server/src/index.ts` — Express entry point
-- `src/App.tsx` — Vite SPA entry
-- `vite.config.*` — Vite build config
-- `src/` — entire legacy SPA tree
-- MongoDB connection config
+- Legacy production deployment target and access credentials
+- MongoDB backup and most recent pre-cutover snapshot
+- Final ETL logs and row-count verification output
+- Production Vercel deployment URL and rollback target notes
 
-**Delete policy:** Archive or delete only after 30 days post-cutover with no rollback incidents and after MongoDB backups are confirmed.
+**Delete policy:** Archive or delete the legacy deployment only after 30 days post-cutover with no rollback incidents and after MongoDB backups are confirmed.
 
 ---
 
 ## Post-Cutover Cleanup (30 days after launch)
 
-- [ ] Remove `server/` directory (Express API)
-- [ ] Remove `src/` directory (Vite SPA)
-- [ ] Remove `vite.config.*`
-- [ ] Remove legacy npm packages from old `package.json` (if any remnants)
+- [ ] Decommission the legacy production deployment
+- [ ] Confirm rollback is no longer needed
 - [ ] Confirm `legacy_mongo_id` columns are retained (keep for 6+ months for debugging)
 - [ ] Close MongoDB Atlas cluster (after final backup downloaded)
-- [ ] Update `CLAUDE.md` to remove all legacy stack references
+- [ ] Remove or archive old launch credentials and runbook notes that point to the retired stack
 
 ---
 
@@ -159,6 +176,8 @@ These files remain in the repository until cutover is signed off:
 | Role | Name | Date | Signature |
 |---|---|---|---|
 | Founder / Owner | | | |
+| Cutover operator | | | |
+| Rollback owner | | | |
 
 **Cutover is approved when this table is complete.**
 
