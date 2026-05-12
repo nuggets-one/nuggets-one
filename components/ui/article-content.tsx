@@ -2,12 +2,15 @@ import Image from 'next/image'
 import { permanentRedirect } from 'next/navigation'
 import { getArticleById } from '@/lib/queries/article'
 import { ArticleBody } from '@/components/ui/article-body'
-import { BookmarkButton } from '@/components/ui/bookmark-button'
-import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
-import { ShareButton } from '@/components/ui/share-button'
 import { TimestampLinkInterceptor } from '@/components/ui/timestamp-link-interceptor'
 import { YouTubePlayer } from '@/components/ui/youtube-player'
+import {
+  canRenderWithNextImage,
+  safeHostname,
+  shouldOptimizeImage,
+} from '@/lib/ui/card-image-host'
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
+import { formatTagDisplayLabel } from '@/lib/ui/tag-display-label'
 
 type Props = {
   id: string
@@ -20,6 +23,13 @@ function formatDate(iso: string): string {
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(iso))
+}
+
+function estimateReadMinutes(markdown: string | null): number | null {
+  if (!markdown) return null
+  const words = markdown.trim().split(/\s+/).filter(Boolean).length
+  if (words === 0) return null
+  return Math.max(1, Math.round(words / 225))
 }
 
 /**
@@ -37,61 +47,106 @@ export async function ArticleContent({ id, slug }: Props) {
     permanentRedirect(`/nuggets/${id}/${article.slug}`)
   }
 
-  const primaryTag = article.tag_slugs[0] ?? null
+  const primaryTagSlug = article.tag_slugs[0] ?? null
+  const isYouTubeHero =
+    article.hero_media_kind === 'youtube' || (article.hero_media_kind as string) === 'video'
+  const trimmedHeroThumb = article.hero_thumb_url?.trim() ?? ''
+  const youtubePosterFallback =
+    isYouTubeHero && article.hero_video_id?.trim() && !trimmedHeroThumb
+      ? youTubePosterHqUrl(article.hero_video_id)
+      : null
+  const heroThumbForDetail = trimmedHeroThumb || youtubePosterFallback || null
+  const canRenderHeroImage = canRenderWithNextImage(heroThumbForDetail)
+  const heroHost = heroThumbForDetail ? safeHostname(heroThumbForDetail) : ''
+  const optimizeHeroImage = shouldOptimizeImage(heroHost)
+  const displayTags = article.tags.length > 0
+    ? article.tags.map((tag) => tag.label)
+    : article.tag_slugs.map((tag) => formatTagDisplayLabel(tag))
+  const readMinutes = estimateReadMinutes(article.content_markdown)
+  const primaryTag = primaryTagSlug
+    ? formatTagDisplayLabel(
+        article.tags.find((tag) => tag.slug === primaryTagSlug)?.label ?? primaryTagSlug
+      )
+    : null
 
   return (
-    <article className="max-w-2xl mx-auto py-8 px-4">
-      <div className="flex flex-wrap items-center gap-2 mb-4 text-sm text-muted">
+    <article className="mx-auto max-w-2xl px-4 py-6">
+      <div className="mb-3 flex flex-wrap gap-1">
         <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
             article.content_stream === 'pulse'
               ? 'bg-pulse-chip-bg text-pulse-chip-fg'
-              : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+              : 'border border-border bg-surface-raised text-muted'
           }`}
         >
           {article.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'}
         </span>
-        {primaryTag && <span className="text-xs text-muted">{primaryTag}</span>}
-        <span className="ml-auto text-xs">{formatDate(article.published_at)}</span>
+        {displayTags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center rounded-full border border-border bg-rail px-2 py-0.5 text-[10px] font-medium text-muted"
+          >
+            {tag}
+          </span>
+        ))}
       </div>
 
-      <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight text-primary mb-4">
+      <h1 className="mb-3 text-[0.9375rem] font-semibold leading-[1.35] tracking-tight text-primary">
         {article.title}
       </h1>
 
-      {article.excerpt && (
-        <p className="text-base text-muted leading-relaxed mb-6 border-l-2 border-border pl-4">
-          {article.excerpt}
-        </p>
+      <div className="mb-3 flex items-center gap-4 text-xs font-medium text-muted">
+        {readMinutes && <span>{readMinutes} min read</span>}
+        {primaryTag && <span>{primaryTag}</span>}
+        <span>{formatDate(article.published_at)}</span>
+      </div>
+
+      {article.source_url && (
+        <a
+          href={article.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-[11px] font-semibold text-accent-emphasis transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          Source
+        </a>
       )}
 
-      {article.hero_media_kind === 'youtube' && article.hero_video_id ? (
+      {isYouTubeHero && article.hero_video_id?.trim() ? (
         <YouTubePlayer
           videoId={article.hero_video_id}
-          posterUrl={
-            article.hero_thumb_url?.trim() ||
-            youTubePosterHqUrl(article.hero_video_id)
-          }
+          posterUrl={heroThumbForDetail}
           title={article.title}
         />
       ) : (
-        article.hero_thumb_url && (
+        canRenderHeroImage && heroThumbForDetail ? (
           <div className="relative aspect-video w-full rounded-xl overflow-hidden mb-8 bg-surface-raised">
             <Image
-              src={article.hero_thumb_url}
+              src={heroThumbForDetail}
               alt={article.hero_alt_text ?? article.title}
               fill
               className="object-cover"
               sizes="(max-width: 672px) 100vw, 672px"
               quality={80}
               priority
+              unoptimized={!optimizeHeroImage}
             />
+          </div>
+        ) : (
+          <div className="mb-8 flex aspect-video w-full items-center justify-center rounded-xl bg-surface-raised text-xs text-muted">
+            Media unavailable
           </div>
         )
       )}
 
+      {article.excerpt && (
+        <p className="mb-4 border-l-2 border-border pl-4 text-xs leading-relaxed text-muted">
+          {article.excerpt}
+        </p>
+      )}
+
       {article.content_markdown ? (
-        article.hero_media_kind === 'youtube' && article.hero_video_id ? (
+        isYouTubeHero && article.hero_video_id?.trim() ? (
           <TimestampLinkInterceptor>
             <ArticleBody markdown={article.content_markdown} />
           </TimestampLinkInterceptor>
@@ -102,62 +157,9 @@ export async function ArticleContent({ id, slug }: Props) {
         <p className="text-muted text-sm italic">No content available.</p>
       )}
 
-      <footer className="mt-10 pt-6 border-t border-border flex flex-col gap-4">
-        {article.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {article.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="rounded-full px-3 py-1 text-xs font-medium bg-surface-raised text-muted border border-border"
-              >
-                {tag.label}
-              </span>
-            ))}
-          </div>
-        ) : article.tag_slugs.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {article.tag_slugs.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full px-3 py-1 text-xs font-medium bg-surface-raised text-muted border border-border"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="flex items-center gap-3 flex-wrap">
-          <BookmarkButton
-            articleId={article.id}
-            initialBookmarked={false}
-            variant="detail"
-          />
-          <ShareButton
-            title={article.title}
-            href={`/nuggets/${article.id}/${article.slug}`}
-            variant="detail"
-          />
-          <BookmarkBatchHydrator articleIds={[article.id]} />
-          {article.source_url && (
-            <a
-              href={article.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-muted hover:text-primary transition-colors"
-            >
-              View source ↗
-            </a>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 text-xs text-muted">
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent text-black font-bold text-xs select-none">
-            N
-          </span>
-          <span>Nuggets</span>
-        </div>
-      </footer>
+      <section className="mt-4 border-t border-border pt-2 text-[10px] italic leading-snug text-muted">
+        Curated summaries and links are informational only—they are not financial, investment, legal, or tax advice.
+      </section>
     </article>
   )
 }

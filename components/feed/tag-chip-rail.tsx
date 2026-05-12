@@ -25,6 +25,7 @@ export function TagChipRail({ tags, counts }: Props) {
     () => (selectedRaw ? selectedRaw.split(',').filter(Boolean) : []),
     [selectedRaw]
   )
+  const hasActiveTags = selected.length > 0
 
   function toggle(slug: string) {
     const next = selected.includes(slug)
@@ -60,45 +61,65 @@ export function TagChipRail({ tags, counts }: Props) {
   if (tags.length === 0) return null
 
   return (
-    <div className="relative">
-      <div
-        ref={scrollerRef}
-        role="group"
-        aria-label="Filter by topic"
-        className="-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden px-1 pb-2 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {tags.map((tag) => {
-          const active = selected.includes(tag.slug)
-          return (
-            <button
-              key={tag.slug}
-              onClick={() => toggle(tag.slug)}
-              aria-pressed={active}
-              disabled={isPending}
-              className={`shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 md:min-h-10 ${
-                active
-                  ? 'bg-accent text-black ring-1 ring-accent/70 active:brightness-95'
-                  : 'bg-surface-raised text-muted hover:text-primary hover:bg-surface active:bg-surface border border-border'
-              }`}
-            >
-              {tag.label}
-            </button>
-          )
-        })}
-        <FilterPopover tags={tags} counts={counts ?? {}} />
+    <div className="flex items-center gap-2">
+      <div className="relative min-w-0 flex-1">
+        <div
+          ref={scrollerRef}
+          role="group"
+          aria-label="Filter by topic"
+          className="-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden px-1 pb-2 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <button
+            onClick={() =>
+              startTransition(() => {
+                setSelected(null)
+              })
+            }
+            aria-pressed={!hasActiveTags}
+            disabled={isPending || !hasActiveTags}
+            className={
+              !hasActiveTags
+                ? 'inline-flex items-center gap-1 rounded-full border border-chip-active-border bg-chip-active-bg px-3 py-1 text-xs font-medium text-chip-active-text shadow-chip-active cursor-default shrink-0'
+                : 'inline-flex items-center rounded-full border border-chip-inactive-border bg-transparent px-3 py-1 text-xs font-medium text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text cursor-pointer shrink-0'
+            }
+          >
+            {!hasActiveTags && <span aria-hidden="true">✓</span>}
+            <span>All</span>
+          </button>
+          {tags.map((tag) => {
+            const active = selected.includes(tag.slug)
+            return (
+              <button
+                key={tag.slug}
+                onClick={() => toggle(tag.slug)}
+                aria-pressed={active}
+                disabled={isPending}
+                className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
+                  active
+                    ? 'inline-flex items-center gap-1 rounded-full border border-chip-active-border bg-chip-active-bg px-3 py-1 text-xs font-medium text-chip-active-text shadow-chip-active cursor-default shrink-0'
+                    : 'inline-flex items-center rounded-full border border-chip-inactive-border bg-transparent px-3 py-1 text-xs font-medium text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text cursor-pointer shrink-0'
+                }`}
+              >
+                {active && <span aria-hidden="true">✓</span>}
+                <span>{tag.label}</span>
+              </button>
+            )
+          })}
+        </div>
+        {showLeftFade && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-bg to-transparent"
+          />
+        )}
+        {showRightFade && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-bg to-transparent"
+          />
+        )}
       </div>
-      {showLeftFade && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-bg to-transparent"
-        />
-      )}
-      {showRightFade && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-bg to-transparent"
-        />
-      )}
+      <FilterPopover tags={tags} counts={counts ?? {}} />
     </div>
   )
 }

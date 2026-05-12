@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import type { AnchorHTMLAttributes } from 'react'
 
 type Props = {
   markdown: string
@@ -61,18 +62,34 @@ function BodyImage({
   )
 }
 
+function BodyLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) {
+  const { className, ...rest } = props
+  return (
+    <a
+      {...rest}
+      className={`rounded-sm bg-transparent border-none p-0 font-inherit text-body-link no-underline transition-colors hover:underline ${className ?? ''}`.trim()}
+    />
+  )
+}
+
 export function ArticleBody({ markdown }: Props) {
   return (
-    <div className="prose prose-zinc dark:prose-invert max-w-prose mx-auto
-      prose-headings:font-semibold prose-headings:tracking-tight
-      prose-a:text-primary prose-a:underline prose-a:underline-offset-2
+    <div className="prose prose-sm prose-slate dark:prose-invert max-w-none text-xs text-muted
+      prose-headings:text-xs prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-primary
+      prose-p:text-xs prose-li:text-xs prose-strong:text-primary
+      prose-a:no-underline prose-a:underline-offset-2
       prose-img:rounded-lg prose-img:my-6
       prose-blockquote:border-l-4 prose-blockquote:border-border prose-blockquote:pl-4 prose-blockquote:text-muted
-      prose-code:bg-surface-raised prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-sm
+      prose-code:bg-surface-raised prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-xs
       prose-pre:bg-surface-raised prose-pre:rounded-xl prose-pre:border prose-pre:border-border">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          a: ({ href, children, ...props }) => (
+            <BodyLink href={href} {...props}>
+              {children}
+            </BodyLink>
+          ),
           img: ({ src, alt }) => (
             <BodyImage src={typeof src === 'string' ? src : undefined} alt={alt} />
           ),

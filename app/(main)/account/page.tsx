@@ -45,7 +45,7 @@ export default async function AccountPage({ searchParams }: Props) {
       {message === 'name_updated' && (
         <div
           role="status"
-          className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/20 px-4 py-3 text-sm text-green-700 dark:text-green-400"
+          className="rounded-lg border border-success-border bg-success-soft px-4 py-3 text-sm text-success-fg"
         >
           Display name updated.
         </div>
@@ -54,7 +54,7 @@ export default async function AccountPage({ searchParams }: Props) {
       {error && (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400"
+          className="rounded-lg border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger-fg"
         >
           {error === 'name_too_long'
             ? 'Display name must be 80 characters or fewer.'
@@ -81,7 +81,7 @@ export default async function AccountPage({ searchParams }: Props) {
           />
           <button
             type="submit"
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
           >
             Save
           </button>

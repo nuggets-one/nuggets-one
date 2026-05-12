@@ -61,7 +61,7 @@ function BellButton({
         <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
       {display && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold px-0.5 leading-none pointer-events-none">
+        <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-0.5 leading-none pointer-events-none">
           {display}
         </span>
       )}
@@ -360,7 +360,7 @@ export function NotificationPanel({
               hidden sm:flex flex-col
               absolute right-0 top-full mt-2
               w-96 max-h-[32rem]
-              bg-bg border border-border rounded-xl shadow-lg
+              bg-rail border border-border rounded-xl shadow-lg
               overflow-hidden z-50
             "
           >
@@ -371,7 +371,7 @@ export function NotificationPanel({
                 <button
                   type="button"
                   onClick={handleMarkAllRead}
-                  className="text-xs text-accent hover:text-accent/80 transition-colors"
+                  className="text-xs text-accent hover:text-accent-hover transition-colors"
                 >
                   Mark all as read
                 </button>
@@ -388,7 +388,7 @@ export function NotificationPanel({
                   <button
                     type="button"
                     onClick={fetchNotifications}
-                    className="text-xs text-accent hover:underline"
+                    className="text-xs text-accent hover:text-accent-hover hover:underline"
                   >
                     Retry
                   </button>
@@ -407,9 +407,9 @@ export function NotificationPanel({
             aria-label="Notifications"
             className="
               sm:hidden fixed inset-x-0 bottom-0 z-50
-              bg-bg border-t border-border rounded-t-2xl
+              bg-rail border-t border-border rounded-t-2xl
               flex flex-col max-h-[85dvh]
-              shadow-[0_-4px_24px_rgba(0,0,0,0.12)]
+              shadow-panel
             "
           >
             {/* Drag handle */}
@@ -424,7 +424,7 @@ export function NotificationPanel({
                 <button
                   type="button"
                   onClick={handleMarkAllRead}
-                  className="text-xs text-accent hover:text-accent/80 transition-colors"
+                  className="text-xs text-accent hover:text-accent-hover transition-colors"
                 >
                   Mark all as read
                 </button>
@@ -441,7 +441,7 @@ export function NotificationPanel({
                   <button
                     type="button"
                     onClick={fetchNotifications}
-                    className="text-xs text-accent hover:underline"
+                    className="text-xs text-accent hover:text-accent-hover hover:underline"
                   >
                     Retry
                   </button>
@@ -456,7 +456,7 @@ export function NotificationPanel({
 
           {/* Mobile backdrop */}
           <div
-            className="sm:hidden fixed inset-0 bg-black/40 z-40"
+            className="sm:hidden fixed inset-0 bg-scrim z-40"
             aria-hidden="true"
             onClick={closePanel}
           />

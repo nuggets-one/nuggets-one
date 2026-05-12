@@ -21,7 +21,7 @@ export default async function NewArticlePage({ searchParams }: Props) {
       <h1 className="text-xl font-bold text-primary mb-6">New article</h1>
 
       {errorCode && (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+        <p className="mb-4 rounded-lg border border-danger-border bg-danger-soft px-3 py-2 text-sm text-danger-fg">
           {TAG_ERRORS[errorCode] ?? 'Something went wrong. Please try again.'}
         </p>
       )}
@@ -31,7 +31,7 @@ export default async function NewArticlePage({ searchParams }: Props) {
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            className="px-5 py-2 rounded-lg bg-accent text-black text-sm font-medium hover:opacity-90"
+            className="px-5 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent-hover transition-colors"
           >
             Create draft
           </button>

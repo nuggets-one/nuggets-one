@@ -120,10 +120,10 @@ export function YouTubePlayer({ videoId, posterUrl, title }: Props) {
               />
             )}
             <span
-              className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30"
+              className="pointer-events-none absolute inset-0 flex items-center justify-center bg-overlay transition-colors group-hover:bg-overlay-hover"
               aria-hidden="true"
             >
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/65 text-white shadow-lg ring-2 ring-white/80">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-media-control text-inverse shadow-lg ring-2 ring-media-control-ring">
                 <svg
                   className="ml-1 h-8 w-8"
                   fill="currentColor"

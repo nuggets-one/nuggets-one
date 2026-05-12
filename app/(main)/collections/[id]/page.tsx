@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { getCollectionById, getCollectionMeta } from '@/lib/queries/collections'
 import { ArticleCard } from '@/components/ui/article-card'
 import { CollectionDetailSkeleton } from '@/components/collections/collection-detail-skeleton'
@@ -27,7 +28,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 async function CollectionContent({ id }: { id: string }) {
-  const collection = await getCollectionById(id)
+  const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+  if (!looksLikeUuid) {
+    notFound()
+  }
+
+  let collection: Awaited<ReturnType<typeof getCollectionById>>
+  try {
+    collection = await getCollectionById(id)
+  } catch {
+    return (
+      <StatusBlock
+        heading="This collection is unavailable right now."
+        body="Please try again shortly."
+        linkHref="/collections"
+        linkLabel="Back to collections"
+      />
+    )
+  }
 
   return (
     <>

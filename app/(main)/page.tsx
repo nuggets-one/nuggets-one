@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { Suspense } from 'react'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nuggets.one'
@@ -60,11 +59,24 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   }
 
   const [feedResult, officialTags, tagCounts] = await Promise.all([
-    hasFilters
+    (hasFilters
       ? getFeedPage({ stream, tags, q })
-      : getFeedPage({ stream, tags: [], q: '' }),
-    listOfficialTags(),
-    getTagCountsForStream(stream),
+      : getFeedPage({ stream, tags: [], q: '' })
+    ).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`FeedGrid getFeedPage error: ${message}`)
+      return { articles: [], nextCursor: null, stream }
+    }),
+    listOfficialTags().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`FeedGrid listOfficialTags error: ${message}`)
+      return []
+    }),
+    getTagCountsForStream(stream).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`FeedGrid getTagCountsForStream error: ${message}`)
+      return {}
+    }),
   ])
 
   const { articles, nextCursor } = feedResult
@@ -75,24 +87,13 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   return (
     <>
       <section
-        className="-mx-4 mb-8 border-b border-border lg:-mx-6"
+        className="-mx-4 mb-3 border-b border-border lg:-mx-6"
         aria-label="Feed stream"
       >
         <StreamTabs />
       </section>
 
       <div className="flex flex-col gap-4 mb-6">
-        <p className="text-xs text-muted">
-          Filter by{' '}
-          <span className="font-medium text-primary/85">topics</span> below. Explore curated sets on{' '}
-          <Link
-            href="/collections"
-            className="font-medium text-primary underline underline-offset-2 decoration-primary/70 hover:text-primary"
-          >
-            Collections
-          </Link>
-          .
-        </p>
         <TagChipRail tags={officialTags} counts={tagCounts} />
         <ActiveFiltersBar tags={officialTags} />
         <p className="text-xs text-muted">
@@ -137,7 +138,7 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <Suspense fallback={
       <>
-        <div className="-mx-4 mb-8 flex min-h-[48px] animate-pulse border-b border-border lg:-mx-6">
+        <div className="-mx-4 mb-3 flex min-h-[48px] animate-pulse border-b border-border lg:-mx-6">
           <div className="h-11 w-24 rounded-none bg-border/40 sm:w-36" />
           <div className="ml-6 h-11 w-32 rounded-none bg-border/30 sm:w-44" />
         </div>

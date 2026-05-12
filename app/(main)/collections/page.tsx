@@ -14,7 +14,19 @@ export const metadata: Metadata = {
 }
 
 async function CollectionGrid() {
-  const collections = await listCollections()
+  let collections: Awaited<ReturnType<typeof listCollections>> = []
+  try {
+    collections = await listCollections()
+  } catch {
+    return (
+      <StatusBlock
+        heading="Collections are unavailable right now."
+        body="Please try again in a moment."
+        linkHref="/collections"
+        linkLabel="Retry"
+      />
+    )
+  }
 
   if (collections.length === 0) {
     return (

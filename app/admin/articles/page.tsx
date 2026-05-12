@@ -20,7 +20,7 @@ export default async function AdminArticlesPage() {
         <h1 className="text-xl font-bold text-primary">Articles</h1>
         <Link
           href="/admin/articles/new"
-          className="px-4 py-2 rounded-lg bg-accent text-black text-sm font-medium hover:opacity-90 transition-opacity"
+          className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent-hover transition-colors"
         >
           New article
         </Link>
@@ -49,8 +49,8 @@ export default async function AdminArticlesPage() {
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     a.status === 'published'
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                      ? 'border border-success-border bg-success-soft text-success-fg'
+                      : 'border border-border bg-surface-raised text-muted'
                   }`}>
                     {a.status as string}
                   </span>

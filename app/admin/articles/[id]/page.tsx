@@ -63,8 +63,8 @@ export default async function EditArticlePage({
         <h1 className="text-xl font-bold text-primary flex-1 truncate">{article.title as string}</h1>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${
           isPublished
-            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-            : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+            ? 'border border-success-border bg-success-soft text-success-fg'
+            : 'border border-border bg-surface-raised text-muted'
         }`}>
           {article.status as string}
         </span>
@@ -72,7 +72,7 @@ export default async function EditArticlePage({
 
       {errorCode && (
         // Audit S6-F3 decision: publish validation errors are user-visible and code-driven.
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+        <p className="mb-4 rounded-lg border border-danger-border bg-danger-soft px-3 py-2 text-sm text-danger-fg">
           {PUBLISH_ERRORS[errorCode] ?? PUBLISH_ERRORS.publish_validation_failed}
         </p>
       )}
@@ -85,7 +85,7 @@ export default async function EditArticlePage({
             <input type="hidden" name="id" value={id} />
             <button
               type="submit"
-              className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors"
+              className="px-4 py-2 rounded-lg bg-success text-inverse text-sm font-medium hover:bg-success-hover transition-colors"
             >
               Publish
             </button>
@@ -111,7 +111,7 @@ export default async function EditArticlePage({
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            className="px-5 py-2 rounded-lg bg-accent text-black text-sm font-medium hover:opacity-90"
+            className="px-5 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent-hover transition-colors"
           >
             Save changes
           </button>

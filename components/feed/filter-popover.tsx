@@ -51,23 +51,16 @@ export function FilterPopover({ tags, counts }: Props) {
   const [localSelected, setLocalSelected] = useState<string[]>(committed)
   const [query, setQuery] = useState('')
 
-  // Sync local selection from the URL whenever the popover opens, so re-opens
-  // reflect any out-of-band changes (e.g. chip rail toggles, Active filters
-  // bar removals).
-  useEffect(() => {
-    if (open) {
-      setLocalSelected(committed)
-      setQuery('')
-      requestAnimationFrame(() => {
-        searchRef.current?.focus()
-      })
-    }
-  }, [open, committed])
-
   const openDialog = useCallback(() => {
+    // Sync local state from URL every time the dialog opens.
+    setLocalSelected(committed)
+    setQuery('')
     setOpen(true)
     dialogRef.current?.showModal()
-  }, [])
+    requestAnimationFrame(() => {
+      searchRef.current?.focus()
+    })
+  }, [committed])
 
   const closeDialog = useCallback(() => {
     setOpen(false)
@@ -117,7 +110,8 @@ export function FilterPopover({ tags, counts }: Props) {
     )
   }, [tags, query])
 
-  const triggerLabel = `More (${tags.length})`
+  const activeCount = committed.length
+  const triggerLabel = activeCount > 0 ? `Filters (${activeCount})` : 'More filters'
   const dirty =
     localSelected.length !== committed.length ||
     localSelected.some((s) => !committed.includes(s))
@@ -130,7 +124,12 @@ export function FilterPopover({ tags, counts }: Props) {
         onClick={openDialog}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="shrink-0 rounded-full border border-border bg-surface-raised px-3 py-1 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 md:min-h-10"
+        aria-label="Open all topic filters"
+        className={`shrink-0 rounded-full border px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 md:min-h-10 ${
+          activeCount > 0
+            ? 'border-chip-active-border bg-chip-active-bg text-chip-active-text shadow-chip-active hover:bg-chip-active-bg'
+            : 'border-chip-inactive-border bg-transparent text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text'
+        }`}
       >
         {triggerLabel}
       </button>
@@ -139,14 +138,19 @@ export function FilterPopover({ tags, counts }: Props) {
         ref={dialogRef}
         onClick={onBackdropClick}
         aria-label="All filters"
-        className="m-0 w-full max-w-full bg-transparent p-0 backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+        className="m-0 w-full max-w-full bg-transparent p-0 backdrop:bg-scrim backdrop:backdrop-blur-sm"
       >
         <div
           className="fixed inset-x-0 bottom-0 flex max-h-[80vh] w-full flex-col rounded-t-2xl border border-border bg-surface text-primary shadow-2xl lg:inset-auto lg:left-1/2 lg:top-1/2 lg:max-h-[80vh] lg:w-[min(480px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl"
           role="document"
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold text-primary">Filter by topic</h2>
+            <h2 className="text-sm font-semibold text-primary">
+              Filter by topic
+              <span className="ml-2 text-xs font-medium text-muted">
+                {localSelected.length} selected
+              </span>
+            </h2>
             <button
               type="button"
               onClick={closeDialog}
@@ -232,7 +236,7 @@ export function FilterPopover({ tags, counts }: Props) {
                 type="button"
                 onClick={applyLocal}
                 disabled={isPending || !dirty}
-                className="rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-black transition-opacity hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
+                className="rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
               >
                 Apply
               </button>

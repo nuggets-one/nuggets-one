@@ -1,6 +1,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { CollectionSummary } from '@/types/collection'
+import { canRenderWithNextImage, safeHostname, shouldOptimizeImage } from '@/lib/ui/card-image-host'
+import { isImageUrl } from '@/lib/ui/is-image-url'
 
 function idToHue(id: string): number {
   let hash = 0
@@ -16,7 +18,7 @@ function GradientPlaceholder({ id }: { id: string }) {
     <div
       className="w-full h-full"
       style={{
-        background: `linear-gradient(135deg, hsl(${hue},35%,82%) 0%, hsl(${(hue + 50) % 360},25%,70%) 100%)`,
+        background: `linear-gradient(135deg, hsl(${hue} var(--color-placeholder-saturation-start) var(--color-placeholder-lightness-start)) 0%, hsl(${(hue + 50) % 360} var(--color-placeholder-saturation-end) var(--color-placeholder-lightness-end)) 100%)`,
       }}
       aria-hidden="true"
     />
@@ -30,6 +32,10 @@ type Props = {
 export function CollectionCard({ collection }: Props) {
   const { id, title, description, curator_name, cover_url, entry_count } = collection
   const href = `/collections/${id}`
+  const coverIsImage = cover_url ? isImageUrl(cover_url) : false
+  const coverCanRender = cover_url ? canRenderWithNextImage(cover_url) : false
+  const coverHost = cover_url ? safeHostname(cover_url) : ''
+  const unoptimized = !shouldOptimizeImage(coverHost)
 
   return (
     <article className="group flex flex-col rounded-xl border border-border bg-surface overflow-hidden transition-transform duration-150 hover:-translate-y-px hover:shadow-sm focus-within:ring-2 focus-within:ring-accent">
@@ -39,7 +45,7 @@ export function CollectionCard({ collection }: Props) {
         tabIndex={-1}
         aria-hidden="true"
       >
-        {cover_url ? (
+        {cover_url && coverIsImage && coverCanRender ? (
           <Image
             src={cover_url}
             alt={title}
@@ -47,6 +53,7 @@ export function CollectionCard({ collection }: Props) {
             className="object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             quality={75}
+            unoptimized={unoptimized}
           />
         ) : (
           <GradientPlaceholder id={id} />

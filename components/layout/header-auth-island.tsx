@@ -42,8 +42,12 @@ export function HeaderAuthIsland() {
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
+    const timeout = setTimeout(() => {
+      controller.abort()
+    }, 4000)
 
-    fetch('/api/auth/status', { cache: 'no-store' })
+    fetch('/api/auth/status', { cache: 'no-store', signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) return { authenticated: false as const }
         const data = await readResponseJson<{
@@ -59,23 +63,29 @@ export function HeaderAuthIsland() {
           email?: string | null
           isAdmin?: boolean
         }) => {
-        if (cancelled) return
-        if (data.authenticated) {
-          setAuth({
-            status: 'authenticated',
-            email: data.email ?? null,
-            isAdmin: data.isAdmin === true,
-          })
-        } else {
-          setAuth({ status: 'anonymous' })
+          if (cancelled) return
+          if (data.authenticated) {
+            setAuth({
+              status: 'authenticated',
+              email: data.email ?? null,
+              isAdmin: data.isAdmin === true,
+            })
+          } else {
+            setAuth({ status: 'anonymous' })
+          }
         }
-      })
+      )
       .catch(() => {
         if (!cancelled) setAuth({ status: 'anonymous' })
+      })
+      .finally(() => {
+        clearTimeout(timeout)
       })
 
     return () => {
       cancelled = true
+      clearTimeout(timeout)
+      controller.abort()
     }
   }, [])
 
@@ -90,12 +100,56 @@ export function HeaderAuthIsland() {
 
   if (auth.status === 'anonymous') {
     return (
-      <Link
-        href="/login"
-        className="inline-flex min-h-[44px] items-center rounded-md px-2 text-sm text-muted transition-colors hover:text-primary active:bg-surface-raised"
-      >
-        Sign in
-      </Link>
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <details className="group relative">
+          <summary
+            aria-label="Open account menu"
+            className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center outline-none [&:-moz-focusring]:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 rounded-full"
+          >
+            <span className="inline-flex size-9 select-none items-center justify-center rounded-full bg-surface-raised text-xs font-semibold text-primary transition-colors hover:bg-surface active:bg-surface-raised border border-border">
+              G
+            </span>
+          </summary>
+
+          <div
+            role="menu"
+            className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-rail py-2 shadow-lg ring-1 ring-elevated"
+          >
+            <Link
+              href="/login"
+              role="menuitem"
+              className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              role="menuitem"
+              className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+            >
+              Create account
+            </Link>
+
+            <div className="my-2 border-t border-border" />
+
+            <MenuHeading>Legal</MenuHeading>
+            <Link
+              href="/legal/terms"
+              role="menuitem"
+              className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+            >
+              Terms of use
+            </Link>
+            <Link
+              href="/legal/privacy"
+              role="menuitem"
+              className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+            >
+              Privacy policy
+            </Link>
+          </div>
+        </details>
+      </div>
     )
   }
 
@@ -109,14 +163,14 @@ export function HeaderAuthIsland() {
           aria-label="Open account menu"
           className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center outline-none [&:-moz-focusring]:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 rounded-full"
         >
-          <span className="inline-flex size-9 select-none items-center justify-center rounded-full bg-accent text-xs font-semibold text-white transition-colors hover:bg-accent/90 active:bg-accent/80">
+          <span className="inline-flex size-9 select-none items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-hover">
             {initials}
           </span>
         </summary>
 
         <div
           role="menu"
-          className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-surface py-2 shadow-lg ring-1 ring-black/5 dark:bg-surface-raised dark:ring-white/10"
+          className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-rail py-2 shadow-lg ring-1 ring-elevated"
         >
           {auth.email && (
             <>

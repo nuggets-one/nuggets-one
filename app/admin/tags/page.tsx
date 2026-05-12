@@ -54,7 +54,7 @@ export default async function AdminTagsPage() {
 
         <button
           type="submit"
-          className="self-start px-4 py-2 rounded-lg bg-accent text-black text-sm font-medium hover:opacity-90"
+          className="self-start px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent-hover transition-colors"
         >
           Create tag
         </button>
@@ -78,7 +78,7 @@ export default async function AdminTagsPage() {
                 <td className="px-4 py-3 text-muted">{(tag.dimension as string | null) ?? '—'}</td>
                 <td className="px-4 py-3">
                   {tag.is_official && (
-                    <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-accent/20 text-accent">
+                    <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-emphasis">
                       ✓ Official
                     </span>
                   )}

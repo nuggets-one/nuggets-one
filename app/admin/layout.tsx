@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-bg">
-      <nav className="border-b border-border bg-surface px-6 h-12 flex items-center gap-6">
+      <nav className="flex h-12 items-center gap-6 border-b border-border bg-header px-6 backdrop-blur-sm">
         <span className="font-semibold text-sm text-primary">Admin</span>
         <Link href="/admin/articles" className="text-sm text-muted hover:text-primary transition-colors">Articles</Link>
         <Link href="/admin/tags" className="text-sm text-muted hover:text-primary transition-colors">Tags</Link>

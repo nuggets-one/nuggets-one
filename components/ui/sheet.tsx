@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
+import { BookmarkButton } from '@/components/ui/bookmark-button'
+import { ShareButton } from '@/components/ui/share-button'
 
 type Props = {
   children: React.ReactNode
@@ -33,6 +36,7 @@ const SWIPE_DISMISS_THRESHOLD = 80
  */
 export function Sheet({ children, ariaLabel }: Props) {
   const router = useRouter()
+  const pathname = usePathname()
   const containerRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
   const [touchStartY, setTouchStartY] = useState<number | null>(null)
@@ -44,6 +48,7 @@ export function Sheet({ children, ariaLabel }: Props) {
   const close = useCallback(() => {
     router.back()
   }, [router])
+  const articleId = pathname.split('/').filter(Boolean).at(-2) ?? ''
 
   // Lock body scroll while the sheet is mounted; capture prior focus to restore.
   useEffect(() => {
@@ -128,7 +133,7 @@ export function Sheet({ children, ariaLabel }: Props) {
         type="button"
         aria-label="Close"
         onClick={close}
-        className="absolute inset-0 bg-black/50 motion-safe:transition-opacity motion-safe:duration-200"
+        className="absolute inset-0 bg-scrim motion-safe:transition-opacity motion-safe:duration-200"
       />
 
       <div
@@ -140,24 +145,38 @@ export function Sheet({ children, ariaLabel }: Props) {
         data-mounted={mounted ? 'true' : 'false'}
         className="relative flex h-[92vh] w-full flex-col overflow-y-auto rounded-t-2xl bg-surface text-primary shadow-2xl motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out translate-y-full data-[mounted=true]:translate-y-0 lg:h-full lg:max-w-[640px] lg:rounded-none lg:rounded-l-2xl lg:translate-y-0 lg:translate-x-full lg:data-[mounted=true]:translate-x-0 motion-reduce:!translate-y-0 lg:motion-reduce:!translate-x-0 motion-reduce:transition-none"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-end gap-1 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-sm">
-          <button
-            type="button"
-            onClick={close}
-            aria-label="Close article"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-              aria-hidden="true"
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-header px-4 py-3 backdrop-blur-sm">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="inline-flex h-6 w-6 select-none items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
+              N
+            </div>
+            <span className="truncate text-sm font-bold text-primary">Nuggets</span>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            {articleId ? (
+              <BookmarkButton articleId={articleId} initialBookmarked={false} variant="card" />
+            ) : null}
+            <ShareButton title="Nuggets" href={pathname} variant="card" />
+            {articleId ? <BookmarkBatchHydrator articleIds={[articleId]} /> : null}
+            <button
+              type="button"
+              onClick={close}
+              aria-label="Close article"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="flex-1">{children}</div>

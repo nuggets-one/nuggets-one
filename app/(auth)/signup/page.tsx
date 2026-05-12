@@ -23,7 +23,7 @@ export default async function SignupPage({ searchParams }: Props) {
         </div>
 
         {error && (
-          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+          <div role="alert" className="rounded-lg border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger-fg">
             {error === 'invalid_data' ? 'Please check your details and try again.' : error}
           </div>
         )}
@@ -64,7 +64,7 @@ export default async function SignupPage({ searchParams }: Props) {
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent/90 transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+            className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
           >
             Create account
           </button>
@@ -104,10 +104,10 @@ export default async function SignupPage({ searchParams }: Props) {
 function GoogleIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-      <path d="M15.68 8.18c0-.57-.05-1.11-.14-1.64H8v3.1h4.3a3.67 3.67 0 0 1-1.6 2.41v2h2.58c1.51-1.39 2.4-3.44 2.4-5.87z" fill="#4285F4" />
-      <path d="M8 16c2.16 0 3.97-.71 5.3-1.93l-2.58-2a4.77 4.77 0 0 1-7.1-2.5H.97v2.07C2.3 14.17 4.96 16 8 16z" fill="#34A853" />
-      <path d="M3.62 9.57A4.8 4.8 0 0 1 3.37 8c0-.55.1-1.08.25-1.57V4.36H.97A8 8 0 0 0 0 8c0 1.29.31 2.51.97 3.64l2.65-2.07z" fill="#FBBC05" />
-      <path d="M8 3.18c1.22 0 2.3.42 3.16 1.24l2.36-2.36A8 8 0 0 0 8 0C4.96 0 2.3 1.83.97 4.36L3.62 6.43A4.77 4.77 0 0 1 8 3.18z" fill="#EA4335" />
+      <path d="M15.68 8.18c0-.57-.05-1.11-.14-1.64H8v3.1h4.3a3.67 3.67 0 0 1-1.6 2.41v2h2.58c1.51-1.39 2.4-3.44 2.4-5.87z" fill="var(--color-google-blue)" />
+      <path d="M8 16c2.16 0 3.97-.71 5.3-1.93l-2.58-2a4.77 4.77 0 0 1-7.1-2.5H.97v2.07C2.3 14.17 4.96 16 8 16z" fill="var(--color-google-green)" />
+      <path d="M3.62 9.57A4.8 4.8 0 0 1 3.37 8c0-.55.1-1.08.25-1.57V4.36H.97A8 8 0 0 0 0 8c0 1.29.31 2.51.97 3.64l2.65-2.07z" fill="var(--color-google-yellow)" />
+      <path d="M8 3.18c1.22 0 2.3.42 3.16 1.24l2.36-2.36A8 8 0 0 0 8 0C4.96 0 2.3 1.83.97 4.36L3.62 6.43A4.77 4.77 0 0 1 8 3.18z" fill="var(--color-google-red)" />
     </svg>
   )
 }
