@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,8 +23,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "@shared/*": ["./scripts/shared/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@shared/*": [
+        "./scripts/shared/*"
+      ]
     }
   },
   "include": [
@@ -28,8 +36,12 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "scripts/validate", "scripts/migrate"]
+  "exclude": [
+    "node_modules",
+    "scripts/validate",
+    "scripts/migrate"
+  ]
 }

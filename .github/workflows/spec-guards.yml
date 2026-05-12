@@ -68,6 +68,17 @@ jobs:
             console.log('Package check passed — no banned packages found.');
           "
 
+      - name: Canonical detail spec reference guard
+        run: |
+          if git grep -n "article-detail-drawer-ui-spec old website.md" -- \
+            ':!docs/article-detail-drawer-ui-spec old website.md' \
+            ':!docs/ARTICLE_DETAIL_DRAWER_UI_SPEC.md'
+          then
+            echo "Legacy detail spec was referenced outside approved docs."
+            exit 1
+          fi
+          echo "Detail spec reference guard passed."
+
       - name: Audit S2-F7 banned import check
         run: npm run check:banned-imports
 

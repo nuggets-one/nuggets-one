@@ -3,17 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3010",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "etl:tags": "npm --prefix scripts/migrate run etl:tags",
     "etl:articles": "npm --prefix scripts/migrate run etl:articles",
     "etl:collections": "npm --prefix scripts/migrate run etl:collections",
+    "backfill:card-preview": "npm --prefix scripts/migrate run backfill:card-preview",
     "validate:og": "node scripts/validate-og.mjs",
     "check:banned-imports": "node scripts/check-banned-imports.mjs",
     "check:bundle-budget": "node scripts/check-bundle-budget.mjs",
-    "test:handoff": "npm --prefix scripts/migrate run test:handoff"
+    "test:handoff": "npm --prefix scripts/migrate run test:handoff",
+    "test:feed-pagination": "playwright test tests/feed-pagination-invariant.spec.ts",
+    "test:detail-visual": "playwright test tests/detail-visual.spec.ts",
+    "test:detail-visual:update": "playwright test tests/detail-visual.spec.ts --update-snapshots",
+    "release:check": "npm run lint && npm run check:banned-imports && npm run build && npm run check:bundle-budget && npm run test:handoff"
   },
   "dependencies": {
     "@next/third-parties": "^16.2.4",
@@ -23,6 +28,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "autoprefixer": "^10.5.0",
     "clsx": "^2.1.1",
+    "jsdom": "^27.4.0",
     "lucide-react": "^0.503.0",
     "next": "16.2.4",
     "next-themes": "^0.4.6",
@@ -39,6 +45,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^20",
     "@types/react": "^19",

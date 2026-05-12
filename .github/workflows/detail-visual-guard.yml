@@ -1,0 +1,39 @@
+name: Detail Visual Guard
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "components/ui/sheet.tsx"
+      - "components/ui/article-content.tsx"
+      - "components/ui/article-body.tsx"
+      - "components/ui/youtube-player.tsx"
+      - "docs/ARTICLE_DETAIL_DRAWER_UI_SPEC.md"
+
+jobs:
+  detail-visual-regression:
+    if: ${{ vars.DETAIL_VISUAL_GUARD == 'true' && vars.DETAIL_VISUAL_YOUTUBE_URL != '' && vars.DETAIL_VISUAL_IMAGE_URL != '' && vars.DETAIL_VISUAL_FALLBACK_URL != '' && vars.DETAIL_VISUAL_LONG_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run detail visual contract tests
+        env:
+          DETAIL_VISUAL_YOUTUBE_URL: ${{ vars.DETAIL_VISUAL_YOUTUBE_URL }}
+          DETAIL_VISUAL_IMAGE_URL: ${{ vars.DETAIL_VISUAL_IMAGE_URL }}
+          DETAIL_VISUAL_FALLBACK_URL: ${{ vars.DETAIL_VISUAL_FALLBACK_URL }}
+          DETAIL_VISUAL_LONG_URL: ${{ vars.DETAIL_VISUAL_LONG_URL }}
+        run: npm run test:detail-visual

@@ -1,0 +1,87 @@
+name: Release Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_url:
+        description: Preview, staging, or production base URL for OG and candidate checks
+        required: false
+        type: string
+      og_paths:
+        description: Comma-separated paths for OG validation
+        required: false
+        default: "/"
+        type: string
+
+jobs:
+  repo-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Install ETL workspace dependencies
+        run: npm --prefix scripts/migrate ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run repo release checks
+        run: npm run release:check
+
+      - name: Run feed pagination browser check
+        run: npm run test:feed-pagination
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-gates-playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
+
+  candidate-gates:
+    needs: repo-gates
+    if: ${{ inputs.deploy_url != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate OG metadata against candidate URL
+        env:
+          OG_PATHS: ${{ inputs.og_paths }}
+        run: npm run validate:og -- ${{ inputs.deploy_url }}
+
+      - name: Run detail visual contract tests against candidate URL
+        if: ${{ vars.DETAIL_VISUAL_GUARD == 'true' && vars.DETAIL_VISUAL_YOUTUBE_URL != '' && vars.DETAIL_VISUAL_IMAGE_URL != '' && vars.DETAIL_VISUAL_FALLBACK_URL != '' && vars.DETAIL_VISUAL_LONG_URL != '' }}
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ inputs.deploy_url }}
+          DETAIL_VISUAL_YOUTUBE_URL: ${{ vars.DETAIL_VISUAL_YOUTUBE_URL }}
+          DETAIL_VISUAL_IMAGE_URL: ${{ vars.DETAIL_VISUAL_IMAGE_URL }}
+          DETAIL_VISUAL_FALLBACK_URL: ${{ vars.DETAIL_VISUAL_FALLBACK_URL }}
+          DETAIL_VISUAL_LONG_URL: ${{ vars.DETAIL_VISUAL_LONG_URL }}
+        run: npm run test:detail-visual
+
+      - name: Upload candidate Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-gates-playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
