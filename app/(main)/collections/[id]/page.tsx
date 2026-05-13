@@ -2,6 +2,8 @@ import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getCollectionById, getCollectionMeta } from '@/lib/queries/collections'
+import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
+import { createClient } from '@/lib/supabase/server'
 import { ArticleCard } from '@/components/ui/article-card'
 import { CollectionDetailSkeleton } from '@/components/collections/collection-detail-skeleton'
 import { StatusBlock } from '@/components/ui/status-block'
@@ -47,6 +49,17 @@ async function CollectionContent({ id }: { id: string }) {
     )
   }
 
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const isAuthenticated = !!user
+  const collectionArticleIds = collection.articles.map((a) => a.id)
+  const bookmarkedIds =
+    user && collectionArticleIds.length > 0
+      ? await getBookmarkedArticleIdsForUser(user.id, collectionArticleIds)
+      : new Set<string>()
+
   return (
     <>
       {/* Header */}
@@ -79,6 +92,8 @@ async function CollectionContent({ id }: { id: string }) {
               key={article.id}
               article={article}
               priority={index === 0}
+              isAuthenticated={isAuthenticated}
+              initialBookmarked={bookmarkedIds.has(article.id)}
             />
           ))}
         </div>

@@ -1,7 +1,7 @@
 export function CollectionCardSkeleton() {
   return (
     <div
-      className="flex flex-col rounded-xl border border-border bg-surface overflow-hidden"
+      className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface"
       aria-hidden="true"
     >
       <div className="aspect-video w-full bg-surface-raised animate-pulse" />

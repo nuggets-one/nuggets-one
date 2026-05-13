@@ -21,17 +21,17 @@ export const metadata: Metadata = {
   },
 }
 import { unstable_noStore } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
 import { getFeedPage } from '@/lib/queries/feed'
 import { listOfficialTags } from '@/lib/queries/tags'
 import { getTagCountsForStream } from '@/lib/queries/tag-counts'
+import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
 import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
 import { FeedPager } from '@/components/feed/feed-pager'
 import { FeedEmpty } from '@/components/feed/feed-empty'
-import { StreamTabs } from '@/components/feed/stream-tabs'
-import { TagChipRail } from '@/components/feed/tag-chip-rail'
-import { ActiveFiltersBar } from '@/components/feed/active-filters-bar'
+import { FeedTopBar } from '@/components/feed/feed-top-bar'
 import { DEFAULT_STREAM } from '@/types/article'
 import type { ContentStream } from '@/types/article'
 
@@ -65,7 +65,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
     ).catch((error) => {
       const message = error instanceof Error ? error.message : String(error)
       console.error(`FeedGrid getFeedPage error: ${message}`)
-      return { articles: [], nextCursor: null, stream }
+      return { articles: [], nextCursor: null, stream, totalCount: 0 }
     }),
     listOfficialTags().catch((error) => {
       const message = error instanceof Error ? error.message : String(error)
@@ -80,27 +80,31 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   ])
 
   const { articles, nextCursor } = feedResult
+  const totalCount = typeof feedResult.totalCount === 'number' ? feedResult.totalCount : articles.length
   const streamLabel = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
-  const resultLabel = `${articles.length} result${articles.length === 1 ? '' : 's'}`
+  const resultLabel = `${articles.length} of ${totalCount} shown`
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const isAuthenticated = !!user
+  const articleIds = articles.map((a) => a.id)
+  const bookmarkedIds =
+    user && articleIds.length > 0
+      ? await getBookmarkedArticleIdsForUser(user.id, articleIds)
+      : new Set<string>()
 
   // Batch bookmark check — BLUEPRINT: "one batched GET per feed page (24 IDs max)"
   return (
     <>
-      <section
-        className="-mx-4 mb-3 border-b border-border lg:-mx-6"
-        aria-label="Feed stream"
-      >
-        <StreamTabs />
-      </section>
-
-      <div className="flex flex-col gap-4 mb-6">
-        <TagChipRail tags={officialTags} counts={tagCounts} />
-        <ActiveFiltersBar tags={officialTags} />
-        <p className="text-xs text-muted">
-          <span className="font-medium text-primary/85">{resultLabel}</span>
-          <span className="mx-1.5 text-muted/70">|</span>
-          <span>{streamLabel}</span>
-        </p>
+      <div className="-mt-4 lg:-mt-4">
+        <FeedTopBar
+          tags={officialTags}
+          counts={tagCounts}
+          resultLabel={resultLabel}
+          streamLabel={streamLabel}
+        />
       </div>
 
       {articles.length === 0 ? (
@@ -113,7 +117,8 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
               key={article.id}
               article={article}
               priority={index === 0}
-              initialBookmarked={false}
+              isAuthenticated={isAuthenticated}
+              initialBookmarked={bookmarkedIds.has(article.id)}
             />
           ))}
         </div>
@@ -126,6 +131,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
           stream={stream}
           tags={tags}
           q={q}
+          isAuthenticated={isAuthenticated}
         />
       )}
     </>
@@ -138,12 +144,15 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <Suspense fallback={
       <>
-        <div className="-mx-4 mb-3 flex min-h-[48px] animate-pulse border-b border-border lg:-mx-6">
-          <div className="h-11 w-24 rounded-none bg-border/40 sm:w-36" />
-          <div className="ml-6 h-11 w-32 rounded-none bg-border/30 sm:w-44" />
-        </div>
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="h-8 w-full rounded-full bg-surface-raised animate-pulse" />
+        <section className="sticky top-[var(--header-height)] z-40 -mx-4 -mt-4 mb-5 border-b border-border bg-rail/95 backdrop-blur-sm lg:-mx-6 lg:-mt-4">
+          <div className="space-y-3 px-4 py-3 lg:px-6">
+            <div className="h-12 w-72 animate-pulse rounded-xl bg-border/35" />
+            <div className="h-10 w-full animate-pulse rounded-full bg-surface-raised/70" />
+            <div className="h-4 w-40 animate-pulse rounded bg-border/35" />
+          </div>
+        </section>
+        <div className="mb-6">
+          <div className="h-8 w-full animate-pulse rounded-full bg-surface-raised" />
         </div>
         <FeedSkeleton count={6} />
       </>

@@ -51,7 +51,10 @@ async function CollectionGrid() {
 export default function CollectionsPage() {
   return (
     <>
-      <h1 className="text-2xl font-bold text-primary mb-6">Collections</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-primary">Collections</h1>
+        <p className="mt-1 text-sm text-muted">Curated reading lists from the Nuggets team</p>
+      </div>
       <Suspense fallback={<CollectionListSkeleton count={6} />}>
         <CollectionGrid />
       </Suspense>

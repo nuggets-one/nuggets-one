@@ -1,7 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import type { CollectionSummary } from '@/types/collection'
-import { canRenderWithNextImage, safeHostname, shouldOptimizeImage } from '@/lib/ui/card-image-host'
+import {
+  canRenderWithNextImage,
+  resolveCardImageUrl,
+  safeHostname,
+  shouldOptimizeImage,
+} from '@/lib/ui/card-image-host'
 import { isImageUrl } from '@/lib/ui/is-image-url'
 
 function idToHue(id: string): number {
@@ -33,34 +39,39 @@ export function CollectionCard({ collection }: Props) {
   const { id, title, description, curator_name, cover_url, entry_count } = collection
   const href = `/collections/${id}`
   const coverIsImage = cover_url ? isImageUrl(cover_url) : false
-  const coverCanRender = cover_url ? canRenderWithNextImage(cover_url) : false
-  const coverHost = cover_url ? safeHostname(cover_url) : ''
+  const resolvedCoverUrl = coverIsImage ? resolveCardImageUrl(cover_url) : null
+  const coverCanRender = resolvedCoverUrl ? canRenderWithNextImage(resolvedCoverUrl) : false
+  const coverHost = resolvedCoverUrl ? safeHostname(resolvedCoverUrl) : ''
   const unoptimized = !shouldOptimizeImage(coverHost)
 
   return (
-    <article className="group flex flex-col rounded-xl border border-border bg-surface overflow-hidden transition-transform duration-150 hover:-translate-y-px hover:shadow-sm focus-within:ring-2 focus-within:ring-accent">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface transition-transform duration-150 hover:-translate-y-px hover:shadow-sm focus-within:ring-2 focus-within:ring-accent">
       <Link
         href={href}
         className="relative block aspect-video w-full overflow-hidden bg-surface-raised"
         tabIndex={-1}
         aria-hidden="true"
       >
-        {cover_url && coverIsImage && coverCanRender ? (
-          <Image
-            src={cover_url}
-            alt={title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            quality={75}
-            unoptimized={unoptimized}
-          />
+        {resolvedCoverUrl && coverCanRender ? (
+          resolvedCoverUrl.includes('/image/fetch/') ? (
+            <CardMediaRaster src={resolvedCoverUrl} alt={title} priority={false} />
+          ) : (
+            <Image
+              src={resolvedCoverUrl}
+              alt={title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              quality={75}
+              unoptimized={unoptimized}
+            />
+          )
         ) : (
           <GradientPlaceholder id={id} />
         )}
       </Link>
 
-      <div className="flex flex-col flex-1 p-4 gap-2">
+      <div className="flex flex-1 flex-col gap-2 p-4">
         <Link href={href} className="focus:outline-none">
           <h2 className="text-base font-semibold leading-snug line-clamp-2 text-primary group-hover:text-primary/80 transition-colors">
             {title}

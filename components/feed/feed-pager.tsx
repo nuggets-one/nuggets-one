@@ -13,6 +13,7 @@ type Props = {
   stream: ContentStream
   tags: string[]
   q: string
+  isAuthenticated: boolean
 }
 
 type FeedApiResponse = {
@@ -20,7 +21,7 @@ type FeedApiResponse = {
   nextCursor: FeedCursor | null
 }
 
-export function FeedPager({ initialCursor, stream, tags, q }: Props) {
+export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated }: Props) {
   const [cards, setCards] = useState<ArticleCardProps[]>([])
   const [cursor, setCursor] = useState<FeedCursor | null>(initialCursor)
   const [isLoading, setIsLoading] = useState(false)
@@ -103,6 +104,7 @@ export function FeedPager({ initialCursor, stream, tags, q }: Props) {
             <ArticleCard
               key={article.id}
               article={article}
+              isAuthenticated={isAuthenticated}
               initialBookmarked={false}
             />
           ))}

@@ -4,6 +4,8 @@ import { CardFooter } from '@/components/ui/card-footer'
 import { CardThumbnailGrid } from '@/components/ui/card-thumbnail-grid'
 import { formatTagDisplayLabel } from '@/lib/ui/tag-display-label'
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
+import { isImageUrl } from '@/lib/ui/is-image-url'
+import { isPdfUrl } from '@/lib/ui/is-pdf-url'
 import type { ArticleCardProps } from '@/types/article'
 
 function getSourceHostLabel(url: string | null): string | null {
@@ -55,11 +57,34 @@ export function ArticleCard({
   const sourceHost = getSourceHostLabel(source_url)
 
   const trimmedHeroThumb = hero_thumb_url?.trim() ?? ''
+  const rawVideoId = hero_video_id?.trim() ?? ''
+  const looksLikeYouTubeId = /^[\w-]{11}$/.test(rawVideoId)
+  // Legacy parity: poster when YouTube (or unknown kind with a plausible 11-char id).
   const youtubePosterFallback =
-    hero_media_kind === 'youtube' && hero_video_id?.trim() && !trimmedHeroThumb
-      ? youTubePosterHqUrl(hero_video_id)
+    rawVideoId &&
+    !trimmedHeroThumb &&
+    looksLikeYouTubeId &&
+    (hero_media_kind === 'youtube' || hero_media_kind === null)
+      ? youTubePosterHqUrl(rawVideoId)
       : null
-  const heroThumbForCard = trimmedHeroThumb || youtubePosterFallback || null
+  // Match legacy CardMedia / getThumbnailUrl: single grid image backs the hero
+  // when hero_thumb_url is empty (multi-grid still requires length >= 2).
+  const singleGridImageFallback =
+    !trimmedHeroThumb && !youtubePosterFallback && images.length === 1
+      ? images[0].url.trim()
+      : ''
+  let heroThumbForCard =
+    trimmedHeroThumb ||
+    youtubePosterFallback ||
+    (singleGridImageFallback || null)
+  // PDF heroes often fail in-browser (Cloudinary PDF restrictions / remote 403).
+  // Prefer first non-PDF raster from article_media when available (legacy grid merge).
+  if (heroThumbForCard && isPdfUrl(heroThumbForCard)) {
+    const raster = images
+      .map((i) => i.url.trim())
+      .find((u) => u && !isPdfUrl(u) && isImageUrl(u))
+    if (raster) heroThumbForCard = raster
+  }
   const useThumbnailGrid = images.length >= 2
 
   return (
