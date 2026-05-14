@@ -1,4 +1,5 @@
 import { getPublicClient } from '@/lib/supabase/public'
+import { normalizeCuratorDisplayNameOnRows } from '@/lib/queries/normalize-curator-display-name'
 import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
 import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
 import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
@@ -33,10 +34,42 @@ const FEED_SELECT = `
   hero_media_kind,
   hero_video_id,
   tag_slugs,
-  source_url
+  source_url,
+  curator_display_name
 `.trim()
 
 const LEGACY_FEED_SELECT = `
+  id,
+  slug,
+  title,
+  card_preview:excerpt,
+  content_stream,
+  published_at,
+  hero_thumb_url,
+  hero_alt_text,
+  hero_media_kind,
+  hero_video_id,
+  tag_slugs,
+  source_url,
+  curator_display_name
+`.trim()
+
+const FEED_SELECT_NO_CURATOR = `
+  id,
+  slug,
+  title,
+  card_preview,
+  content_stream,
+  published_at,
+  hero_thumb_url,
+  hero_alt_text,
+  hero_media_kind,
+  hero_video_id,
+  tag_slugs,
+  source_url
+`.trim()
+
+const LEGACY_FEED_SELECT_NO_CURATOR = `
   id,
   slug,
   title,
@@ -57,6 +90,35 @@ const LEGACY_FEED_SELECT = `
 
 function isMissingCardPreviewError(message: string): boolean {
   return /card_preview/i.test(message)
+}
+
+function isMissingCuratorDisplayNameColumnError(message: string): boolean {
+  return /curator_display_name/i.test(message) && /does not exist/i.test(message)
+}
+
+type FeedArticleSelectResult = {
+  data: unknown
+  error: { message: string } | null
+}
+
+async function runFeedArticleSelectChain(
+  runQuery: (selectClause: string) => Promise<FeedArticleSelectResult>
+): Promise<FeedArticleSelectResult> {
+  let result = await runQuery(FEED_SELECT)
+  if (result.error && isMissingCuratorDisplayNameColumnError(result.error.message)) {
+    result = await runQuery(FEED_SELECT_NO_CURATOR)
+  }
+  if (result.error && isMissingCardPreviewError(result.error.message)) {
+    result = await runQuery(LEGACY_FEED_SELECT)
+    if (result.error && isMissingCuratorDisplayNameColumnError(result.error.message)) {
+      result = await runQuery(LEGACY_FEED_SELECT_NO_CURATOR)
+    }
+  }
+  return result
+}
+
+function normalizeCuratorOnRows(rows: Record<string, unknown>[]): RawArticleRow[] {
+  return normalizeCuratorDisplayNameOnRows(rows) as unknown as RawArticleRow[]
 }
 
 export async function getFeedPage({
@@ -155,17 +217,14 @@ async function getFeedPageByCursor({
     return query
   }
 
-  let { data, error } = await runQuery(FEED_SELECT)
-  if (error && isMissingCardPreviewError(error.message)) {
-    ;({ data, error } = await runQuery(LEGACY_FEED_SELECT))
-  }
+  const { data, error } = await runFeedArticleSelectChain(runQuery)
 
   if (error) {
     throw new Error(`getFeedPage error: ${error.message}`)
   }
 
   // TODO: replace with generated DB types in later PR
-  const rawRows = (data ?? []) as unknown as RawArticleRow[]
+  const rawRows = normalizeCuratorOnRows((data ?? []) as unknown as Record<string, unknown>[])
   const rowsWithImages = await attachImagesToRows(supabase, rawRows)
   const rows = await attachTagLabelsToRows(
     supabase as unknown as SupabaseLike,
@@ -218,10 +277,7 @@ async function getFeedPageBySearch({
     return query
   }
 
-  let { data, error } = await runQuery(FEED_SELECT)
-  if (error && isMissingCardPreviewError(error.message)) {
-    ;({ data, error } = await runQuery(LEGACY_FEED_SELECT))
-  }
+  const { data, error } = await runFeedArticleSelectChain(runQuery)
 
   if (error) {
     throw new Error(`getFeedPageBySearch error: ${error.message}`)
@@ -229,7 +285,7 @@ async function getFeedPageBySearch({
 
   // Search results have no stable cursor — return null
   // PR-09 can add pagination for search results if needed post-PMF
-  const rawRows = (data ?? []) as unknown as RawArticleRow[]
+  const rawRows = normalizeCuratorOnRows((data ?? []) as unknown as Record<string, unknown>[])
   const rowsWithImages = await attachImagesToRows(supabase, rawRows)
   const rows = await attachTagLabelsToRows(
     supabase as unknown as SupabaseLike,

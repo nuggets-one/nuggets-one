@@ -19,9 +19,14 @@ export type ArticleCardProps = {
   hero_media_kind: 'image' | 'youtube' | null
   hero_video_id: string | null
   tag_slugs: string[]
-  /** Display labels aligned to `tag_slugs` order. Derived from `tags.label`; fallback formatting is only used when a label lookup is unavailable. */
+  /** Display labels aligned to `tag_slugs` order: `tags.label` when present, else the slug as stored on the article. */
   tag_labels: string[]
   source_url: string | null
+  /**
+   * Denormalized curator display name for the card chip (null → badge "N").
+   * Set on admin save/publish from `profiles.display_name`.
+   */
+  curator_display_name: string | null
   /**
    * Up to 4 image rows from `article_media` (kind='image', sort_order ASC).
    * Populated only by the feed query (Phase 14); other surfaces leave it `[]`.

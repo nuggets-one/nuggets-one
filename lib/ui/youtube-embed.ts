@@ -1,6 +1,6 @@
 /**
  * Shared YouTube nocookie embed URL + IFrame API postMessage helpers.
- * Used by detail `YouTubePlayer` and feed `GlobalYouTubeMiniPlayer`.
+ * Used by `GlobalYouTubeMiniPlayer`, optional `YouTubePlayer`, and shared helpers.
  */
 
 export const YOUTUBE_NOCOOKIE_ORIGIN = 'https://www.youtube-nocookie.com'

@@ -1,5 +1,3 @@
-import { formatTagDisplayLabel } from '@/lib/ui/tag-display-label'
-
 type TagLookupRow = {
   slug: string
   label: string
@@ -46,7 +44,7 @@ export async function attachTagLabelsToRows(
     console.warn(`attachTagLabelsToRows: ${error.message}`)
     return rows.map((row) => ({
       ...row,
-      tag_labels: row.tag_slugs.map((slug) => formatTagDisplayLabel(slug)),
+      tag_labels: row.tag_slugs.slice(),
     }))
   }
 
@@ -58,7 +56,8 @@ export async function attachTagLabelsToRows(
     ...row,
     tag_labels: row.tag_slugs.map((slug) => {
       const label = labelBySlug.get(slug)
-      return label ? formatTagDisplayLabel(label) : formatTagDisplayLabel(slug)
+      // Show `tags.label` when set; otherwise the stored slug on the article (no client-side casing).
+      return label != null && label.length > 0 ? label : slug
     }),
   }))
 }

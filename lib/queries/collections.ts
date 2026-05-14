@@ -2,6 +2,7 @@
 
 import { notFound } from 'next/navigation'
 import { getPublicClient } from '@/lib/supabase/public'
+import { normalizeCuratorDisplayNameOnRows } from '@/lib/queries/normalize-curator-display-name'
 import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
 import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
 import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
@@ -110,10 +111,42 @@ const ARTICLE_FIELDS = `
   hero_media_kind,
   hero_video_id,
   tag_slugs,
-  source_url
+  source_url,
+  curator_display_name
 `.trim()
 
 const LEGACY_ARTICLE_FIELDS = `
+  id,
+  slug,
+  title,
+  card_preview:excerpt,
+  content_stream,
+  published_at,
+  hero_thumb_url,
+  hero_alt_text,
+  hero_media_kind,
+  hero_video_id,
+  tag_slugs,
+  source_url,
+  curator_display_name
+`.trim()
+
+const ARTICLE_FIELDS_NO_CURATOR = `
+  id,
+  slug,
+  title,
+  card_preview,
+  content_stream,
+  published_at,
+  hero_thumb_url,
+  hero_alt_text,
+  hero_media_kind,
+  hero_video_id,
+  tag_slugs,
+  source_url
+`.trim()
+
+const LEGACY_ARTICLE_FIELDS_NO_CURATOR = `
   id,
   slug,
   title,
@@ -130,6 +163,10 @@ const LEGACY_ARTICLE_FIELDS = `
 
 function isMissingCardPreviewError(message: string): boolean {
   return /card_preview/i.test(message)
+}
+
+function isMissingCuratorDisplayNameColumnError(message: string): boolean {
+  return /curator_display_name/i.test(message) && /does not exist/i.test(message)
 }
 
 export async function getCollectionById(id: string): Promise<CollectionDetail> {
@@ -156,8 +193,14 @@ export async function getCollectionById(id: string): Promise<CollectionDetail> {
   }
 
   let { data, error } = await runQuery(ARTICLE_FIELDS)
+  if (error && isMissingCuratorDisplayNameColumnError(error.message)) {
+    ;({ data, error } = await runQuery(ARTICLE_FIELDS_NO_CURATOR))
+  }
   if (error && isMissingCardPreviewError(error.message)) {
     ;({ data, error } = await runQuery(LEGACY_ARTICLE_FIELDS))
+    if (error && isMissingCuratorDisplayNameColumnError(error.message)) {
+      ;({ data, error } = await runQuery(LEGACY_ARTICLE_FIELDS_NO_CURATOR))
+    }
   }
 
   if (error) {
@@ -169,16 +212,18 @@ export async function getCollectionById(id: string): Promise<CollectionDetail> {
   const entries: Array<{ position: number; articles: ArticleRowWithoutImages | null }> =
     raw.community_collection_entries ?? []
 
-  const rowsWithoutLabels: ArticleRowBase[] = entries
+  const rawArticles: Record<string, unknown>[] = entries
     .filter((e) => e.articles != null)
     .sort((a, b) => a.position - b.position)
-    .map((e) => ({
-      ...(e.articles as ArticleRowWithoutImages),
-      images: [],
-      hero_media_kind: normalizeHeroMediaKind(
-        (e.articles as ArticleRowWithoutImages).hero_media_kind
-      ),
-    }))
+    .map((e) => e.articles as unknown as Record<string, unknown>)
+
+  const normalized = normalizeCuratorDisplayNameOnRows(rawArticles)
+
+  const rowsWithoutLabels: ArticleRowBase[] = normalized.map((flat) => ({
+    ...flat,
+    images: [],
+    hero_media_kind: normalizeHeroMediaKind(flat.hero_media_kind),
+  })) as unknown as ArticleRowBase[]
 
   const rows = await attachTagLabelsToRows(
     supabase as unknown as SupabaseLike,

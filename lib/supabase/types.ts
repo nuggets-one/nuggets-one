@@ -30,6 +30,20 @@ export type Database = {
           slug: string
           label: string
           sort_order: number
+          page_title: string | null
+          body_markdown: string
+          is_enabled: boolean
+          show_in_footer: boolean
+          show_in_account_menu: boolean
+          robots_index: boolean
+          updated_at: string
+        }
+      }
+      site_settings: {
+        Row: {
+          setting_key: string
+          setting_value: string
+          updated_at: string
         }
       }
     }

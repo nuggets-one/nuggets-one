@@ -13,6 +13,10 @@ export const CACHE_TAGS = {
   tags:            'tags:official',
   collectionsList: 'collections:list',
   collection:      (id: string) => `collection:${id}`,
+  /** Busts public legal footer/menu caches and all `/legal/[slug]` data reads. */
+  legalDocuments:  'legal:documents',
+  /** Busts cached `site_settings` reads (e.g. consumer disclaimer). */
+  siteSettings:    'site:settings',
 } as const
 
 // ─── Revalidation helpers — called by admin publish handler (PR-14) ─
@@ -39,4 +43,14 @@ export function revalidateArticle(id: string): void {
  */
 export function revalidateOfficialTags(): void {
   revalidateTag(CACHE_TAGS.tags, HARD_BUST)
+}
+
+/** Call after any admin change to `legal_pages` (content, flags, order, create). */
+export function revalidateLegalDocuments(): void {
+  revalidateTag(CACHE_TAGS.legalDocuments, HARD_BUST)
+}
+
+/** Call after any admin change to `site_settings`. */
+export function revalidateSiteSettings(): void {
+  revalidateTag(CACHE_TAGS.siteSettings, HARD_BUST)
 }

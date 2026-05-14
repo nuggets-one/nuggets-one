@@ -3,23 +3,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
+import { sanitizeNext } from '@/lib/auth/sanitize-next'
 
 // S7-F4: use the canonical site URL env var — never trust the Host header for
 // redirect construction (host-header poisoning → attacker controls reset link).
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3010'
-
-// PRODUCT §0.7: reject next values not starting with '/' OR starting with '//'
-// OR containing a scheme. Defense-in-depth against open redirects.
-function sanitizeNext(raw: FormDataEntryValue | null | undefined): string {
-  const next = typeof raw === 'string' ? raw : ''
-  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/'
-  try {
-    if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(decodeURIComponent(next))) return '/'
-  } catch {
-    return '/'
-  }
-  return next
-}
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),

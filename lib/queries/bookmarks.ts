@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { normalizeCuratorDisplayNameOnRows } from '@/lib/queries/normalize-curator-display-name'
 import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
 import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
 import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
@@ -29,10 +30,42 @@ const BOOKMARK_ARTICLE_FIELDS = `
   hero_media_kind,
   hero_video_id,
   source_url,
-  tag_slugs
+  tag_slugs,
+  curator_display_name
 `.trim()
 
 const LEGACY_BOOKMARK_ARTICLE_FIELDS = `
+  id,
+  slug,
+  title,
+  card_preview:excerpt,
+  content_stream,
+  published_at,
+  hero_thumb_url,
+  hero_alt_text,
+  hero_media_kind,
+  hero_video_id,
+  source_url,
+  tag_slugs,
+  curator_display_name
+`.trim()
+
+const BOOKMARK_ARTICLE_FIELDS_NO_CURATOR = `
+  id,
+  slug,
+  title,
+  card_preview,
+  content_stream,
+  published_at,
+  hero_thumb_url,
+  hero_alt_text,
+  hero_media_kind,
+  hero_video_id,
+  source_url,
+  tag_slugs
+`.trim()
+
+const LEGACY_BOOKMARK_ARTICLE_FIELDS_NO_CURATOR = `
   id,
   slug,
   title,
@@ -49,6 +82,10 @@ const LEGACY_BOOKMARK_ARTICLE_FIELDS = `
 
 function isMissingCardPreviewError(message: string): boolean {
   return /card_preview/i.test(message)
+}
+
+function isMissingCuratorDisplayNameColumnError(message: string): boolean {
+  return /curator_display_name/i.test(message) && /does not exist/i.test(message)
 }
 
 /** Batched bookmark lookup for feed/collection cards (caller supplies user id). */
@@ -86,25 +123,35 @@ export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
   }
 
   let { data, error } = await runQuery(BOOKMARK_ARTICLE_FIELDS)
+  if (error && isMissingCuratorDisplayNameColumnError(error.message)) {
+    ;({ data, error } = await runQuery(BOOKMARK_ARTICLE_FIELDS_NO_CURATOR))
+  }
   if (error && isMissingCardPreviewError(error.message)) {
     ;({ data, error } = await runQuery(LEGACY_BOOKMARK_ARTICLE_FIELDS))
+    if (error && isMissingCuratorDisplayNameColumnError(error.message)) {
+      ;({ data, error } = await runQuery(LEGACY_BOOKMARK_ARTICLE_FIELDS_NO_CURATOR))
+    }
   }
 
   if (error || !data) return []
 
   // Relation payload shape can vary with generated DB types (object vs array).
   // Normalize to one article per bookmark row.
-  const rowsWithoutLabels: ArticleRowBase[] = ((data as unknown) as BookmarkWithArticleRow[])
+  const rawArticles = ((data as unknown) as BookmarkWithArticleRow[])
     .map((row) => {
       if (!row.articles) return null
-      return Array.isArray(row.articles) ? row.articles[0] ?? null : row.articles
+      const raw = Array.isArray(row.articles) ? row.articles[0] ?? null : row.articles
+      return raw as Record<string, unknown> | null
     })
-    .filter((article): article is Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels'> => article !== null)
-    .map((article) => ({
-      ...article,
-      images: [],
-      hero_media_kind: normalizeHeroMediaKind(article.hero_media_kind),
-    }))
+    .filter((row): row is Record<string, unknown> => row !== null)
+
+  const normalized = normalizeCuratorDisplayNameOnRows(rawArticles)
+
+  const rowsWithoutLabels = normalized.map((article) => ({
+    ...article,
+    images: [],
+    hero_media_kind: normalizeHeroMediaKind(article.hero_media_kind),
+  })) as unknown as ArticleRowBase[]
 
   const rows = await attachTagLabelsToRows(
     supabase as unknown as SupabaseLike,

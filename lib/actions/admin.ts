@@ -25,6 +25,15 @@ function withoutCardPreview<T extends { card_preview?: unknown }>(payload: T): O
 
 type AdminDb = ReturnType<typeof createAdminClient>
 
+async function curatorDisplayNameForAdminUser(
+  db: AdminDb,
+  userId: string
+): Promise<string | null> {
+  const { data } = await db.from('profiles').select('display_name').eq('id', userId).maybeSingle()
+  const d = data?.display_name
+  return typeof d === 'string' && d.trim() ? d.trim() : null
+}
+
 function asString(value: FormDataEntryValue): string {
   return typeof value === 'string' ? value : ''
 }
@@ -145,6 +154,8 @@ export async function createArticleAction(formData: FormData) {
   const id = crypto.randomUUID()
   const slug = generateArticleSlug(title, id)
 
+  const curator_display_name = await curatorDisplayNameForAdminUser(db, user.id)
+
   // S6-F4: insert with empty tag_slugs; RPC populates article_tags and recomputes the array
   const insertPayload = {
     id,
@@ -159,6 +170,7 @@ export async function createArticleAction(formData: FormData) {
     hero_alt_text,
     tag_slugs: [],
     created_by: user.id,
+    curator_display_name,
     status: 'draft',
   }
 
@@ -196,7 +208,7 @@ export async function createArticleAction(formData: FormData) {
 }
 
 export async function updateArticleAction(formData: FormData) {
-  await requireAdmin()
+  const user = await requireAdmin()
   const db = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
@@ -221,6 +233,8 @@ export async function updateArticleAction(formData: FormData) {
   // Blueprint §2.a: slug regenerated on every save (title changes → new slug → 301 from old)
   const slug = generateArticleSlug(title, id)
 
+  const curator_display_name = await curatorDisplayNameForAdminUser(db, user.id)
+
   // S6-F4: tag_slugs excluded from direct update; RPC recomputes from article_tags
   const updatePayload = {
     slug,
@@ -232,6 +246,7 @@ export async function updateArticleAction(formData: FormData) {
     source_url,
     hero_thumb_url,
     hero_alt_text,
+    curator_display_name,
   }
 
   let { error } = await db.from('articles').update(updatePayload).eq('id', id)
@@ -265,7 +280,7 @@ export async function updateArticleAction(formData: FormData) {
 }
 
 export async function publishArticleAction(formData: FormData) {
-  await requireAdmin()
+  const user = await requireAdmin()
   const db = createAdminClient()
 
   const id = formData.get('id') as string
@@ -300,11 +315,14 @@ export async function publishArticleAction(formData: FormData) {
   // Blueprint §15.1: published_at set once on first publish — never overwritten
   const published_at = (existing?.published_at as string | null) ?? new Date().toISOString()
 
+  const curator_display_name = await curatorDisplayNameForAdminUser(db, user.id)
+
   const publishUpdatePayload = {
     status: 'published',
     published_at,
     excerpt: publishPayload.excerpt,
     card_preview: publishPayload.card_preview,
+    curator_display_name,
   }
 
   let { error } = await db.from('articles').update(publishUpdatePayload).eq('id', id)
@@ -317,15 +335,19 @@ export async function publishArticleAction(formData: FormData) {
 
   revalidateArticle(id)
 
-  // Audit S6-F10 decision: decouple fan-out from publish response path.
   if (publishPayload.content_stream && publishPayload.title) {
-    void fanOutOnPublish({
-      articleId: id,
-      stream: publishPayload.content_stream as 'standard' | 'pulse',
-      title: publishPayload.title,
-    }).catch((fanOutError) => {
+    try {
+      const fanResult = await fanOutOnPublish({
+        articleId: id,
+        stream: publishPayload.content_stream as 'standard' | 'pulse',
+        title: publishPayload.title,
+      })
+      const suffix = fanResult.mode === 'queued' ? '?notice=fanout_queued' : ''
+      redirect(`/admin/articles/${id}${suffix}`)
+    } catch (fanOutError) {
       console.error('[publishArticleAction] fan-out error:', fanOutError)
-    })
+      redirect(`/admin/articles/${id}?warning=fanout_failed`)
+    }
   }
 
   redirect(`/admin/articles/${id}`)

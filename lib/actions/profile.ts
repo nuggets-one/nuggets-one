@@ -25,5 +25,9 @@ export async function updateDisplayNameAction(formData: FormData): Promise<void>
     updated_at: new Date().toISOString(),
   })
 
+  await supabase.auth.updateUser({
+    data: { display_name: displayName || null },
+  })
+
   redirect('/account?message=name_updated')
 }
