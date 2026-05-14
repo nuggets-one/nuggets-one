@@ -82,7 +82,6 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const { articles, nextCursor } = feedResult
   const totalCount = typeof feedResult.totalCount === 'number' ? feedResult.totalCount : articles.length
   const streamLabel = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
-  const resultLabel = `${articles.length} of ${totalCount} shown`
 
   const supabase = await createClient()
   const {
@@ -102,8 +101,9 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
         <FeedTopBar
           tags={officialTags}
           counts={tagCounts}
-          resultLabel={resultLabel}
           streamLabel={streamLabel}
+          shownCount={articles.length}
+          totalCount={totalCount}
         />
       </div>
 
@@ -144,11 +144,14 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <Suspense fallback={
       <>
-        <section className="sticky top-[var(--header-height)] z-40 -mx-4 -mt-4 mb-5 border-b border-border bg-rail/95 backdrop-blur-sm lg:-mx-6 lg:-mt-4">
+        <section className="sticky top-[var(--header-height)] z-40 -mx-4 -mt-4 mb-5 min-h-[100px] border-b border-border bg-rail/95 backdrop-blur-sm lg:-mx-6 lg:-mt-4">
           <div className="space-y-3 px-4 py-3 lg:px-6">
             <div className="h-12 w-72 animate-pulse rounded-xl bg-border/35" />
-            <div className="h-10 w-full animate-pulse rounded-full bg-surface-raised/70" />
-            <div className="h-4 w-40 animate-pulse rounded bg-border/35" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="h-9 w-16 animate-pulse rounded-full bg-surface-raised/70" />
+              <div className="h-10 w-32 animate-pulse rounded-full bg-surface-raised/70" />
+            </div>
+            <div className="h-4 w-48 animate-pulse rounded bg-border/35" />
           </div>
         </section>
         <div className="mb-6">

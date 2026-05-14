@@ -649,10 +649,10 @@ The card density at 4 cols is high enough that adding one icon doesn't tip clutt
 
 **Rollback:** revert Phase 14 PR. Card returns to single `hero_thumb_url` rendering.
 
-### 2.K — Detail reading pattern: parallel-slot intercepting route ("Sheet") — AMENDED 2026-05-01
+### 2.K — Detail reading pattern: canonical nugget route + intercepted sheet shell — AMENDED 2026-05-01
 > **Overrides** §7 ("Modal/drawer reading pattern — frozen out") and **scoped lift** of `CLAUDE.md` rule "ArticleModal / ArticleDrawer → use /nuggets/[id]/[slug]". The lift is **narrow**: only the parallel-slot + intercepting-route pattern is permitted. Context-driven modals (e.g. a `useModalState` hook above the grid) remain banned because that's the v1 pattern that caused click-lag. The intercepting-route pattern is a *route*, not a context — it does not re-introduce the v1 failure mechanism.
 
-**Decision:** clicking a card from the feed opens an article in a **sheet** rendered via Next 15 parallel slot + intercepting route. The grid stays mounted underneath; scroll position is preserved; URL updates to `/nuggets/[id]/[slug]`. Direct hits to that URL serve the canonical full page (mobile fallback, deep-link share targets). The full page route already exists and stays unchanged.
+**Decision:** clicking a card from the feed opens the canonical nugget route in an in-context **sheet** rendered via Next 15 parallel slot + intercepting route. The grid stays mounted underneath; scroll position is preserved; URL updates to `/nuggets/[id]/[slug]`. Direct hits to that URL serve the canonical full page (mobile fallback, deep-link share targets). The route stays singular; only the shell changes by entry context.
 
 **Why this overrides §7 (which said "modal reading pattern — frozen out"):**
 The v1 freeze was perf-grounded — the original modal sat above a context-cascaded grid. Under v2, the sheet is a *route* parallel-slotted into the layout. Background grid does not re-render on open. `PERFORMANCE_RULES_REEVALUATION.md` §7 confirmed v2's architecture structurally eliminates the v1 cascade. Bundle cost: ~3–5 KB gzip for sheet shell. Home is at 42.6 KB / 85 KB — comfortable headroom.
@@ -662,13 +662,13 @@ The v1 freeze was perf-grounded — the original modal sat above a context-casca
 **Implementation contract:**
 - `app/(main)/layout.tsx` — accept `modal` slot prop alongside `children`. Render `{children}{modal}`.
 - `app/(main)/@modal/default.tsx` — returns `null`. **Required.** Without it, the slot leaks into direct URLs.
-- `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` — intercepts feed-originated nav. Renders `<Sheet>` containing the same `<ArticleContent>` used by the canonical route (extract into `components/ui/article-content.tsx`).
+- `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` — intercepts feed-originated nav. Renders the canonical nugget route inside `<Sheet>` using the same `<ArticleContent>` as the full-page shell.
 - `components/ui/sheet.tsx` (`'use client'`) — focus trap, escape-to-close, backdrop-click-to-close, swipe-down-to-close on mobile. Single client island. ~3–5 KB gzip.
   - Desktop: side panel anchored right, ~640px wide, full height, slide-in from right.
   - Mobile (`<lg`): bottom sheet, ~92vh, slide-up from bottom.
   - Reduced-motion: snap, no slide.
 - Close → `router.back()`. URL returns to feed; `searchParams` (filters) preserved automatically because `router.back()` traverses history.
-- `components/ui/article-card.tsx` — `<Link>` href stays `/nuggets/[id]/[slug]` (unchanged). Next 15 routes feed-originated clicks through the intercept; direct URL paste/share-link goes to canonical route. **No card-level routing change.**
+- `components/ui/article-card.tsx` — `<Link>` href stays `/nuggets/[id]/[slug]` (unchanged). Next 15 routes feed-originated clicks through the intercept; direct URL paste/share-link goes to the full-page shell of that same canonical route. **No card-level routing change.**
 
 **Risks acknowledged:**
 - Parallel-slot + intercepting-route in Next 15 has known sharp edges around `default.tsx` discipline and prefetch. Phase 15 PR includes a smoke test of: feed → click card → sheet opens → close → grid scroll preserved → click another → second sheet opens → back button closes → forward reopens → direct URL paste shows full page (no sheet) → share link from sheet copies canonical URL.

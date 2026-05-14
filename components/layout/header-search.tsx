@@ -221,7 +221,7 @@ export function HeaderSearch() {
         <ul
           role="listbox"
           aria-label="Search suggestions"
-          className="absolute top-full left-0 right-0 mt-1 z-50 bg-surface border border-border rounded-lg shadow-lg overflow-hidden"
+          className="absolute top-full left-0 right-0 mt-1 z-50 overflow-hidden rounded-lg border border-border bg-surface shadow-panel"
         >
           {suggestionsPending && (
             <li className="px-4 py-3 text-sm text-muted">

@@ -100,12 +100,12 @@ auto-animate, @vercel/og, @sentry/react, @sentry/nextjs
 - is_published anywhere in application TypeScript
 
 ### Legacy patterns from Project-Phoenix — do not port
-- ArticleModal / ArticleDrawer — replaced by /nuggets/[id]/[slug]
+- ArticleModal / ArticleDrawer — replaced by the canonical /nuggets/[id]/[slug] route; only route-driven intercepted sheet shells are allowed
 - FilterStateContext — replaced by nuqs URL state
 - useInfiniteArticles hook — replaced by fetch + useTransition
 - BookmarkCollection / CollectionSelector — replaced by flat /bookmarks
 - NewsCard grid/feed/masonry variants — single dense grid only
-- openArticle / expanded URL sync pattern — replaced by next/link
+- openArticle / expanded URL sync pattern — replaced by next/link to the canonical route; never reintroduce query-param modal state
 
 ---
 

@@ -1,10 +1,16 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import {
   canRenderWithNextImage,
+  resolveCardImageUrl,
   safeHostname,
   shouldOptimizeImage,
 } from '@/lib/ui/card-image-host'
+import {
+  cardMediaGroupClasses,
+  cardMediaImageHoverClasses,
+} from '@/lib/ui/card-media-hover'
 
 function NoPreviewPlaceholder() {
   return (
@@ -29,30 +35,39 @@ export function CardMedia({
   hero_alt_text,
   priority,
 }: Props) {
-  const canShow = canRenderWithNextImage(hero_thumb_url)
-  const host = hero_thumb_url ? safeHostname(hero_thumb_url) : ''
-  const optimized = shouldOptimizeImage(host)
+  const resolvedHeroUrl = resolveCardImageUrl(hero_thumb_url)
+  const canShow = canRenderWithNextImage(resolvedHeroUrl)
+  const useFetchRaster = Boolean(resolvedHeroUrl?.includes('/image/fetch/'))
 
   return (
     <div className="w-full rounded-t-xl px-2 pb-2 pt-2">
       <div className="relative aspect-video overflow-hidden rounded-lg bg-bg">
         <Link
           href={href}
-          className="block h-full w-full"
+          className={`relative block h-full w-full ${cardMediaGroupClasses}`}
           tabIndex={-1}
           aria-hidden="true"
         >
-          {canShow && hero_thumb_url ? (
-            <Image
-              src={hero_thumb_url}
-              alt={hero_alt_text ?? title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc((100vw - 3rem) / 2), (max-width: 1536px) calc((100vw - 4rem) / 4), 320px"
-              quality={75}
-              priority={priority}
-              unoptimized={!optimized}
-            />
+          {canShow && resolvedHeroUrl ? (
+            useFetchRaster ? (
+              <CardMediaRaster
+                src={resolvedHeroUrl}
+                alt={hero_alt_text ?? title}
+                priority={priority}
+                imageHover
+              />
+            ) : (
+              <Image
+                src={resolvedHeroUrl}
+                alt={hero_alt_text ?? title}
+                fill
+                className={`object-cover ${cardMediaImageHoverClasses}`}
+                sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc((100vw - 3rem) / 2), (max-width: 1536px) calc((100vw - 4rem) / 4), 320px"
+                quality={75}
+                priority={priority}
+                unoptimized={!shouldOptimizeImage(safeHostname(resolvedHeroUrl))}
+              />
+            )
           ) : (
             <NoPreviewPlaceholder />
           )}

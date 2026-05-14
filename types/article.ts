@@ -25,8 +25,9 @@ export type ArticleCardProps = {
   /**
    * Up to 4 image rows from `article_media` (kind='image', sort_order ASC).
    * Populated only by the feed query (Phase 14); other surfaces leave it `[]`.
-   * The card renders the multi-image grid when length ≥ 2; otherwise falls
-   * back to single-hero rendering using `hero_thumb_url`.
+   * The card renders the multi-image grid when length ≥ 2; when length === 1
+   * and `hero_thumb_url` is empty, that URL backs the single hero (legacy
+   * `getThumbnailUrl` / grid fallback parity).
    */
   images: CardImage[]
 }
@@ -52,6 +53,7 @@ export type FeedPage = {
   articles: ArticleCardProps[]
   nextCursor: FeedCursor | null   // null = no more pages
   stream: ContentStream
+  totalCount?: number
 }
 
 /**
@@ -107,3 +109,10 @@ export const CONTENT_STREAMS = ['standard', 'pulse'] as const
 export const DEFAULT_STREAM: ContentStream = 'standard'
 
 export const FEED_PAGE_SIZE = 24    // do not change without perf review
+
+/** Map DB / ETL quirks to the app model (`video` → `youtube`; unknown → null). */
+export function normalizeHeroMediaKind(value: unknown): 'image' | 'youtube' | null {
+  if (value === 'image' || value === 'youtube') return value
+  if (value === 'video') return 'youtube'
+  return null
+}

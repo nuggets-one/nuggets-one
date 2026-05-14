@@ -360,7 +360,7 @@ export function NotificationPanel({
               hidden sm:flex flex-col
               absolute right-0 top-full mt-2
               w-96 max-h-[32rem]
-              bg-rail border border-border rounded-xl shadow-lg
+              bg-rail border border-border rounded-xl shadow-panel
               overflow-hidden z-50
             "
           >

@@ -1,3 +1,4 @@
+import { sortOfficialTagsByDimensionThenLabel } from '@/lib/feed/group-official-tags'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { TagSummary } from '@/types/article'
 
@@ -9,7 +10,6 @@ export async function listOfficialTags(): Promise<TagSummary[]> {
       .from('tags')
       .select('id, slug, label, dimension, is_official')
       .eq('is_official', true)
-      .order('label', { ascending: true })
 
     if (error) {
       // Keep the feed renderable when Supabase has transient network issues.
@@ -18,7 +18,7 @@ export async function listOfficialTags(): Promise<TagSummary[]> {
     }
 
     // TODO: replace with generated DB types in later PR
-    return (data ?? []) as unknown as TagSummary[]
+    return sortOfficialTagsByDimensionThenLabel((data ?? []) as unknown as TagSummary[])
   } catch (error) {
     // Supabase client can throw for low-level fetch/network failures.
     const message = error instanceof Error ? error.message : String(error)

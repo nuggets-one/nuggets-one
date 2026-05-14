@@ -44,6 +44,13 @@ export function cloudinaryLoader({
   width,
   quality,
 }: CloudinaryLoaderParams): string {
+  // Remote fetch URLs already embed transforms + encoded source in the path.
+  // Do not append ?w=&q= (treated as CDN query params) — that breaks delivery.
+  const fetchSegment = '/image/fetch/'
+  if (src.includes(fetchSegment)) {
+    return src
+  }
+
   // If src is already a full Cloudinary URL, extract and rebuild
   // Expected format: https://res.cloudinary.com/{cloud}/image/upload/.../{public_id}
   const uploadSegment = '/image/upload/'

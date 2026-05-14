@@ -16,23 +16,13 @@
  * always-true and the passthrough hosts can be dropped from `remotePatterns`.
  */
 
-const OPTIMIZED_HOSTS = new Set<string>([
-  'res.cloudinary.com',
-  'i.ytimg.com',
-])
+import { cloudinaryFetchUrl } from '@/lib/ui/cloudinary-fetch'
+import { IMAGE_REMOTE_HOSTS } from '@/lib/ui/image-host-policy'
 
-// Tier-1 passthrough hosts. Mirror this list with `next.config.ts` remotePatterns
-// AND the `img-src` directive in the same file's CSP — drift will break rendering.
-const PASSTHROUGH_HOSTS = new Set<string>([
-  'pbs.twimg.com',
-  'i.redd.it',
-  'preview.redd.it',
-  'i.imgur.com',
-  'media.licdn.com',
-])
+const ALLOWED_IMAGE_HOSTS = new Set<string>(IMAGE_REMOTE_HOSTS)
 
 export function shouldOptimizeImage(host: string): boolean {
-  return OPTIMIZED_HOSTS.has(host.toLowerCase())
+  return ALLOWED_IMAGE_HOSTS.has(host.toLowerCase())
 }
 
 export function canRenderWithNextImage(url: string | null): boolean {
@@ -43,12 +33,22 @@ export function canRenderWithNextImage(url: string | null): boolean {
     const host = parsed.hostname.toLowerCase()
     const path = parsed.pathname.toLowerCase()
 
-    if (path.endsWith('.pdf')) return false
+    if (path.endsWith('.pdf') && host !== 'res.cloudinary.com') return false
 
-    return OPTIMIZED_HOSTS.has(host) || PASSTHROUGH_HOSTS.has(host)
+    return ALLOWED_IMAGE_HOSTS.has(host)
   } catch {
     return false
   }
+}
+
+/**
+ * Route non-allowlisted image URLs through Cloudinary fetch so they can
+ * still render via Next/Image under a strict remote host policy.
+ */
+export function resolveCardImageUrl(url: string | null): string | null {
+  if (!url) return null
+  if (canRenderWithNextImage(url)) return url
+  return cloudinaryFetchUrl(url)
 }
 
 /** Hostname of `url` (lowercased), or empty string when unparseable. */

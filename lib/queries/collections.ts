@@ -6,7 +6,10 @@ import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
 import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
 import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
 import type { CollectionSummary, CollectionDetail } from '@/types/collection'
-import type { ArticleCardProps } from '@/types/article'
+import {
+  normalizeHeroMediaKind,
+  type ArticleCardProps,
+} from '@/types/article'
 
 // Phase 14: collections doesn't fetch `article_media`; cards stay single-hero.
 // `images: []` is appended in the mapping step below.
@@ -169,7 +172,13 @@ export async function getCollectionById(id: string): Promise<CollectionDetail> {
   const rowsWithoutLabels: ArticleRowBase[] = entries
     .filter((e) => e.articles != null)
     .sort((a, b) => a.position - b.position)
-    .map((e) => ({ ...(e.articles as ArticleRowWithoutImages), images: [] }))
+    .map((e) => ({
+      ...(e.articles as ArticleRowWithoutImages),
+      images: [],
+      hero_media_kind: normalizeHeroMediaKind(
+        (e.articles as ArticleRowWithoutImages).hero_media_kind
+      ),
+    }))
 
   const rows = await attachTagLabelsToRows(
     supabase as unknown as SupabaseLike,

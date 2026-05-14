@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import { getArticleMeta } from '@/lib/queries/article'
+import { notFound, permanentRedirect } from 'next/navigation'
+import { getArticleMeta, getCanonicalArticleSlug } from '@/lib/queries/article'
 import { ArticleContent } from '@/components/ui/article-content'
 import { ArticleDetailSkeleton } from '@/components/ui/article-detail-skeleton'
 
@@ -51,10 +52,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function NuggetPage({ params }: Props) {
   const { id, slug } = await params
+  const canonicalSlug = await getCanonicalArticleSlug(id)
 
+  if (!canonicalSlug) {
+    notFound()
+  }
+
+  if (canonicalSlug !== slug) {
+    permanentRedirect(`/nuggets/${id}/${canonicalSlug}`)
+  }
+
+  // Full-page shell for the canonical nugget detail route. Feed-originated
+  // in-app opens may render the same route through the intercepted sheet.
   return (
     <Suspense fallback={<ArticleDetailSkeleton />}>
-      <ArticleContent id={id} slug={slug} />
+      <ArticleContent id={id} />
     </Suspense>
   )
 }

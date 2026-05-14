@@ -1,4 +1,4 @@
-# Article detail drawer (Sheet) — UI specification for recreation
+# Nugget detail sheet (intercepted route) — UI specification for recreation
 
 > Status: Canonical
 >
@@ -10,7 +10,7 @@
 >
 > Component Owners: `components/ui/sheet.tsx`, `components/ui/article-content.tsx`, `components/ui/article-body.tsx`, `components/ui/youtube-player.tsx`
 
-This document describes the **intercepted-route article “drawer”**: the parallel slot `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` renders `<Sheet><ArticleContent /></Sheet>`. The same `ArticleContent` appears on the full-page route `/nuggets/[id]/[slug]`; only the **outer shell** differs (Sheet vs plain page). An LLM can treat **Shell + ArticleContent** as the full drawer experience.
+This document describes the **intercepted-route nugget detail sheet**: the parallel slot `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` renders `<Sheet><ArticleContent /></Sheet>`. The same `ArticleContent` appears on the full-page route `/nuggets/[id]/[slug]`; only the **outer shell** differs (sheet vs page). Treat the canonical route as the product concept and the shell as the context-specific presentation.
 
 **Source files (in render order):**
 

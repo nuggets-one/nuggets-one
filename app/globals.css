@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 :root {
+  /* Layout */
+  --header-height: 56px; /* matches h-14 */
+
   /* Background */
   --color-bg: theme('colors.slate.100');
   --color-bg-page: theme('colors.slate.100');
@@ -10,8 +13,10 @@
   /* Surface / card */
   --color-surface: theme('colors.white');
   --color-surface-raised: theme('colors.white');
+  --color-surface-strong: theme('colors.slate.900');
+  --color-surface-strong-foreground: theme('colors.white');
   --color-header: color-mix(in srgb, theme('colors.white') 80%, transparent);
-  --color-rail: color-mix(in srgb, theme('colors.white') 95%, transparent);
+  --color-rail: theme('colors.slate.100');
 
   /* Border */
   --color-border: theme('colors.slate.200');
@@ -19,7 +24,7 @@
 
   /* Text */
   --color-text-primary: theme('colors.slate.900');
-  --color-text-muted: theme('colors.slate.500');
+  --color-text-muted: theme('colors.slate.600');
   --color-text-inverse: theme('colors.white');
   --color-card-title: theme('colors.slate.900');
   --color-body-link: theme('colors.primary.600');
@@ -90,8 +95,10 @@
   /* Surface / card */
   --color-surface: color-mix(in srgb, theme('colors.slate.900') 80%, transparent);
   --color-surface-raised: color-mix(in srgb, theme('colors.slate.800') 80%, transparent);
+  --color-surface-strong: theme('colors.slate.100');
+  --color-surface-strong-foreground: theme('colors.slate.950');
   --color-header: color-mix(in srgb, theme('colors.slate.900') 80%, transparent);
-  --color-rail: color-mix(in srgb, theme('colors.slate.900') 95%, transparent);
+  --color-rail: theme('colors.slate.950');
 
   /* Border */
   --color-border: theme('colors.slate.800');
@@ -99,7 +106,7 @@
 
   /* Text */
   --color-text-primary: theme('colors.slate.100');
-  --color-text-muted: theme('colors.slate.400');
+  --color-text-muted: theme('colors.slate.300');
   --color-text-inverse: theme('colors.white');
   --color-card-title: theme('colors.slate.50');
   --color-body-link: theme('colors.primary.400');

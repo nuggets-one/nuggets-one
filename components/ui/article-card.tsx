@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { CardMedia } from '@/components/ui/card-media'
 import { CardBody } from '@/components/ui/card-body'
+import { YouTubeFeedHero } from '@/components/ui/youtube-feed-hero'
 import { CardFooter } from '@/components/ui/card-footer'
 import { CardThumbnailGrid } from '@/components/ui/card-thumbnail-grid'
 import { formatTagDisplayLabel } from '@/lib/ui/tag-display-label'
@@ -87,9 +89,19 @@ export function ArticleCard({
   }
   const useThumbnailGrid = images.length >= 2
 
+  const showYouTubeFeedHero =
+    !useThumbnailGrid &&
+    Boolean(rawVideoId) &&
+    looksLikeYouTubeId &&
+    (hero_media_kind === 'youtube' || hero_media_kind === null)
+  const youtubePreview =
+    rawVideoId && looksLikeYouTubeId && (hero_media_kind === 'youtube' || hero_media_kind === null)
+      ? { videoId: rawVideoId, title, articleId: id }
+      : undefined
+
   return (
     <article
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-shadow duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-accent"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-border-strong bg-surface transition-shadow duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-accent"
       data-article-id={id}
     >
       {useThumbnailGrid ? (
@@ -98,6 +110,17 @@ export function ArticleCard({
           title={hero_alt_text ?? title}
           images={images}
           totalCount={images.length}
+        />
+      ) : showYouTubeFeedHero ? (
+        <YouTubeFeedHero
+          title={title}
+          hero_thumb_url={heroThumbForCard}
+          hero_alt_text={hero_alt_text}
+          priority={priority}
+          videoId={rawVideoId}
+          articleId={id}
+          sourceUrl={source_url}
+          sourceHost={sourceHost}
         />
       ) : (
         <CardMedia
@@ -115,7 +138,38 @@ export function ArticleCard({
         cardPreviewHtml={cardPreviewHtml}
         contentStream={article.content_stream}
         displayTags={displayTags}
+        youtubePreview={youtubePreview}
       />
+
+      {showYouTubeFeedHero ? (
+        <div className="px-4 py-2">
+          <div className="flex justify-center">
+            <Link
+              href={href}
+              aria-label="View full article"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              <span>View Full Article</span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden
+              >
+                <path
+                  d="M4.5 9L7.5 6L4.5 3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       <CardFooter
         href={href}

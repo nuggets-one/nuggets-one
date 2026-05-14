@@ -8,36 +8,31 @@
 // listener per detail page.
 
 import { type MouseEvent, type ReactNode } from 'react'
+import { resolveDetailYouTubeTimestampClick } from '@/lib/ui/youtube-inline-url'
 import { YOUTUBE_SEEK_EVENT, type YouTubeSeekDetail } from './youtube-player'
-
-const HASH_PREFIX = '#yt='
-
-function parseSeconds(href: string | null): number | null {
-  if (!href || !href.startsWith(HASH_PREFIX)) return null
-  const raw = href.slice(HASH_PREFIX.length)
-  const n = Number.parseInt(raw, 10)
-  if (!Number.isFinite(n) || n < 0 || String(n) !== raw) return null
-  return n
-}
 
 type Props = {
   children: ReactNode
+  /** Hero YouTube id — full watch URLs are intercepted only when `v` matches. */
+  heroVideoId: string
 }
 
-export function TimestampLinkInterceptor({ children }: Props) {
-  function handleClick(e: MouseEvent<HTMLDivElement>) {
+export function TimestampLinkInterceptor({ children, heroVideoId }: Props) {
+  function handleClickCapture(e: MouseEvent<HTMLDivElement>) {
     const target = e.target
     if (!(target instanceof Element)) return
     const anchor = target.closest('a')
     if (!anchor) return
 
-    const seconds = parseSeconds(anchor.getAttribute('href'))
+    const href = anchor.getAttribute('href')
+    const seconds = resolveDetailYouTubeTimestampClick(href, heroVideoId.trim())
     if (seconds === null) return
 
     e.preventDefault()
+    e.stopPropagation()
     const detail: YouTubeSeekDetail = { seconds }
     window.dispatchEvent(new CustomEvent(YOUTUBE_SEEK_EVENT, { detail }))
   }
 
-  return <div onClick={handleClick}>{children}</div>
+  return <div onClickCapture={handleClickCapture}>{children}</div>
 }

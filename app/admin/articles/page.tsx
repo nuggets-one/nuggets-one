@@ -22,7 +22,7 @@ export default async function AdminArticlesPage() {
           href="/admin/articles/new"
           className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent-hover transition-colors"
         >
-          New article
+          Create nugget
         </Link>
       </div>
 

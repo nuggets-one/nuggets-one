@@ -6,9 +6,16 @@ import { ExternalLink, MoreVertical } from 'lucide-react'
 type Props = {
   sourceUrl: string
   sourceHost: string | null
+  menuPlacement?: 'above' | 'below'
+  variant?: 'default' | 'toolbar'
 }
 
-export function CardMoreButton({ sourceUrl, sourceHost }: Props) {
+export function CardMoreButton({
+  sourceUrl,
+  sourceHost,
+  menuPlacement = 'above',
+  variant = 'default',
+}: Props) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -41,7 +48,11 @@ export function CardMoreButton({ sourceUrl, sourceHost }: Props) {
         aria-label="More options"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-slate-400 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+        className={`flex items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-surface-raised hover:text-primary focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface ${
+          variant === 'toolbar'
+            ? 'h-10 w-10 min-h-[40px] min-w-[40px]'
+            : 'min-h-[44px] min-w-[44px]'
+        }`}
       >
         <MoreVertical size={16} strokeWidth={1.5} aria-hidden="true" />
       </button>
@@ -49,7 +60,9 @@ export function CardMoreButton({ sourceUrl, sourceHost }: Props) {
       {open && (
         <div
           role="menu"
-          className="absolute bottom-full right-0 z-20 mb-1 min-w-[10rem] rounded-xl border border-border bg-surface p-1 shadow-panel ring-1 ring-elevated"
+          className={`absolute right-0 z-20 min-w-[10rem] rounded-xl border border-border bg-surface p-1 shadow-panel ring-1 ring-elevated ${
+            menuPlacement === 'below' ? 'top-full mt-1' : 'bottom-full mb-1'
+          }`}
         >
           <a
             href={sourceUrl}

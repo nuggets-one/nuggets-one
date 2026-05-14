@@ -41,7 +41,7 @@ Run **Mongo → Postgres ETL** as **offline batch scripts** (similar spirit to `
 |--------------------------|-----------|
 | **Client shell** | **Next.js App Router** (`app/`): replaces **`src/main.tsx`**, **`src/App.tsx`**, **`react-router-dom`** routes |
 | **Feed rendering** | **Server-first page** + lean props + **client pagination island** (no TanStack Query on feed per blueprint). Replaces **`HomePage.tsx`**, **`ArticleGrid.tsx`**, **`HomeGridVirtualized.tsx`**, **`useInfiniteArticles.ts`** |
-| **Detail views** | **`/nuggets/[id]/[slug]`** RSC/detail pipeline — replaces **`ArticleModal`**, **`ArticleDrawer`**, **`/?openArticle=`** pattern (`ArticleRedirect` in **`App.tsx`**) |
+| **Detail views** | **`/nuggets/[id]/[slug]`** canonical nugget detail route — replaces **`ArticleModal`**, **`ArticleDrawer`**, **`/?openArticle=`** pattern (`ArticleRedirect` in **`App.tsx`**); direct hits render full page, feed-originated in-app opens may use an intercepted sheet shell |
 | **Market Pulse** | **`/?stream=pulse`** (nuqs) — replaces **`contentStream`** via **`FilterStateContext`** / **`Header.tsx`** / **`MobileBottomNav.tsx`** (`standard` vs `pulse`) |
 | **Collections (community)** | **`community_collections`** + entries — maps **`server/src/models/Collection.ts`** + **`collections` routes** (`server/src/routes/collections.ts`) |
 | **Bookmarks** | **Flat `bookmarks`** — **v2-only** — **no Mongo bookmark import** (founder: no legacy users to migrate) |
@@ -98,7 +98,7 @@ ETL **creates `article_media`** from collapsed Mongo media fields **before** rel
 | `rawName` | `label` |
 | `canonicalName` | `slug` (normalized to unique slug) |
 | `isOfficial` | **`is_official boolean not null default false`** (`BLUEPRINT` §12.1 / §2.a) — **drives Home chip rail** filter. Default `false` if absent in source. |
-| `dimension` | `dimension text null check (dimension is null or dimension in ('format','domain','subtopic'))` — kept for future grouping; not surfaced PMF |
+| `dimension` | `dimension text null check (dimension is null or dimension in ('format','domain','subtopic'))` — **Home:** grouped in **More filters** dialog columns when set; `null` → **Uncategorized** in the same dialog (`PRODUCT` §11.1). **No** left sidebar. |
 | `parentTagId`, `sortOrder`, `status`, `aliases`, `usageCount`, `type` | **Dropped** — flat tags PMF (`BLUEPRINT` §19) |
 
 Normalize `canonicalName` → unique `slug`.
@@ -148,7 +148,7 @@ Normalize `canonicalName` → unique `slug`.
 
 | | Action |
 |---|--------|
-| Tag dimensions | **Keep column** in DB; **PMF filter UI = flat chip list** (see product doc §11) — **not** dimension-grouped UI |
+| Tag dimensions | **Keep column** in DB; **Home:** taxonomy only in **More filters** mega dialog (Format / Domain / Subtopic) — see `PRODUCT` §11.1. **No** left sidebar. |
 | **Collections** | **Migrate Phase 1** — **`§3.5`** — ship **`/collections`** |
 | Pulse unseen (`readBy`, **`articlesController`** unseen endpoints) | **Defer** — no migration of read maps |
 | In-app notifications | **Greenfield** — **§6.6** schema + jobs (**not** legacy router port) |
@@ -179,7 +179,7 @@ Normalize `canonicalName` → unique `slug`.
 
 ### 4.2 Intentional behavior changes
 
-- **Article open:** **Full page** replaces **`ArticleModal`** / **`?openArticle=`**.
+- **Article open:** the canonical **`/nuggets/[id]/[slug]`** route replaces **`ArticleModal`** / **`?openArticle=`**. Direct hits render the full page; feed-originated in-app opens may render an intercepted sheet of that same route.
 - **Bookmark folders:** Removed — saved UI simplifies (**`SavedPage.tsx`** / **`CollectionSelector`** patterns obsolete).
 - **Pulse unseen badges:** API **`/api/articles/pulse/unseen-count`** etc. (**`articles.ts` routes**) — **defer**.
 
@@ -195,8 +195,8 @@ Normalize `canonicalName` → unique `slug`.
 
 | Current feature | v2 equivalent | Keep / Simplify / Defer / Delete | Notes / risk |
 |-----------------|---------------|-----------------------------------|----------------|
-| **Modal article detail** (`ArticleModal`, `openArticle` query) | **Article page** | **Delete** default modal UX | SEO++, clarity++; UX change |
-| **Drawer / secondary detail** (`ArticleDrawer`) | Optional **defer** | **Defer** | Reduce duplication |
+| **Modal article detail** (`ArticleModal`, `openArticle` query) | **Canonical nugget detail route** (`/nuggets/[id]/[slug]`) | **Delete** modal state model | One URL, one share target, one metadata surface; in-app opens may still use a route-driven sheet shell |
+| **Drawer / secondary detail** (`ArticleDrawer`) | **Canonical nugget detail route** (intercepted sheet shell) | **Simplify** | Not a separate product concept; alternate shell of the same URL |
 | **Feed infinite scroll** (`useInfiniteArticles`, **`ArticleGrid`**) | **fetch + observer** | **Simplify** | No TanStack on feed |
 | **Virtualization** (`HomeGridVirtualized.tsx`) | CSS/grid **or** virtual **defer** | **Simplify / Defer** | Perf validate after ship |
 | **Tags & filters** (`FilterStateContext`, **`CategoryToolbar`**) | URL state + server lists | **Keep / Simplify** | Dimensions may shrink |

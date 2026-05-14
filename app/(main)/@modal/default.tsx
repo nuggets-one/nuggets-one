@@ -1,5 +1,6 @@
-// Required for parallel-slot routing — without this default, the @modal slot
-// leaks into direct URL hits and breaks rendering. Phase 15 / plan §2.K.
+// Required for the intercepted nugget detail shell — without this default,
+// the @modal slot leaks into direct URL hits instead of letting
+// /nuggets/[id]/[slug] render as the full page route.
 export default function Default() {
   return null
 }

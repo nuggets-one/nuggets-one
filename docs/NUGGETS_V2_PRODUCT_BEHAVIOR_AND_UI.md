@@ -101,9 +101,11 @@ If some bookmarked **`article_id`** rows are **deleted or unpublished**, list sh
 
 ### 0.14 YouTube on Nugget page (DECIDED)
 
-**Hero / poster** (`hero_thumb_url`) above the fold; primary **Watch on YouTube** `target="_blank"`. **Optional** iframe **only** below fold behind explicit **Load video** — **no** autoplay; **no** inline player on Home cards (§8 alignment).
+**Hero / poster** (`hero_thumb_url`) above the fold on the **nugget page**; primary **Watch on YouTube** `target="_blank"`. **Optional** iframe **only** below fold behind explicit **Load video** (poster tap or timestamp) — **no** autoplay on initial page load; **no** iframe inside the **card chrome** on first paint.
 
-**Body timestamp links** (e.g. `[2:34](#yt=154)` in `content_markdown`) load the embed (if not already loaded) and **seek the player to that second** — full state machine and implementation rules in **`BLUEPRINT` §6.3a**. Authors author timestamps with the `#yt={seconds}` URL-fragment convention; clicking is handled by a single client island, not per-link wiring.
+**Home feed — YouTube hero:** Tapping the **hero poster** (single-image card, not the multi-thumbnail grid) opens a **global deferred mini-player** (portal + `youtube-nocookie` embed) so playback stays in-app. The mini-player script loads **client-only** (`dynamic` / no SSR) and the iframe mounts **only after** that tap — not for LCP. **Open article** on the hero and the **title** link still navigate to **`/nuggets/[id]/[slug]`** (detail-first reading). **Card preview** may include `[label](#yt=N)` links; on YouTube-backed cards they open the same mini-player at `N` seconds.
+
+**Body (detail)** timestamp links (`[2:34](#yt=154)` in `content_markdown`) load the detail embed (if not already loaded) and **seek** — full state machine in **`BLUEPRINT` §6.3a** — handled by the detail `YouTubePlayer` island, not the feed mini-player.
 
 ---
 
@@ -130,9 +132,9 @@ Two interaction stories appeared across drafts; **only one is valid for v2**:
 | Narrative | What it means | v2 status |
 |-----------|----------------|-----------|
 | **Outbound-first** (legacy sketch) | Primary interaction opens **external source** in **`target="_blank"`**; feed stays mounted; scroll position trivially preserved. | **Rejected** for v2 PMF |
-| **Detail-first** (canonical) | Primary interaction navigates to **`/nuggets/[id]/[slug]`**; sharing and OG use **one canonical URL**; **secondary** “Source” link may open externally. | **Required** |
+| **Detail-first** (canonical) | Primary interaction navigates to **`/nuggets/[id]/[slug]`**; sharing and OG use **one canonical URL**; **secondary** “Source” link may open externally. Direct hits render the nugget page; some in-app opens may use an intercepted sheet shell of the same route. | **Required** |
 
-**Why we chose detail-first:** Shareable canonical URLs, SEO and Open Graph on one page, simpler RSC story (`docs/NUGGETS_V2_BLUEPRINT.md`), and one clear reading surface. Scroll preservation via **staying on SPA** is traded for **proper nugget routes** — **Back** returns to **Home** (`/`); **Next.js App Router often does not restore prior browse-grid scroll position** (unlike some classic SPAs). **Accept** landing toward the **top of the grid** after Back for PMF; optional later: explicit restoration — **not** launch-blocking.
+**Why we chose detail-first:** Shareable canonical URLs, SEO and Open Graph on one route, simpler RSC story (`docs/NUGGETS_V2_BLUEPRINT.md`), and one clear reading object. Browse continuity can still be preserved for some in-app opens via an intercepted sheet shell without introducing a second URL or modal state model. When the full-page shell is used, **Back** returns to **Home** (`/`); **Next.js App Router often does not restore prior browse-grid scroll position** (unlike some classic SPAs). **Accept** landing toward the **top of the grid** after Back for PMF; optional later: explicit restoration — **not** launch-blocking.
 
 **Implementation rule:** Card **`onClick`** / primary link → **internal navigation** to detail. **Never** make the whole card a raw external `<a href={source}>`. A separate **“Source”** control may use **`target="_blank"`**.
 
@@ -142,7 +144,7 @@ Two interaction stories appeared across drafts; **only one is valid for v2**:
 
 1. **Speed is a feature** — Perceived performance (`docs/NUGGETS_V2_BLUEPRINT.md` §8 skeletons, §9 CLS) matters as much as raw ms.
 2. **URL is truth for discovery** — **`stream`**, **`tags`**, and committed **`q`** live in query params on **`/`** (`nuqs`) — **blueprint §6.2**. Debounced **suggestions** while typing; **committed search** updates **`q`** (shareable).
-3. **One mental model for reading** — Home discovers → nugget page reads → optional outbound to source. No competing “tiles open drawer vs modal vs new tab” unless strictly necessary by breakpoint.
+3. **One mental model for reading** — Home discovers → canonical nugget route reads → optional outbound to source. The route is the product concept; full page and intercepted sheet are alternate shells of the same URL. No competing drawer/modal/query-state model.
 4. **Density over whitespace theatre** — Prefer **information-rich grids**; breathe only where readability degrades (detail body, legal).
 5. **Read-heavy, not social** — No follower counts, reactions, or comment threads in PMF; **bookmark** is the lightest viable personal signal.
 6. **Accessible by default** — Touch targets, focus rings, legible contrast — non‑negotiable (see §15).
@@ -236,7 +238,7 @@ This table consolidates everything else in §3 / §4 / §5 into one block UI com
 - **Card height is fluid** — driven by content. **Image region is fixed** by aspect ratio so card height varies only by title/excerpt line count.
 - **Title is required** — single nugget shape (§5 Standard card). No media-only-without-title cards.
 - **One stream chip max** — never both standard and pulse.
-- **Tag chip on card** — show **at most one** primary tag chip; full tag rail is on Home, not on cards.
+- **Tag chip on card** — show **at most one** primary tag chip; full topic filters live in **More filters** on Home, not on cards.
 - **No `react-markdown`** inside a card — cards always use plain-text `excerpt` from DB (`BLUEPRINT` §17 forbidden).
 - **No per-card popovers** PMF (no tag popover on hover, no link unfurl preview, no edit menu) — keeps interaction model thin (§16).
 
@@ -264,7 +266,7 @@ Implemented via `next-themes` + Tailwind `dark:` + CSS variables (§3 / `BUILD` 
 
 ### 3.3 Header & global chrome (frozen)
 
-**The header stays thin.** v1 nested filter affordances, search overlays, sub-toolbars, and stream switchers in the header. The legacy click-lag the founder reported was technically caused by `FilterStateContext` cascading re-renders through a hydrated client tree — re-derived in `docs/PERFORMANCE_RULES_REEVALUATION.md`; v2 architecture (RSC + `nuqs`) eliminates that mechanism, so a `next/link` in the header would *not* reproduce the lag. The thin-header rule is retained for **content density** (every header pixel is grid pixel lost), **editorial cleanliness** (NYT/Bloomberg/FT/Reuters/Substack/Medium pattern: header = utilities only; destinations live in dropdowns + body chrome + mobile bottom nav), and **client-island discipline** (each interactive header element is potentially +1 hydration cost). v2 collapses the header to four elements; everything else lives in the page body chrome (stream tabs, chip rail — see §11.1) or the avatar dropdown / mobile bottom nav.
+**The header stays thin.** v1 nested filter affordances, search overlays, sub-toolbars, and stream switchers in the header. The legacy click-lag the founder reported was technically caused by `FilterStateContext` cascading re-renders through a hydrated client tree — re-derived in `docs/PERFORMANCE_RULES_REEVALUATION.md`; v2 architecture (RSC + `nuqs`) eliminates that mechanism, so a `next/link` in the header would *not* reproduce the lag. The thin-header rule is retained for **content density** (every header pixel is grid pixel lost), **editorial cleanliness** (NYT/Bloomberg/FT/Reuters/Substack/Medium pattern: header = utilities only; destinations live in dropdowns + body chrome + mobile bottom nav), and **client-island discipline** (each interactive header element is potentially +1 hydration cost). v2 collapses the header to four elements; everything else lives in the page body chrome (stream tabs, **All** + **More filters** strip — see §11.1) or the avatar dropdown / mobile bottom nav.
 
 #### Desktop header (`≥ 1024px`)
 
@@ -301,7 +303,7 @@ Implemented via `next-themes` + Tailwind `dark:` + CSS variables (§3 / `BUILD` 
 
 #### Visual hierarchy on Home (cross-reference)
 
-Header → **Stream tabs** → **Chip rail** → **Active filters** (conditional) → **Grid** — full layout in §11.1. Header is intentionally not the place where filtering happens.
+Header → **Stream tabs** → **All + More filters** → **Active filters** (conditional) → **Grid** — full layout in §11.1. Header is intentionally not the place where filtering happens.
 
 ### 3.4 Explicit layout recommendations
 
@@ -385,7 +387,7 @@ Header → **Stream tabs** → **Chip rail** → **Active filters** (conditional
 
 ### Evaluation of current patterns
 
-Today **`NewsCard`** orchestrates **`GridVariant`**, **`ArticleModal`**, **`ImageLightbox`**, **`LinkPreviewModal`**, etc. — powerful but **heavy for PMF** and hostile to the blueprint’s **full-page detail** strategy.
+Today **`NewsCard`** orchestrates **`GridVariant`**, **`ArticleModal`**, **`ImageLightbox`**, **`LinkPreviewModal`**, etc. — powerful but **heavy for PMF** and hostile to the blueprint’s **canonical nugget detail route** strategy.
 
 ### Recommendation (decisive)
 
@@ -393,15 +395,15 @@ This table is **identical in intent** to **`docs/NUGGETS_V2_BLUEPRINT.md` §6.0*
 
 | Interaction | Recommendation |
 |-------------|----------------|
-| **Primary click** (card body / title / image) | **Navigate to `/nuggets/[id]/[slug]`** — full detail **everywhere** (desktop + mobile). |
+| **Primary click** (card body / title / image) | **Navigate to `/nuggets/[id]/[slug]`** — canonical nugget detail route everywhere. Direct hits render the full page; feed-originated in-app opens may render an intercepted sheet shell. |
 | **Secondary: Source** | **Tertiary text link** (**Source**) on card footer opens **`target="_blank"` `rel="noopener"`** — does **not** replace primary click; power users skip detail when obvious. |
-| **Modal / drawer** | **Do not use as default reader** in v2. Optional **future:** inline preview sheet **only** if metrics show detail-page abandonment — **not PMF**. |
-| **Desktop vs mobile** | **Same primary behavior** — route navigation; avoid desktop-drawer / mobile-full mismatch (**`ArticleGrid`** `expanded` pattern replaced). |
+| **Modal / drawer** | **Do not use as a separate reading model** in v2. The only allowed in-context variant is a route-driven intercepted sheet shell of the canonical route. |
+| **Desktop vs mobile** | **Same primary behavior** — route navigation to the canonical nugget URL; shell may differ by entry context, not by a separate routing concept. |
 
-**Why full page wins:** Canonical URLs for sharing, simpler mental model, aligns with **`generateMetadata`**, works with RSC skeleton → content story.
+**Why the canonical route wins:** Canonical URLs for sharing, simpler mental model, aligns with **`generateMetadata`**, works with RSC skeleton → content story, and still allows an intercepted in-context shell when browse continuity matters.
 
-**Pros:** Shareable, bookmarkable tabs, back button semantics, less JS on Home.  
-**Cons:** Loses “stay on grid” overlay feel — mitigate with **fast transitions** + **View Transitions** optional later.
+**Pros:** Shareable, bookmarkable tabs, back button semantics, less JS on Home, and one URL for both page and sheet shells.  
+**Cons:** Intercepted-route shells add routing complexity; if they become unstable, simplify back to full-page only rather than reviving modal state.
 
 ### Share + bookmark placement
 
@@ -481,7 +483,7 @@ The user clicked a link in WhatsApp/email/X — they expect the **content**, not
 
 | Type | Feed card | Detail page |
 |------|-----------|-------------|
-| **YouTube / video** | **Poster/thumbnail image** (16:9); **play affordance** subtle (icon overlay optional). **No inline player on card.** | **Frozen:** §0.14 — poster above fold + **Watch on YouTube**; embed **only** behind explicit load control below fold. **Timestamp links in body** (`[2:34](#yt=154)`) load + seek the embed — full spec `BLUEPRINT` §6.3a. |
+| **YouTube / video** | **Poster/thumbnail** (16:9); **hero tap** opens **deferred global mini-player** (in-app, not in-card iframe). **Open article** + **title** → canonical nugget. Preview **`#yt=`** links on YouTube-backed cards seek the mini-player. **No** iframe in card HTML on first paint. | **§0.14** — poster + **Watch on YouTube**; detail embed only behind explicit load; body **`[2:34](#yt=154)`** → `BLUEPRINT` §6.3a. |
 | **Image** | Image fills aspect region; lightbox **defer** — tap goes to detail | Large image; pinch/zoom **defer** |
 | **Blog / article** | Thumbnail + excerpt | **`prose`** markdown body; outbound **source** button |
 | **Report / PDF** | Generic doc icon + title if no thumb | Link to PDF opens **new tab**; inline PDF viewer **defer** |
@@ -491,7 +493,7 @@ The user clicked a link in WhatsApp/email/X — they expect the **content**, not
 
 **Fallback:** Placeholder gradient/solid **§9** when **`hero_thumb_url`** missing — never broken image icon alone.
 
-**Embed rule:** **No autoplay** ever. Embeds **below fold** or behind explicit tap **recommended**.
+**Embed rule:** **No autoplay** on cold load without user gesture. Embeds **below fold** or behind explicit tap **recommended**; user-activated playback on the detail hero or feed mini-player after tap is allowed.
 
 ---
 
@@ -600,16 +602,16 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 
 **v1 had three filter UIs** (`DesktopFilterSidebar`, `MobileFilterSheet`, `FilterPopover` + chips, plus `TaxonomySidebar` and `FilterScrollRow`). v2 has **one mental model in two presentations**:
 
-- **Desktop:** horizontal chip rail under the header
-- **Mobile:** bottom sheet opening a flat chip list
+- **Desktop:** sticky minimal **filter strip** under stream tabs — **All** + **More filters** only. Topic taxonomy (**Content format** \| **Subject domain** \| **Subtopic**) appears **only** inside the `<dialog>` as a **three-column** mega panel (plus **Uncategorized** chips when needed), search, staged checkboxes, **Apply** / **Cancel** / **Clear**. **No** tag pills on the landing surface.
+- **Mobile:** same strip; **More filters** opens the bottom sheet with stacked columns then mega-style sections.
 
 **No left filter sidebar PMF — explicit decision.** Kills v1's `DesktopFilterSidebar` / `TaxonomySidebar`. Reasons (closed):
 
 1. Sidebar costs ~250px → loses 1 of 3 desktop columns above the fold (33% fewer cards visible on a surface that exists *to surface nuggets*). **(content-density argument — primary)**
 2. Two filter UIs (sidebar desktop + sheet mobile) violates "one mental model" (§2.3).
-3. Curated tags filtered by `is_official = true` (`BLUEPRINT` §2.a) yield ~12–30 chips total — fits a rail.
-4. Tag dimensions (`format / domain / subtopic`) are deferred — flat list PMF, nothing taxonomic to surface in a sidebar.
-5. **Client-island discipline.** A useful sidebar (collapse panels, multi-select widgets) implies many interactive elements; even with RSC rendering the chip list, every selectable control is a hydration unit. The chip rail keeps the count to one. *(Note: original framing claimed a sidebar would be "fat client widget tree fighting `nuqs` + RSC" — that framing was technically loose. RSC can render the list cheaply; the real cost is per-control hydration, not tree fatness. Re-evaluation: `PERFORMANCE_RULES_REEVALUATION.md` §2.2.)*
+3. Curated tags filtered by `is_official = true` (`BLUEPRINT` §2.a) — **no** on-page tag grid; discovery chrome stays **All** + **More filters** so the card grid leads the fold.
+4. Tag dimensions (`format` / `domain` / `subtopic`) surface **only** inside the **More filters** dialog (three-column mega layout on desktop). Official tags with `dimension IS NULL` appear in an **Uncategorized** strip in the same dialog.
+5. **Client-island discipline.** Filter interactions stay in one primary client module (`FeedTaxonomyFilters` + dialog) with `nuqs` URL writes — no filter state in context above the grid.
 6. **Historical note (founder click-lag).** v1's filter sprawl (8+ modules feeding `FilterStateContext`) was the technical root cause of the legacy click-lag — context re-render cascade into the hydrated feed grid. v2's `nuqs` + RSC architecture eliminates that mechanism regardless of UI shape, so reintroducing a sidebar would *not* re-introduce that specific failure mode. The decision against a sidebar stands on reasons 1–5 above, **not** click-lag avoidance.
 
 #### Visual hierarchy on Home (top-down)
@@ -620,7 +622,7 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 ├──────────────────────────────────────────────────────────┤
 │ Stream tabs: [ Nuggets ]  [ Market Pulse ]               │  ← primary chrome
 ├──────────────────────────────────────────────────────────┤
-│ Tag chip rail: macro · crypto · policy · ai · …  [More]  │  ← max 2 lines desktop
+│ [ All ]                              [ More filters ▾ ]   │
 ├──────────────────────────────────────────────────────────┤
 │ Active filters: macro ✕ · q="taiwan" ✕     Clear all    │  ← only if ≥1 filter
 ├──────────────────────────────────────────────────────────┤
@@ -632,43 +634,41 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 
 #### Stream tabs (primary chrome — not just URL state)
 
-- Two tabs: **Nuggets** (default) | **Market Pulse** — visible above the chip rail at all times.
+- Two tabs: **Nuggets** (default) | **Market Pulse** — visible above the filter strip at all times.
 - Each tab is a `next/link` with `prefetch` — instant swap (`BLUEPRINT` §5.7).
 - Active tab: brand-colored bottom border or filled-chip treatment; inactive tab is text-only.
 - Same component on desktop and mobile — full-width on mobile, content-width on desktop.
 - Toggling stream **clears `tags` and `q`** (frozen — different corpus; §0.5).
 - Mobile bottom nav still has Nuggets + Market Pulse destinations (§14) — both surfaces route to the same `/?stream=…` URL; the in-page tab and the bottom-nav tab stay in sync via `nuqs`.
 
-#### Tag chip rail
+#### Tag taxonomy filters (sticky body chrome)
 
-- **Source:** `SELECT slug, label FROM tags WHERE is_official = true ORDER BY ` *(by usage count if denormalized later, else label)*. Curated set — small.
-- **Desktop:** wraps to **max 2 lines**. If more chips than fit, last visible chip is **More** opening a popover with the full list.
-- **Mobile:** single-line horizontal scroll (swipeable). End-of-list **Filters** chip opens the bottom sheet.
-- Each chip is a `next/link` (`prefetch`, `nuqs` URL write).
-- Active chip: filled brand color (§3.2 `--brand`), ✕ icon visible on hover / focus to remove.
-- Chip click wraps URL write in `useTransition` — skeleton appears within one frame regardless of fetch latency (`BLUEPRINT` §5.7).
-- **Multi-tag AND** semantics — `tag_slugs @> $1::text[]` (`BLUEPRINT` §2.a). No OR mode toggle.
-- **No filter widget library** (`react-select`, headless-ui menu, etc.) — pure HTML buttons + nuqs.
+- **Source:** `tags` where `is_official = true`, ordered **format → domain → subtopic → uncategorized**, then label (`listOfficialTags`).
+- **Landing surface:** **All** + **More filters** only (`FeedTaxonomyFilters`). **No** dimension pill rows on `/`.
+- **Dialog:** wide panel (`~960px` desktop cap) — **search** (filters all columns), **three columns** (**Content format** \| **Subject domain** \| **Subtopic**) with scrollable checkbox lists and **(count)** per tag; **Uncategorized** as a wrap row below when present; **Apply** / **Cancel** / **Clear** (staged selection until Apply).
+- **URL:** `tags` still via **`nuqs`** + `useTransition` on Apply and **All** (`BLUEPRINT` §5.7).
+- **Multi-tag AND** — `tag_slugs @> $1::text[]` (`BLUEPRINT` §2.a). No OR mode toggle.
+- **No filter widget library** — native checkboxes + buttons + `nuqs`.
 
 #### Active filters bar
 
 - Renders **only** when at least one of `tags`, `q` is set (stream alone doesn't count — it's always set).
 - Shows each active filter as a removable pill: `macro ✕` (clears that tag), `q="taiwan" ✕` (clears search), comma-separated.
 - Right-aligned **Clear all** action — clears `tags` + `q`; preserves `stream`.
-- Position: between chip rail and grid. Not sticky PMF.
+- Position: below taxonomy filters and above grid. Not sticky PMF.
 - Mobile: same row, smaller text, scrollable horizontally if filters overflow.
 
 #### Mobile filter sheet
 
-- Trigger: **Filters** chip at end of mobile rail, **or** a header icon — shows numeric badge when ≥1 filter active.
-- Sheet: **bottom sheet** ~75% viewport height with: search-within-tags input (filters the chip list as user types), full chip list, **Apply** + **Clear** buttons.
+- Trigger: **More filters** in the filter strip, **or** a header icon — label shows **More filters (N)** when ≥1 tag filter is active in the URL.
+- Sheet / modal: search + **three-column** mega layout (stacked on narrow viewports) + **Uncategorized** wrap row + **Apply** + **Clear**.
 - **Apply sequence (frozen — `BLUEPRINT` §5.7):** close sheet → grid skeleton appears within one frame → URL writes → fetch fires.
 - Cancel / swipe down: discards draft selection, no URL change.
 
 #### What's NOT in v2 filter chrome (frozen — kills v1 chrome bloat)
 
 - ❌ Desktop left sidebar (`DesktopFilterSidebar`, `TaxonomySidebar`).
-- ❌ Dimension grouping in chip rail (`format / domain / subtopic`) — `tags.dimension` exists in DB but UI is flat.
+- ❌ Dimension grouping on the **landing** surface — use **More filters** dialog only (mega columns). **Not** a left sidebar.
 - ❌ Sort dropdown (`sortOrder=newest|oldest|popular`). Default feed is **always `published_at DESC`**; search is **always relevance-first** (`BLUEPRINT` §6.2a). No sort UI PMF.
 - ❌ View-mode toggle (grid / list / compact). Single grid PMF.
 - ❌ OR-mode for tags — AND only.
@@ -705,7 +705,7 @@ Changing `stream` (Nuggets ↔ Market Pulse) **clears `tags` and `q`** — diffe
 
 **Cover:** **`BLUEPRINT` §12.3** — if **`cover_image_url`** is null, use **branded placeholder** **or** **first ordered entry’s** nugget hero thumb (deterministic).
 
-**Tags vs collections (discovery):** **Tag filters + `q`** apply **only** on **`/`** (**§11**). **`/collections`** is separate browse (curated lists); **do not** reuse the Home tag rail on collection surfaces PMF — optional later: tag filter **within** one collection’s entries.
+**Tags vs collections (discovery):** **Tag filters + `q`** apply **only** on **`/`** (**§11**). **`/collections`** is separate browse (curated lists); **do not** reuse the Home **More filters** UI on collection surfaces PMF — optional later: tag filter **within** one collection’s entries.
 
 ---
 
@@ -756,7 +756,7 @@ Changing `stream` (Nuggets ↔ Market Pulse) **clears `tags` and `q`** — diffe
 |-------|-----------|
 | **In-app feedback widget** | **Out of PMF** — **Contact** page / email sufficient |
 | **Content moderation** | **Publish / unpublish** in admin — **no** user reporting queue or triage UI at launch |
-| **Tag creation** | **Admin-only** — **`BUILD` PR-14**; Home chip rail shows **official** tags only (**no** user-created tags) |
+| **Tag creation** | **Admin-only** — **`BUILD` PR-14**; Home **More filters** dialog lists **official** tags only (**no** user-created tags on the public picker) |
 
 ---
 
@@ -764,12 +764,12 @@ Changing `stream` (Nuggets ↔ Market Pulse) **clears `tags` and `q`** — diffe
 
 | Area | Change |
 |------|--------|
-| **Reading** | Replace modal/drawer stacks with **full-page detail** |
+| **Reading** | Replace modal/drawer stacks with the **canonical nugget detail route** (full page on direct hit; intercepted sheet allowed only as an in-context shell) |
 | **Cards** | Strip **`NewsCard`** modal carnival to **navigate + bookmark + optional share** |
 | **Sharing** | Centralize on **canonical URL + OG**; simplify **`ShareMenu`** surface |
 | **Media** | Stop mixing lightbox + preview modal + drawer — **one detail page** owns depth |
 | **Hero vs gallery** | **Carousel/narrative order** (`article_media.sort_order`, **manual gallery PMF**) is independent of **feed/card cover**: admin sets **“Use as feed/card hero”** on an attachment so the first uploaded or first-in-list image need not be the cover; reorder alone does not move the hero (**`BLUEPRINT` §12.2a**). Inline images in the Markdown body render in prose on detail — **not** the carousel unless a future **`origin=inline`** job ships. |
-| **Filters** | `nuqs` for `stream` / `tags` / `q` — §11. **No left sidebar** — chip rail + bottom sheet only (§11.1). Kills `DesktopFilterSidebar`, `TaxonomySidebar`, `FilterStateContext`, `FilterPopover`, `FilterPanel`, `FilterScrollRow` from v1. |
+| **Filters** | `nuqs` for `stream` / `tags` / `q` — §11. **No left sidebar** — **All** + **More filters** on `/`; mega-panel dialog for taxonomy (§11.1). Kills `DesktopFilterSidebar`, `TaxonomySidebar`, `FilterStateContext`, v1 `FilterPopover`, `FilterPanel`, `FilterScrollRow` from v1. |
 | **Sort UI** | **Removed.** Default feed `published_at DESC`; search relevance-first. No dropdown, no sort chip — v1's `sortOrder` field is dead PMF. |
 | **View modes** | **Removed.** Single grid. Kills v1 grid/feed/masonry variant pickers. |
 | **Header** | Thin — logo · search · theme · sign-in/bell. **No nested filter affordances.** §3.3. |
@@ -799,7 +799,7 @@ Changing `stream` (Nuggets ↔ Market Pulse) **clears `tags` and `q`** — diffe
 - **Custom scroll-restoration** beyond App Router default (§6 / §1b)
 - **OG metadata scraping** (`open-graph-scraper`) — admin authors metadata; scraping comes back behind an explicit "Fetch OG" admin action PR
 - **Transactional email** (`resend`) — Supabase Auth handles its own emails; defer until `/contact` form ships
-- **Desktop left filter sidebar** — single chip rail + bottom sheet pattern instead (§11.1)
+- **Desktop left filter sidebar** — **All** + **More filters** + dialog (§11.1)
 - **Sort dropdown / sort chip** — feed always reverse-chronological, search always relevance-first (§11.1)
 - **View-mode toggle** (grid / list / compact) — single grid PMF
 - **Always-mounted "Back to top" button** — chrome bloat with negligible UX gain given prefetch + fast routes

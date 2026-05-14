@@ -1,10 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
-import { BookmarkButton } from '@/components/ui/bookmark-button'
-import { ShareButton } from '@/components/ui/share-button'
+import { useRouter } from 'next/navigation'
 
 type Props = {
   children: React.ReactNode
@@ -23,8 +20,8 @@ const FOCUSABLE_SELECTOR = [
 const SWIPE_DISMISS_THRESHOLD = 80
 
 /**
- * Sheet — single client island for the parallel-slot intercepting-route
- * detail view (Phase 15 / plan §2.K).
+ * Nugget detail sheet — alternate shell for the canonical
+ * /nuggets/[id]/[slug] route.
  *
  * - Desktop (`lg+`): right-anchored side panel, ~640px wide.
  * - Mobile (`<lg`): bottom sheet, ~92vh.
@@ -36,7 +33,6 @@ const SWIPE_DISMISS_THRESHOLD = 80
  */
 export function Sheet({ children, ariaLabel }: Props) {
   const router = useRouter()
-  const pathname = usePathname()
   const containerRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
   const [touchStartY, setTouchStartY] = useState<number | null>(null)
@@ -48,7 +44,6 @@ export function Sheet({ children, ariaLabel }: Props) {
   const close = useCallback(() => {
     router.back()
   }, [router])
-  const articleId = pathname.split('/').filter(Boolean).at(-2) ?? ''
 
   // Lock body scroll while the sheet is mounted; capture prior focus to restore.
   useEffect(() => {
@@ -126,12 +121,12 @@ export function Sheet({ children, ariaLabel }: Props) {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={ariaLabel ?? 'Article'}
+      aria-label={ariaLabel ?? 'Nugget detail'}
       className="fixed inset-0 z-50 flex items-end justify-end lg:items-stretch"
     >
       <button
         type="button"
-        aria-label="Close"
+        aria-label="Dismiss nugget detail"
         onClick={close}
         className="absolute inset-0 bg-scrim motion-safe:transition-opacity motion-safe:duration-200"
       />
@@ -143,40 +138,10 @@ export function Sheet({ children, ariaLabel }: Props) {
         onTouchEnd={onTouchEnd}
         style={dragOffset > 0 ? { transform: `translateY(${dragOffset}px)` } : undefined}
         data-mounted={mounted ? 'true' : 'false'}
-        className="relative flex h-[92vh] w-full flex-col overflow-y-auto rounded-t-2xl bg-surface text-primary shadow-2xl motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out translate-y-full data-[mounted=true]:translate-y-0 lg:h-full lg:max-w-[640px] lg:rounded-none lg:rounded-l-2xl lg:translate-y-0 lg:translate-x-full lg:data-[mounted=true]:translate-x-0 motion-reduce:!translate-y-0 lg:motion-reduce:!translate-x-0 motion-reduce:transition-none"
+        className="relative flex h-[92vh] w-full flex-col overflow-y-auto rounded-t-[1.75rem] border border-border bg-surface text-primary shadow-panel ring-1 ring-elevated motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out translate-y-full data-[mounted=true]:translate-y-0 sm:max-w-[420px] lg:h-full lg:max-w-[500px] lg:rounded-none lg:rounded-l-[1.75rem] lg:border-b-0 lg:border-r-0 lg:border-t-0 lg:translate-y-0 lg:translate-x-full lg:data-[mounted=true]:translate-x-0 motion-reduce:!translate-y-0 lg:motion-reduce:!translate-x-0 motion-reduce:transition-none"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-header px-4 py-3 backdrop-blur-sm">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="inline-flex h-6 w-6 select-none items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
-              N
-            </div>
-            <span className="truncate text-sm font-bold text-primary">Nuggets</span>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {articleId ? (
-              <BookmarkButton articleId={articleId} initialBookmarked={false} variant="card" />
-            ) : null}
-            <ShareButton title="Nuggets" href={pathname} variant="card" />
-            {articleId ? <BookmarkBatchHydrator articleIds={[articleId]} /> : null}
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Close article"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            </button>
-          </div>
+        <div className="flex justify-center px-4 pb-1 pt-2 lg:hidden" aria-hidden="true">
+          <span className="h-1.5 w-12 rounded-full bg-border" />
         </div>
 
         <div className="flex-1">{children}</div>

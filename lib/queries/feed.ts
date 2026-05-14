@@ -3,13 +3,14 @@ import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
 import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
 import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
 import { isImageUrl } from '@/lib/ui/is-image-url'
-import type {
-  ArticleCardProps,
-  CardImage,
-  FeedPage,
-  FeedPageParams,
-  FeedCursor,
-  ContentStream,
+import {
+  normalizeHeroMediaKind,
+  type ArticleCardProps,
+  type CardImage,
+  type FeedPage,
+  type FeedPageParams,
+  type FeedCursor,
+  type ContentStream,
 } from '@/types/article'
 
 type ArticleRowWithLabels = Omit<ArticleCardProps, 'cardPreviewHtml'>
@@ -66,16 +67,55 @@ export async function getFeedPage({
   limit = 24,
 }: FeedPageParams): Promise<FeedPage> {
   const supabase = getPublicClient()
+  const totalCountPromise = getFeedTotalCount({ supabase, stream, tags, q })
 
   // Branch: full-text search vs cursor pagination
   // Search uses textSearch on search_vector — no cursor support PMF
   // Cursor pagination uses keyset on (published_at DESC, id DESC)
 
   if (q.trim()) {
-    return getFeedPageBySearch({ supabase, stream, tags, q, limit })
+    const page = await getFeedPageBySearch({ supabase, stream, tags, q, limit })
+    return { ...page, totalCount: await totalCountPromise }
   }
 
-  return getFeedPageByCursor({ supabase, stream, tags, cursor, limit })
+  const page = await getFeedPageByCursor({ supabase, stream, tags, cursor, limit })
+  return { ...page, totalCount: await totalCountPromise }
+}
+
+async function getFeedTotalCount({
+  supabase,
+  stream,
+  tags,
+  q,
+}: {
+  supabase: ReturnType<typeof getPublicClient>
+  stream: ContentStream
+  tags: string[]
+  q: string
+}): Promise<number> {
+  let query = supabase
+    .from('articles')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'published')
+    .eq('content_stream', stream)
+
+  if (tags.length > 0) {
+    query = query.contains('tag_slugs', tags)
+  }
+
+  if (q.trim()) {
+    query = query.textSearch('search_vector', q, {
+      type: 'websearch',
+      config: 'english',
+    })
+  }
+
+  const { count, error } = await query
+  if (error) {
+    throw new Error(`getFeedTotalCount error: ${error.message}`)
+  }
+
+  return count ?? 0
 }
 
 async function getFeedPageByCursor({
@@ -228,7 +268,11 @@ async function attachImagesToRows(
   if (error) {
     // Fail open — render single-hero rather than blocking the feed.
     console.warn(`attachImagesToRows: ${error.message}`)
-    return rows.map((r) => ({ ...r, images: [] }))
+    return rows.map((r) => ({
+      ...r,
+      images: [],
+      hero_media_kind: normalizeHeroMediaKind(r.hero_media_kind),
+    }))
   }
 
   const byArticle = new Map<string, CardImage[]>()
@@ -240,5 +284,9 @@ async function attachImagesToRows(
     byArticle.set(m.article_id, list)
   }
 
-  return rows.map((r) => ({ ...r, images: byArticle.get(r.id) ?? [] }))
+  return rows.map((r) => ({
+    ...r,
+    images: byArticle.get(r.id) ?? [],
+    hero_media_kind: normalizeHeroMediaKind(r.hero_media_kind),
+  }))
 }

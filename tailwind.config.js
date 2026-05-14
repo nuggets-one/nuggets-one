@@ -20,6 +20,8 @@ module.exports = {
         bg: "var(--color-bg)",
         surface: "var(--color-surface)",
         "surface-raised": "var(--color-surface-raised)",
+        "surface-strong": "var(--color-surface-strong)",
+        "surface-strong-foreground": "var(--color-surface-strong-foreground)",
         header: "var(--color-header)",
         rail: "var(--color-rail)",
         border: "var(--color-border)",

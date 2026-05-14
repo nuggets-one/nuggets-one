@@ -458,15 +458,15 @@ Wire Cloudinary `image/fetch` proxy: external URLs route through `res.cloudinary
 Source plan: `docs/HOMEPAGE_UI_UX_REMEDIATION_PLAN.md` §2.K + §0d (LOCKED 2026-05-01).
 
 ### What changed
-- New `components/ui/article-content.tsx` — Server Component extracted from the canonical detail route; consumed by both the canonical page and the intercept slot.
+- New `components/ui/article-content.tsx` — Server Component extracted from the canonical nugget detail route; consumed by both the full-page shell and the intercept slot.
 - `app/(main)/nuggets/[id]/[slug]/page.tsx` slimmed to a `<Suspense>` + metadata wrapper that renders `<ArticleContent/>`.
 - New `components/ui/sheet.tsx` — single `'use client'` island. Bottom sheet on `<lg`, right-anchored side panel on `lg+`. Focus trap, Escape and backdrop close (via `router.back()`), mobile swipe-down dismiss past 80px, body-scroll lock, prior-focus restore. Two-frame RAF mount toggle drives the slide-in transition; `motion-reduce:` snaps.
 - `app/(main)/layout.tsx` accepts the `modal` slot prop and renders it alongside `<main>`.
 - New `app/(main)/@modal/default.tsx` returning `null` (required so the slot doesn't leak into direct URL hits).
-- New `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` — intercept route rendering `<Sheet>` around `<ArticleContent/>`.
+- New `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` — intercept route rendering the canonical nugget detail route inside `<Sheet>`.
 
 ### Scope of the modal-ban lift
-Route-pattern-specific. `<Sheet>` is fed by Next 15 parallel slots, not by a context above the grid. The CLAUDE.md "ArticleModal / ArticleDrawer → use /nuggets/[id]/[slug]" rule is overridden only for this route pattern; context-driven modals and the add-to-collection / report / admin-CRUD bans remain in force.
+Route-pattern-specific. `<Sheet>` is fed by Next 15 parallel slots, not by a context above the grid. The canonical nugget route remains the single reading URL; the intercepted sheet is only an alternate shell of that route. Context-driven modals and the add-to-collection / report / admin-CRUD bans remain in force.
 
 ### Verification
 - `npm run build` → exit 0. Intercept route registered as `/(.)nuggets/[id]/[slug]`; canonical `/nuggets/[id]/[slug]` preserved.

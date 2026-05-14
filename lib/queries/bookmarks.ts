@@ -2,7 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
 import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
 import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
-import type { ArticleCardProps } from '@/types/article'
+import {
+  normalizeHeroMediaKind,
+  type ArticleCardProps,
+} from '@/types/article'
 
 // Phase 14: bookmarks doesn't fetch `article_media`; cards stay single-hero.
 // `images: []` is appended after normalization.
@@ -48,6 +51,25 @@ function isMissingCardPreviewError(message: string): boolean {
   return /card_preview/i.test(message)
 }
 
+/** Batched bookmark lookup for feed/collection cards (caller supplies user id). */
+export async function getBookmarkedArticleIdsForUser(
+  userId: string,
+  articleIds: string[]
+): Promise<Set<string>> {
+  const unique = [...new Set(articleIds)].filter(Boolean)
+  if (unique.length === 0) return new Set()
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('bookmarks')
+    .select('article_id')
+    .eq('user_id', userId)
+    .in('article_id', unique)
+
+  if (error || !data) return new Set()
+  return new Set(data.map((row) => row.article_id as string))
+}
+
 export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
   const supabase = await createClient()
 
@@ -78,7 +100,11 @@ export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
       return Array.isArray(row.articles) ? row.articles[0] ?? null : row.articles
     })
     .filter((article): article is Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels'> => article !== null)
-    .map((article) => ({ ...article, images: [] }))
+    .map((article) => ({
+      ...article,
+      images: [],
+      hero_media_kind: normalizeHeroMediaKind(article.hero_media_kind),
+    }))
 
   const rows = await attachTagLabelsToRows(
     supabase as unknown as SupabaseLike,

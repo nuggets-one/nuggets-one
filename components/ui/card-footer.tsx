@@ -1,18 +1,34 @@
-import Link from 'next/link'
 import { BookmarkButton } from '@/components/ui/bookmark-button'
 import { ShareButton } from '@/components/ui/share-button'
 import { CardMoreButton } from '@/components/ui/card-more-button'
 
+const MS_PER_DAY = 86_400_000
+
 function formatCompactDate(iso: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+
+  const now = Date.now()
+  const diffMs = now - d.getTime()
+  if (diffMs < 0) {
+    return new Intl.DateTimeFormat(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(d)
+  }
+
+  const ageDays = Math.floor(diffMs / MS_PER_DAY)
+  if (ageDays < 7) {
+    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+    return rtf.format(-ageDays, 'day')
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
     day: 'numeric',
     month: 'short',
-    year: '2-digit',
-  }).formatToParts(new Date(iso))
-  const day = parts.find((part) => part.type === 'day')?.value ?? ''
-  const month = parts.find((part) => part.type === 'month')?.value ?? ''
-  const year = parts.find((part) => part.type === 'year')?.value ?? ''
-  return `${day} ${month} '${year}`.trim()
+    year: 'numeric',
+  }).format(d)
 }
 
 function getSourceChipLabel(sourceHost: string | null): string | null {
@@ -51,57 +67,37 @@ export function CardFooter({
 
   return (
     <div className="mt-auto block px-4 py-2 md:border-t md:border-border">
-      <div className="flex flex-col gap-2">
-        <div className="hidden items-center justify-center md:flex">
-          <Link
-            href={href}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface"
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex shrink-0 items-center gap-2 text-xs text-muted">
+          <span
+            aria-hidden="true"
+            title={sourceHost ?? 'Nuggets'}
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-chip-active-border bg-accent-soft text-[9px] font-bold text-body-link"
           >
-            <span>View Full Article</span>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path
-                d="M4.5 9L7.5 6L4.5 3"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
+            {sourceChipLabel}
+          </span>
+          <span className="shrink-0">
+            {compactDate}
+          </span>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <span
-              aria-hidden="true"
-              title={sourceHost ?? 'Nuggets'}
-              className="flex h-6 w-6 items-center justify-center rounded-full border border-[#ffea96] bg-[#fff5c8] text-[9px] font-bold text-[#ca8a04] dark:border-[#854d0e] dark:bg-[#713f12]/30 dark:text-[#facc15]"
-            >
-              {sourceChipLabel}
-            </span>
-            <span className="shrink-0">
-              {compactDate}
-            </span>
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+          <div className="shrink-0">
+            <ShareButton title={title} href={href} variant="footer" />
           </div>
-
-          <div className="ml-auto flex shrink-0 items-center gap-0.5">
-            <div className="shrink-0">
-              <ShareButton title={title} href={href} variant="footer" />
-            </div>
-            <div className="shrink-0">
-              <BookmarkButton
-                articleId={articleId}
-                initialBookmarked={initialBookmarked}
-                isAuthenticated={isAuthenticated}
-                variant="footer"
-              />
-            </div>
-            {source_url && (
-              <div className="shrink-0">
-                <CardMoreButton sourceUrl={source_url} sourceHost={sourceHost} />
-              </div>
-            )}
+          <div className="shrink-0">
+            <BookmarkButton
+              articleId={articleId}
+              initialBookmarked={initialBookmarked}
+              isAuthenticated={isAuthenticated}
+              variant="footer"
+            />
           </div>
+          {source_url && (
+            <div className="shrink-0">
+              <CardMoreButton sourceUrl={source_url} sourceHost={sourceHost} />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { IMAGE_REMOTE_HOSTS } from './lib/ui/image-host-policy'
 
 // S11-F1: security headers per BLUEPRINT §5.6 — required PMF.
 const isProd = process.env.NODE_ENV === 'production'
@@ -14,8 +15,8 @@ const securityHeaders = [
       // Phase 14 Tier 1: external UGC hosts served via `unoptimized={true}`.
       // Phase 14.5 will collapse these back to res.cloudinary.com once the
       // image/fetch proxy ships. Keep this list in lockstep with
-      // `lib/ui/card-image-host.ts` PASSTHROUGH_HOSTS and `remotePatterns`.
-      "img-src 'self' data: https://res.cloudinary.com https://i.ytimg.com https://pbs.twimg.com https://i.redd.it https://preview.redd.it https://i.imgur.com https://media.licdn.com",
+      // `lib/ui/image-host-policy.ts` IMAGE_REMOTE_HOSTS and `remotePatterns`.
+      `img-src 'self' data: ${IMAGE_REMOTE_HOSTS.map((host) => `https://${host}`).join(' ')}`,
       "media-src 'self' https://res.cloudinary.com",
       scriptSrc,
       "style-src 'self' 'unsafe-inline'",
@@ -53,17 +54,7 @@ const nextConfig: NextConfig = {
   images: {
     loader: 'custom',
     loaderFile: './lib/cloudinary-loader.ts',
-    remotePatterns: [
-      { protocol: 'https', hostname: 'res.cloudinary.com' },
-      { protocol: 'https', hostname: 'i.ytimg.com' },
-      // Phase 14 Tier 1 — passthrough (`unoptimized={true}` at the call site).
-      // Removed in Phase 14.5 when Cloudinary `image/fetch` proxy lands.
-      { protocol: 'https', hostname: 'pbs.twimg.com' },
-      { protocol: 'https', hostname: 'i.redd.it' },
-      { protocol: 'https', hostname: 'preview.redd.it' },
-      { protocol: 'https', hostname: 'i.imgur.com' },
-      { protocol: 'https', hostname: 'media.licdn.com' },
-    ],
+    remotePatterns: IMAGE_REMOTE_HOSTS.map((hostname) => ({ protocol: 'https' as const, hostname })),
   },
   async headers() {
     return [

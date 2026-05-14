@@ -23,7 +23,7 @@ export function StreamTabs() {
     <div
       role="tablist"
       aria-label="Content stream"
-      className="flex min-h-[48px] items-end gap-1 overflow-x-auto sm:gap-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="inline-flex min-h-[44px] items-center rounded-xl border border-border bg-surface p-1"
     >
       {STREAMS.map(({ value, label }) => {
         const selected = stream === value
@@ -41,10 +41,10 @@ export function StreamTabs() {
                 setQ(null)
               })
             }}
-            className={`-mb-[1px] shrink-0 border-b-2 pb-3 pt-2 text-sm font-semibold tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 min-h-[44px] px-4 sm:px-5 ${
+            className={`min-h-[44px] shrink-0 rounded-lg px-4 text-sm font-semibold tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 ${
               selected
-                ? 'border-accent text-primary'
-                : 'border-transparent text-muted hover:text-primary'
+                ? 'bg-accent/20 text-primary shadow-sm'
+                : 'text-muted hover:bg-surface-raised hover:text-primary'
             }`}
           >
             {label}

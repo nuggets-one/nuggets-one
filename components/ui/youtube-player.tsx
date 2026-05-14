@@ -11,8 +11,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
-
-const EMBED_ORIGIN = 'https://www.youtube-nocookie.com'
+import {
+  buildYouTubeNoCookieEmbedSrc,
+  postYouTubeIframeCommand,
+} from '@/lib/ui/youtube-embed'
 
 export const YOUTUBE_SEEK_EVENT = 'youtube-seek'
 
@@ -26,22 +28,14 @@ type Props = {
   title: string
 }
 
-function buildEmbedSrc(videoId: string, start: number | null, autoplay: boolean) {
-  const params = new URLSearchParams({ enablejsapi: '1', rel: '0' })
-  if (autoplay) params.set('autoplay', '1')
-  if (start && start > 0) params.set('start', String(start))
-  return `${EMBED_ORIGIN}/embed/${encodeURIComponent(videoId)}?${params.toString()}`
+function pageOrigin(): string | null {
+  if (typeof window === 'undefined') return null
+  return window.location.origin
 }
 
-function logPlay(videoId: string, seconds: number, source: 'poster' | 'timestamp') {
-  if (typeof window !== 'undefined') {
-    console.log('[telemetry]', {
-      event: 'youtube_play',
-      video_id: videoId,
-      seconds,
-      source,
-    })
-  }
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 export function YouTubePlayer({ videoId, posterUrl, title }: Props) {
@@ -59,18 +53,15 @@ export function YouTubePlayer({ videoId, posterUrl, title }: Props) {
         setInitialStart(seconds)
         setMounted(true)
       } else if (iframeRef.current?.contentWindow) {
-        iframeRef.current.contentWindow.postMessage(
-          JSON.stringify({
-            event: 'command',
-            func: 'seekTo',
-            args: [seconds, true],
-          }),
-          EMBED_ORIGIN,
-        )
+        const win = iframeRef.current.contentWindow
+        postYouTubeIframeCommand(win, 'seekTo', [seconds, true])
+        postYouTubeIframeCommand(win, 'playVideo', [])
       }
 
-      logPlay(videoId, seconds, 'timestamp')
-      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      containerRef.current?.scrollIntoView({
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        block: 'start',
+      })
     }
 
     window.addEventListener(YOUTUBE_SEEK_EVENT, handler)
@@ -80,16 +71,24 @@ export function YouTubePlayer({ videoId, posterUrl, title }: Props) {
   function handlePosterClick() {
     setInitialStart(null)
     setMounted(true)
-    logPlay(videoId, 0, 'poster')
   }
 
+  const embedSrc =
+    mounted
+      ? buildYouTubeNoCookieEmbedSrc(videoId, {
+          autoplay: true,
+          startSeconds: initialStart,
+          pageOrigin: pageOrigin(),
+        })
+      : null
+
   return (
-    <div ref={containerRef} className="my-8">
-      <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-surface-raised">
-        {mounted ? (
+    <div ref={containerRef} className="w-full">
+      <div className="relative aspect-video w-full overflow-hidden bg-surface-raised">
+        {mounted && embedSrc ? (
           <iframe
             ref={iframeRef}
-            src={buildEmbedSrc(videoId, initialStart, true)}
+            src={embedSrc}
             title={title}
             className="absolute inset-0 h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -123,7 +122,7 @@ export function YouTubePlayer({ videoId, posterUrl, title }: Props) {
               className="pointer-events-none absolute inset-0 flex items-center justify-center bg-overlay transition-colors group-hover:bg-overlay-hover"
               aria-hidden="true"
             >
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-media-control text-inverse shadow-lg ring-2 ring-media-control-ring">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-media-control text-inverse shadow-panel ring-2 ring-media-control-ring">
                 <svg
                   className="ml-1 h-8 w-8"
                   fill="currentColor"
@@ -142,7 +141,7 @@ export function YouTubePlayer({ videoId, posterUrl, title }: Props) {
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Watch ${title} on YouTube (opens in new tab)`}
-        className="mt-2 inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
+        className="mx-4 mb-4 mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 sm:mx-5"
       >
         Watch on YouTube ↗
       </a>

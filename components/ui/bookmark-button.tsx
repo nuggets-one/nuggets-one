@@ -14,7 +14,7 @@ type Props = {
   articleId: string
   initialBookmarked: boolean
   isAuthenticated?: boolean
-  variant?: 'card' | 'detail' | 'footer'
+  variant?: 'card' | 'detail' | 'footer' | 'toolbar'
 }
 
 export function BookmarkButton({
@@ -79,14 +79,20 @@ export function BookmarkButton({
       className={`inline-flex items-center gap-1.5 transition-colors min-h-[44px] min-w-[44px] justify-center ${
         variant === 'detail'
           ? 'px-3 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-surface-raised active:bg-surface-raised/80'
+          : variant === 'toolbar'
+            ? 'h-10 w-10 min-h-[40px] min-w-[40px] rounded-full hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface'
           : variant === 'footer'
-            ? 'rounded-full hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface dark:hover:bg-slate-800'
+            ? 'rounded-full hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface'
             : 'h-8 w-8 min-h-[32px] min-w-[32px] rounded-lg border border-border bg-transparent hover:bg-surface-raised active:bg-surface-raised/80'
       } ${
         variant === 'footer'
           ? bookmarked
-            ? 'text-[#ca8a04] dark:text-[#eab308]'
-            : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'
+            ? 'text-body-link'
+            : 'text-muted hover:text-primary'
+          : variant === 'toolbar'
+          ? bookmarked
+            ? 'text-primary'
+            : 'text-muted hover:text-primary'
           : bookmarked
             ? 'text-accent'
             : 'text-muted hover:text-primary'
@@ -95,7 +101,7 @@ export function BookmarkButton({
       }`}
     >
       <svg
-        className={variant === 'footer' ? 'h-4 w-4' : 'w-4 h-4'}
+        className={variant === 'toolbar' ? 'h-[18px] w-[18px]' : 'h-4 w-4'}
         fill={bookmarked ? 'currentColor' : 'none'}
         stroke="currentColor"
         strokeWidth={variant === 'footer' ? 1.5 : 2}

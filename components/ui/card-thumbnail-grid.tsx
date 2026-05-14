@@ -1,10 +1,16 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import {
   canRenderWithNextImage,
+  resolveCardImageUrl,
   safeHostname,
   shouldOptimizeImage,
 } from '@/lib/ui/card-image-host'
+import {
+  cardMediaGroupClasses,
+  cardMediaImageHoverClasses,
+} from '@/lib/ui/card-media-hover'
 import type { CardImage } from '@/types/article'
 
 type Props = {
@@ -23,8 +29,8 @@ type Props = {
  *   - 3 images: 1 large left + 2 stacked right.
  *   - 4+ images: 2x2 with `+N` overlay on cell 4.
  *
- * The single-image case is handled by `<CardMedia>` directly (preserves
- * existing aspect-video hero rendering); this component is only invoked
+ * The single-image case is handled by `<CardMedia>` via `ArticleCard` when
+ * the hero is empty and `images.length === 1`; this component is only invoked
  * when `images.length >= 2`.
  *
  * Server Component. The whole grid is wrapped in one outer `<Link>` so
@@ -57,7 +63,7 @@ export function CardThumbnailGrid({
               return (
                 <div
                   key={`${img.url}-${idx}`}
-                  className={`relative overflow-hidden bg-surface-raised ${cellClass(layout, idx)}`}
+                  className={`relative overflow-hidden bg-surface-raised ${cardMediaGroupClasses} ${cellClass(layout, idx)}`}
                 >
                   <CellImage url={img.url} alt={img.alt ?? title} />
                   {isOverflowCell && (
@@ -79,18 +85,22 @@ export function CardThumbnailGrid({
 }
 
 function CellImage({ url, alt }: { url: string; alt: string }) {
-  if (!canRenderWithNextImage(url)) {
-    // Host not in remotePatterns — Next/Image would error. Skip media instead
-    // of crashing; outer container's bg-surface-raised remains visible.
+  const resolvedUrl = resolveCardImageUrl(url)
+  // Host not in remotePatterns — Next/Image would error. Skip media instead
+  // of crashing; outer container's bg-surface-raised remains visible.
+  if (!resolvedUrl || !canRenderWithNextImage(resolvedUrl)) {
     return null
   }
-  const host = safeHostname(url)
+  if (resolvedUrl.includes('/image/fetch/')) {
+    return <CardMediaRaster src={resolvedUrl} alt={alt} priority={false} imageHover />
+  }
+  const host = safeHostname(resolvedUrl)
   return (
     <Image
-      src={url}
+      src={resolvedUrl}
       alt={alt}
       fill
-      className="object-cover"
+      className={`object-cover ${cardMediaImageHoverClasses}`}
       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
       quality={75}
       unoptimized={!shouldOptimizeImage(host)}

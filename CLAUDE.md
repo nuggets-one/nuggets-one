@@ -82,11 +82,11 @@ react-modal, react-spring, auto-animate, @vercel/og,
 - Bookmark toggle is local to each card only
 
 ### Legacy patterns from Project-Phoenix — do not port
-- ArticleModal / ArticleDrawer → use /nuggets/[id]/[slug]
+- ArticleModal / ArticleDrawer → use the canonical /nuggets/[id]/[slug] route; only route-driven intercepted sheet shells are allowed
 - FilterStateContext → use nuqs
 - useInfiniteArticles hook → use fetch + useTransition
 - BookmarkCollection / CollectionSelector → flat /bookmarks only
-- openArticle / expanded URL sync → use next/link
+- openArticle / expanded URL sync → use next/link to the canonical route; never reintroduce query-param modal state
 - Modal-driven CRUD forms in admin → use route pages + Server Actions
 
 ### Other hard bans

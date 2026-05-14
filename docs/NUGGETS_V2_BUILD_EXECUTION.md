@@ -246,7 +246,7 @@ Use this **numeric order** so LLMs don’t argue circular “this doc wins” cl
 |-------|---------|
 | **Objective** | **`app/nuggets/[id]/[slug]/page.tsx`**: **Load by `id` only** (UUID). RLS enforces visibility — drafts return 404 for **everyone, including admins**. **In-product draft preview is out of PMF**; admins preview by setting `status='published'` in staging or via Supabase Studio. `generateMetadata` for OG; slug mismatch → **301** redirect to canonical. **Body markdown:** render with `react-markdown` + `remark-gfm`, **`img` component overridden per `BLUEPRINT` §9.1** (Cloudinary → `next/image` custom loader; else `<img loading="lazy">`; column-bounded). **No `rehype-raw`** — disallow raw HTML. **Detail JS budget ≤ ~60 KiB gzip** (§5.4). |
 | **Dependencies** | PR-05. |
-| **Validation** | Share URL resolves; **Source** shows; wrong slug **301**. **Detail load always uses UUID `id` first** — never `WHERE slug = $2` as primary lookup or fallback (§6.3). **Drafts 404 for all visitors including authenticated admins** (RLS-enforced; no service-role detail fetch). Markdown body images render with correct loader and stay column-bounded. **YouTube spec (`BLUEPRINT` §6.3a):** poster + Watch on YouTube renders without iframe on first paint; clicking timestamp link `[2:34](#yt=154)` loads embed and seeks; `react-markdown` link override for `#yt=` href routes to player island. **Crawler render guarantee (`PRODUCT` §7):** OG tags present in HTML at byte 0; `curl -A "facebookexternalhit/1.1"` returns full `<head>` with `og:image` absolute HTTPS. |
+| **Validation** | Share URL resolves; **Source** shows; wrong slug **301**. **Detail load always uses UUID `id` first** — never `WHERE slug = $2` as primary lookup or fallback (§6.3). **Drafts 404 for all visitors including authenticated admins** (RLS-enforced; no service-role detail fetch). Markdown body images render with correct loader and stay column-bounded. **YouTube (`BLUEPRINT` §6.3a + `PRODUCT` §0.14):** detail — poster + Watch on YouTube without iframe on first paint; `[2:34](#yt=154)` loads embed and seeks. **Feed** — YouTube hero tap opens deferred global mini-player (no iframe in card on first paint); `#yt=` in card preview on YouTube-backed cards seeks mini-player; title / Open article still go to `/nuggets/[id]/[slug]`. **Crawler render guarantee (`PRODUCT` §7):** OG tags present in HTML at byte 0; `curl -A "facebookexternalhit/1.1"` returns full `<head>` with `og:image` absolute HTTPS. |
 | **Must NOT include** | Comments, bookmarks on page **until** PR-13 if avoiding churn — **or** include read-only bookmark icon inactive until PR-13 (**pick one** — prefer bookmark UI **with** PR-13 only). |
 
 ---
@@ -390,7 +390,7 @@ Use this **numeric order** so LLMs don’t argue circular “this doc wins” cl
 
 ### Article detail
 
-- **Reference:** modal stack in **`ArticleModal`** — **replace** with **`app/nuggets/...`** only.
+- **Reference:** modal stack in **`ArticleModal`** — **replace** with the canonical **`app/nuggets/...`** route; only route-driven intercepted sheet shells are allowed.
 
 ### Market Pulse
 
@@ -517,7 +517,7 @@ Explicit **non-build** per blueprint + migration plan:
 - **Full admin parity** (**`adminController`** CMS configs — Pulse intro strips, etc.).
 - **BullMQ / Redis** job runners in-app.
 - **TanStack Query on public feed** (**`useInfiniteArticles`** pattern).
-- **Modal-first reading** (**`ArticleModal`** default UX).
+- **Separate modal-first reading model** (**`ArticleModal`** default UX).
 - **`HomeGridVirtualized`** unless perf requires — **fast-follow** if feed **~150+** cards without windowing hurts mobile (**CLS**/scroll jank); consider **manual “load more” cap** before full virtualization.
 - **TanStack Query on `/bookmarks`, `/collections`, notifications panel** (forbidden everywhere PMF, not just public feed).
 - **`framer-motion` / animation libs PMF.**

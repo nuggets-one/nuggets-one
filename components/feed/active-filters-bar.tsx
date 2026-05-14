@@ -51,9 +51,9 @@ export function ActiveFiltersBar({ tags }: Props) {
     <div
       role="region"
       aria-label="Active filters"
-      className="flex flex-wrap items-center gap-2"
+      className="flex flex-wrap items-center gap-1.5"
     >
-      <span className="text-xs text-muted">Filters:</span>
+      <span className="text-[11px] uppercase tracking-wide text-muted">Filters</span>
 
       {q && (
         <button
@@ -86,7 +86,7 @@ export function ActiveFiltersBar({ tags }: Props) {
         type="button"
         onClick={clearAll}
         disabled={isPending}
-        className="ml-auto rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60"
+        className="rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60 sm:ml-auto"
       >
         Clear all
       </button>

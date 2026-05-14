@@ -6,6 +6,14 @@ export function collapseWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
 }
 
+function normalizeInlineSpacing(value: string): string {
+  return value
+    .replace(/\[\s+/g, '[')
+    .replace(/\s+\]/g, ']')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+}
+
 function truncateAtWordBoundary(value: string, max: number): string {
   const trimmed = value.trim()
   if (trimmed.length <= max) return trimmed
@@ -15,43 +23,79 @@ function truncateAtWordBoundary(value: string, max: number): string {
   return `${truncated}…`
 }
 
-function stripInlineMarkdown(value: string): string {
+function decodeHtmlEntities(value: string): string {
   return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+}
+
+function normalizeInlineMarkup(value: string): string {
+  const normalized = decodeHtmlEntities(value)
     .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1')
-    .replace(/<https?:\/\/[^>]+>/gi, ' ')
-    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/<https?:\/\/[^>]+>/gi, (match) => {
+      const url = match.slice(1, -1).trim()
+      return url ? `[${url}](${url})` : ' '
+    })
+    .replace(
+      /<a\b[^>]*href=(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/gi,
+      (_, __: string, href: string, label: string) => {
+        const normalizedHref = collapseWhitespace(decodeHtmlEntities(href))
+        const normalizedLabel = normalizeInlineMarkup(label)
+        if (!normalizedLabel) return ''
+        return normalizedHref ? `[${normalizedLabel}](${normalizedHref})` : normalizedLabel
+      }
+    )
+    .replace(/<(strong|b)\b[^>]*>/gi, '**')
+    .replace(/<\/(strong|b)>/gi, '**')
+    .replace(/<(em|i)\b[^>]*>/gi, '*')
+    .replace(/<\/(em|i)>/gi, '*')
+    .replace(/<code\b[^>]*>([\s\S]*?)<\/code>/gi, (_, code: string) => {
+      const text = collapseWhitespace(decodeHtmlEntities(code).replace(/<\/?[^>]+>/g, ' '))
+      return text ? `\`${text.replace(/`+/g, '')}\`` : ''
+    })
+    .replace(/<button\b[^>]*>([\s\S]*?)<\/button>/gi, (_, label: string) => normalizeInlineMarkup(label))
     .replace(/<\/?[^>]+>/g, ' ')
-    .replace(/[*_~`]+/g, '')
+
+  return normalizeInlineSpacing(collapseWhitespace(normalized))
+}
+
+function normalizeLegacyHtmlBlocks(value: string): string {
+  return value
+    .replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, inner: string) => {
+      const quoteText = normalizeInlineMarkup(
+        inner
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/p>/gi, '\n')
+          .replace(/<p\b[^>]*>/gi, '')
+      )
+
+      return quoteText ? `\n\n> ${quoteText}\n\n` : '\n\n'
+    })
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|section|article|h[1-6])>/gi, '\n\n')
+    .replace(/<(p|div|section|article|h[1-6])\b[^>]*>/gi, '')
 }
 
 function normalizeQuoteBlock(lines: string[]): string {
-  const text = collapseWhitespace(
-    lines
-      .map((line) => stripInlineMarkdown(line.replace(/^>\s?/, ' ')))
-      .join(' ')
-  )
+  const text = normalizeInlineMarkup(lines.map((line) => line.replace(/^>\s?/, ' ')).join(' '))
 
   return text ? `> ${text}` : ''
 }
 
 function normalizeListBlock(lines: string[]): string {
   const items = lines
-    .map((line) => collapseWhitespace(stripInlineMarkdown(line.replace(/^([-*+]|\d+\.)\s+/, ' '))))
+    .map((line) => normalizeInlineMarkup(line.replace(/^([-*+]|\d+\.)\s+/, ' ')))
     .filter(Boolean)
 
   return items.map((item) => `- ${item}`).join('\n')
 }
 
 function normalizeParagraphBlock(lines: string[]): string {
-  const text = collapseWhitespace(
-    stripInlineMarkdown(
-      lines
-        .map((line) => line.replace(/^#{1,6}\s+/, ''))
-        .join(' ')
-    )
-  )
+  const text = normalizeInlineMarkup(lines.map((line) => line.replace(/^#{1,6}\s+/, '')).join(' '))
 
   return text
 }
@@ -81,7 +125,7 @@ export function buildExcerptFromMarkdown(markdown: string): string {
 }
 
 export function buildCardPreviewFromMarkdown(markdown: string): string {
-  const blocks = markdown
+  const blocks = normalizeLegacyHtmlBlocks(markdown)
     .split(/\n\s*\n/g)
     .map(normalizeMarkdownBlock)
     .filter(Boolean)

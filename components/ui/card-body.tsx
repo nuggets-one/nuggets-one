@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CardPreviewYouTubeTimestamps } from '@/components/ui/card-preview-youtube-timestamps'
 
 type Props = {
   href: string
@@ -6,6 +7,8 @@ type Props = {
   cardPreviewHtml: string
   contentStream: 'standard' | 'pulse'
   displayTags: Array<{ slug: string; label: string }>
+  /** When set, `#yt=` links in preview HTML open the feed mini-player. */
+  youtubePreview?: { videoId: string; title: string; articleId: string }
 }
 
 export function CardBody({
@@ -14,6 +17,7 @@ export function CardBody({
   cardPreviewHtml,
   contentStream,
   displayTags,
+  youtubePreview,
 }: Props) {
   const previewText = cardPreviewHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
   const visibleTags = displayTags.slice(0, 3)
@@ -60,41 +64,36 @@ export function CardBody({
       )}
 
       <Link href={href} className="flex min-h-[44px] items-start focus:outline-none">
-        <h2 className="line-clamp-2 text-xs font-semibold leading-snug text-card-title transition-colors group-hover:text-body-link">
+        <h2 className="line-clamp-2 text-xs font-semibold leading-snug text-card-title transition-colors group-hover:text-slate-950 dark:group-hover:text-slate-100">
           {title}
         </h2>
       </Link>
 
       {hasPreview && (
         <div className="relative">
-          <div
-            className="max-h-[8.75rem] overflow-hidden text-xs leading-5 text-muted [&_a]:text-body-link [&_a]:no-underline [&_a:hover]:underline [&_blockquote]:my-4 [&_blockquote]:ml-0 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted [&_em]:italic [&_p]:m-0 [&_p]:mb-1.5 [&_strong]:font-bold [&_strong]:text-primary"
-            dangerouslySetInnerHTML={{ __html: cardPreviewHtml }}
-          />
+          {youtubePreview ? (
+            <CardPreviewYouTubeTimestamps
+              videoId={youtubePreview.videoId}
+              title={youtubePreview.title}
+              articleId={youtubePreview.articleId}
+            >
+              <div
+                className="max-h-[8.75rem] overflow-hidden text-xs leading-5 text-muted [&_a]:text-body-link [&_a]:no-underline [&_a:hover]:underline [&_blockquote]:my-4 [&_blockquote]:ml-0 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted [&_em]:italic [&_p]:m-0 [&_p]:mb-1.5 [&_strong]:font-bold [&_strong]:text-primary"
+                dangerouslySetInnerHTML={{ __html: cardPreviewHtml }}
+              />
+            </CardPreviewYouTubeTimestamps>
+          ) : (
+            <div
+              className="max-h-[8.75rem] overflow-hidden text-xs leading-5 text-muted [&_a]:text-body-link [&_a]:no-underline [&_a:hover]:underline [&_blockquote]:my-4 [&_blockquote]:ml-0 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted [&_em]:italic [&_p]:m-0 [&_p]:mb-1.5 [&_strong]:font-bold [&_strong]:text-primary"
+              dangerouslySetInnerHTML={{ __html: cardPreviewHtml }}
+            />
+          )}
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-surface to-transparent md:hidden"
           />
         </div>
       )}
-
-      <div className="mt-auto flex items-center gap-2 border-t border-border pt-2 md:hidden">
-        <Link
-          href={href}
-          className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 focus:ring-offset-surface"
-        >
-          <span>View Full Article</span>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path
-              d="M4.5 9L7.5 6L4.5 3"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
-      </div>
     </div>
   )
 }

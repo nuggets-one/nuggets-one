@@ -23,6 +23,96 @@ function withoutCardPreview<T extends { card_preview?: unknown }>(payload: T): O
   return copy
 }
 
+type AdminDb = ReturnType<typeof createAdminClient>
+
+function asString(value: FormDataEntryValue): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function parseTagSlugs(formData: FormData): string[] {
+  const rawValues = formData
+    .getAll('tag_slugs')
+    .map(asString)
+    .flatMap((value) => value.split(','))
+
+  return [...new Set(rawValues.map((tag) => tag.trim().toLowerCase()).filter(Boolean))]
+}
+
+function parseMediaUrls(formData: FormData): string[] {
+  const urls = formData
+    .getAll('media_urls')
+    .map(asString)
+    .flatMap((value) => value.split(/[\s,]+/))
+    .map((url) => url.trim())
+    .filter(Boolean)
+    .filter((url) => {
+      try {
+        const parsed = new URL(url)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      } catch {
+        return false
+      }
+    })
+
+  return [...new Set(urls)]
+}
+
+async function syncManualImageMedia(db: AdminDb, articleId: string, urls: string[], requestedHeroUrl: string | null) {
+  const { error: deleteError } = await db
+    .from('article_media')
+    .delete()
+    .eq('article_id', articleId)
+    .eq('origin', 'manual')
+    .eq('kind', 'image')
+
+  if (deleteError) return deleteError
+
+  if (urls.length === 0) {
+    const { error: clearHeroError } = await db
+      .from('articles')
+      .update({
+        hero_media_id: null,
+        hero_media_kind: null,
+        hero_video_id: null,
+        hero_thumb_url: null,
+      })
+      .eq('id', articleId)
+    return clearHeroError
+  }
+
+  const { data: insertedMedia, error: insertError } = await db
+    .from('article_media')
+    .insert(
+      urls.map((url, index) => ({
+        article_id: articleId,
+        kind: 'image',
+        url,
+        sort_order: index,
+        origin: 'manual',
+        hero_thumb_url: url,
+      }))
+    )
+    .select('id, url, hero_thumb_url, sort_order')
+
+  if (insertError) return insertError
+
+  const orderedMedia = (insertedMedia ?? []).sort((a, b) => a.sort_order - b.sort_order)
+  const heroMedia = orderedMedia.find((media) => media.url === requestedHeroUrl) ?? orderedMedia[0]
+  if (!heroMedia) return null
+
+  const { error: heroError } = await db
+    .from('articles')
+    .update({
+      hero_media_id: heroMedia.id,
+      hero_media_kind: 'image',
+      hero_video_id: null,
+      hero_thumb_url: heroMedia.hero_thumb_url ?? heroMedia.url,
+    })
+    .eq('id', articleId)
+
+  return heroError
+}
+
 async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -44,13 +134,13 @@ export async function createArticleAction(formData: FormData) {
   const source_url = (formData.get('source_url') as string | null)?.trim() || null
   const hero_thumb_url = (formData.get('hero_thumb_url') as string | null)?.trim() || null
   const hero_alt_text = (formData.get('hero_alt_text') as string | null)?.trim() || null
-  const tag_slugs_raw = String(formData.get('tag_slugs') ?? '').trim()
-  const tag_slugs = tag_slugs_raw
-    ? tag_slugs_raw.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
-    : []
+  const tag_slugs = parseTagSlugs(formData)
+  const media_urls = parseMediaUrls(formData)
   const card_preview = resolveCardPreview({ content_markdown, excerpt })
 
-  if (!title) throw new Error('Title is required')
+  if (!title) {
+    redirect('/admin/articles/new?error=missing_title')
+  }
 
   const id = crypto.randomUUID()
   const slug = generateArticleSlug(title, id)
@@ -78,7 +168,9 @@ export async function createArticleAction(formData: FormData) {
     ;({ error } = await db.from('articles').insert(legacyInsertPayload))
   }
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    redirect('/admin/articles/new?error=create_failed')
+  }
 
   if (tag_slugs.length > 0) {
     const { error: tagError } = await db.rpc('upsert_article_tags', {
@@ -91,6 +183,12 @@ export async function createArticleAction(formData: FormData) {
       const code = tagError.message.includes('unknown_tag_slugs') ? 'unknown_tags' : 'tag_update_failed'
       redirect(`/admin/articles/new?error=${encodeURIComponent(code)}`)
     }
+  }
+
+  const mediaError = await syncManualImageMedia(db, id, media_urls, hero_thumb_url)
+  if (mediaError) {
+    await db.from('articles').delete().eq('id', id)
+    redirect('/admin/articles/new?error=media_update_failed')
   }
 
   revalidateArticle(id)
@@ -109,13 +207,16 @@ export async function updateArticleAction(formData: FormData) {
   const source_url = (formData.get('source_url') as string | null)?.trim() || null
   const hero_thumb_url = (formData.get('hero_thumb_url') as string | null)?.trim() || null
   const hero_alt_text = (formData.get('hero_alt_text') as string | null)?.trim() || null
-  const tag_slugs_raw = String(formData.get('tag_slugs') ?? '').trim()
-  const tag_slugs = tag_slugs_raw
-    ? tag_slugs_raw.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
-    : []
+  const tag_slugs = parseTagSlugs(formData)
+  const media_urls = parseMediaUrls(formData)
   const card_preview = resolveCardPreview({ content_markdown, excerpt })
 
-  if (!title || !id) throw new Error('Missing required fields')
+  if (!id) {
+    redirect('/admin/articles')
+  }
+  if (!title) {
+    redirect(`/admin/articles/${id}?error=missing_title`)
+  }
 
   // Blueprint §2.a: slug regenerated on every save (title changes → new slug → 301 from old)
   const slug = generateArticleSlug(title, id)
@@ -139,7 +240,9 @@ export async function updateArticleAction(formData: FormData) {
     ;({ error } = await db.from('articles').update(legacyUpdatePayload).eq('id', id))
   }
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    redirect(`/admin/articles/${id}?error=save_failed`)
+  }
 
   // S6-F4: article_tags is canonical; upsert_article_tags atomically replaces join rows
   // and recomputes articles.tag_slugs from the join table (admin CLAUDE.md SQL pattern)
@@ -150,6 +253,11 @@ export async function updateArticleAction(formData: FormData) {
   if (tagError) {
     const code = tagError.message.includes('unknown_tag_slugs') ? 'unknown_tags' : 'tag_update_failed'
     redirect(`/admin/articles/${id}?error=${encodeURIComponent(code)}`)
+  }
+
+  const mediaError = await syncManualImageMedia(db, id, media_urls, hero_thumb_url)
+  if (mediaError) {
+    redirect(`/admin/articles/${id}?error=media_update_failed`)
   }
 
   revalidateArticle(id)

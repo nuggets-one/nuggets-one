@@ -1,6 +1,10 @@
 import { getPublicClient } from '@/lib/supabase/public'
 import { notFound } from 'next/navigation'
-import type { ArticleDetail, ContentStream } from '@/types/article'
+import {
+  normalizeHeroMediaKind,
+  type ArticleDetail,
+  type ContentStream,
+} from '@/types/article'
 
 export type SuggestionRow = {
   id: string
@@ -101,6 +105,7 @@ export async function getArticleById(
   return {
     ...raw,
     tags,
+    hero_media_kind: normalizeHeroMediaKind(raw.hero_media_kind),
   } as unknown as ArticleDetail
 }
 
@@ -125,6 +130,20 @@ export async function getArticleMeta(id: string): Promise<{
 
   if (error || !data) return null
   return data
+}
+
+/**
+ * Resolve the canonical slug for a published article by id.
+ * Returns notFound() when the article is missing or not publicly readable.
+ */
+export async function getCanonicalArticleSlug(id: string): Promise<string> {
+  const meta = await getArticleMeta(id)
+
+  if (!meta) {
+    notFound()
+  }
+
+  return meta.slug
 }
 
 /**

@@ -113,7 +113,7 @@ export function HeaderAuthIsland() {
 
           <div
             role="menu"
-            className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-rail py-2 shadow-lg ring-1 ring-elevated"
+            className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-rail py-2 shadow-panel ring-1 ring-elevated"
           >
             <Link
               href="/login"
@@ -170,7 +170,7 @@ export function HeaderAuthIsland() {
 
         <div
           role="menu"
-          className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-rail py-2 shadow-lg ring-1 ring-elevated"
+          className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-rail py-2 shadow-panel ring-1 ring-elevated"
         >
           {auth.email && (
             <>

@@ -71,7 +71,7 @@ These are **closed decisions** added in this revision. They override any conflic
 | **`profiles` table (new)** | **Required PMF.** `profiles(id uuid pk references auth.users(id) on delete cascade, display_name text, created_at timestamptz default now(), updated_at timestamptz default now())`. Trigger seeds row on `auth.users` insert. RLS: select/update where `id = auth.uid()`. Holds **all editable user fields** PMF (display_name only). **No** writes to `auth.users.user_metadata` from the client. |
 | **`articles.created_by`** | **Add column** `uuid null references auth.users(id) on delete set null`. ETL writes NULL; admin save writes `auth.uid()`. **No UI surface PMF** — kept so future curator pages don't require destructive migration. |
 | **`articles.tag_slugs text[]` (denormalized)** | **Required PMF.** `not null default '{}'`, recomputed in admin save **and** ETL on every tag write. **GIN-indexed.** Multi-tag AND queries: `WHERE tag_slugs @> $1::text[]` — **no counting joins at the cursor pager**. Stays in sync with `article_tags`; `article_tags` remains source of truth, `tag_slugs` is derived. |
-| **`tags` table — full schema** | `tags(id uuid pk default gen_random_uuid(), slug text unique not null, label text not null, dimension text null check (dimension is null or dimension in ('format','domain','subtopic')), is_official boolean not null default false, created_at timestamptz default now())`. **Home chip rail filter:** `WHERE is_official = true`. User-created/auto-tags can exist (`is_official = false`) but **never** appear on the public chip rail. |
+| **`tags` table — full schema** | `tags(id uuid pk default gen_random_uuid(), slug text unique not null, label text not null, dimension text null check (dimension is null or dimension in ('format','domain','subtopic')), is_official boolean not null default false, created_at timestamptz default now())`. **Home taxonomy filter UI:** `WHERE is_official = true`. User-created/auto-tags can exist (`is_official = false`) but **never** appear on the public Home filter surfaces. |
 | **Notification fan-out — cap + queue** | **Synchronous fan-out cap = 5,000 matched recipients per publish.** Above cap: enqueue via **Vercel Cron** route (`/api/cron/notifications-fanout`, 60s interval) — publish handler returns `200` with `{ fanout: 'queued' }`. **No bespoke queue/Redis.** `notification_preferences` requires partial index `(stream_standard, stream_pulse) WHERE mute_all = false` for the recipient query. |
 | **`notification_preferences` lazy-create** | Row created **lazily on first authenticated request** that needs it (bell open, prefs page) with defaults `mute_all=false, stream_standard=true, stream_pulse=true`. **No** seed-on-signup trigger. |
 | **Bell rendering — anonymous** | **No bell** in header for anonymous users (avoids dead chrome and a wasted JS island). Header renders **Sign in** instead. |
@@ -291,7 +291,7 @@ Authenticated identifier: `user.id` (uuid). Empty/spoofed IPs all share the `'an
 
 **Anti-pattern allow list (things v1 did that v2 must not):**
 
-- ❌ Modal stack (`ArticleModal` + `ArticleDrawer` + `ImageLightbox` + `LinkPreviewModal` mounted simultaneously) — replaced by full-page detail (§6.0).
+- ❌ Modal stack (`ArticleModal` + `ArticleDrawer` + `ImageLightbox` + `LinkPreviewModal` mounted simultaneously) — replaced by the canonical nugget detail route (§6.0); only route-driven intercepted sheet shells are allowed.
 - ❌ Filter context spanning entire tree → URL via `nuqs` instead.
 - ❌ `useInfiniteArticles` TanStack pattern — replaced by `fetch` + `useTransition` pager.
 - ❌ Per-card popovers, hover-loaded previews, hover-loaded link unfurls.
@@ -347,9 +347,9 @@ Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 
 | Topic | **v2 canonical behavior** |
 |-------|---------------------------|
-| **Primary tap/click on card** (media, title, excerpt body) | **Navigate** to **`/nuggets/[id]/[slug]`** — full nugget detail route (see §6.3). |
+| **Primary tap/click on card** (media, title, excerpt body) | **Navigate** to **`/nuggets/[id]/[slug]`** — canonical nugget detail route (see §6.3). Direct URL hits render the full page; feed-originated in-app opens may render an intercepted sheet shell of that same route. |
 | **Opening the source site** | **Secondary** control only — e.g. footer link **“View source”** / domain with **`target="_blank"`** **`rel="noopener noreferrer"`**. Never the only path to reading a nugget. |
-| **Feed scroll after return** | User uses **browser Back** from detail → feed. **Next.js App Router does not reliably restore feed scroll position on Back** the way a classic client-only SPA sometimes does — **landing near top of feed after Back is accepted PMF behavior.** Optional later: `scrollRestoration` / sessionStorage offset / virtualization-aware hooks — **do not** block launch on custom restoration. |
+| **Feed scroll after return** | If the canonical route was opened as the intercepted sheet, close/back restores the mounted grid context. If the user is on the full-page shell, **Next.js App Router does not reliably restore feed scroll position on Back** the way a classic client-only SPA sometimes does — **landing near top of feed after Back is accepted PMF behavior.** Optional later: `scrollRestoration` / sessionStorage offset / virtualization-aware hooks — **do not** block launch on custom restoration. |
 
 **Aligned with:** `docs/NUGGETS_V2_PRODUCT_BEHAVIOR_AND_UI.md` §6 (card interaction model).
 
@@ -426,7 +426,7 @@ Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 | **Embed loaded** | User clicks the **Load video** affordance under the poster (or any timestamp link in the body — see below) | `<iframe>` mounts (`youtube-nocookie.com/embed/{video_id}?enablejsapi=1`), poster replaced |
 | **Outbound** (fallback) | User clicks **Watch on YouTube** | Opens `youtube.com/watch?v={video_id}` in new tab. Embed not loaded. |
 
-**Never autoplay.** **Never** mount the iframe on first paint. **Never** show the embed on Home cards (§0.14).
+**Never autoplay on route first paint.** **Never** mount a **detail** iframe on first paint. **Home feed:** **never** mount an iframe **inside** the card layout on first paint; a **global deferred mini-player** (portal to `document.body`, iframe only after explicit hero or `#yt=` tap) is allowed per **`PRODUCT` §0.14**.
 
 #### Body timestamp link syntax (frozen)
 
@@ -467,7 +467,7 @@ onClick(seconds):
 - **Sandbox:** `<iframe sandbox="allow-scripts allow-same-origin allow-presentation">` (no `allow-forms`).
 - **Aspect ratio:** `aspect-video` (16:9) container, fixed before mount → no CLS when iframe replaces poster.
 - **Cleanup:** on route leave, `<YouTubePlayer />` unmounts and tears down the postMessage listener.
-- **Forbidden:** `<video>` with YouTube CDN URLs (illegal); pulling `youtube.com` (with cookies) instead of `nocookie`; mounting the iframe in a portal outside the page flow.
+- **Forbidden (detail):** `<video>` with YouTube CDN URLs (illegal); pulling `youtube.com` (with cookies) instead of `nocookie`; mounting the **detail** iframe in a portal outside the nugget page flow. **Exception:** the **feed** mini-player (`PRODUCT` §0.14) uses a portal and is not the detail `<YouTubePlayer />`.
 
 #### Telemetry (optional, lightweight)
 
@@ -478,7 +478,7 @@ onClick(seconds):
 - Multiple videos per nugget.
 - Spotify / Apple Podcast inline players (link-only — §8 PRODUCT).
 - Custom video player UI on top of the iframe.
-- Picture-in-picture / persistent player across nav (v1 had `PersistentVideoPlayer` — explicitly **not** ported).
+- Picture-in-picture / **full** persistent player across all routes like legacy v1 `PersistentVideoPlayer` — **not** ported. A **feed-only** deferred mini-player (`PRODUCT` §0.14) is in scope for YouTube hero cards.
 
 ---
 
@@ -743,7 +743,7 @@ article_tags(
 
 **Indexes** on `tag_id`, `article_id`, slug lookups — see §13.
 
-**Public chip rail filter:** `WHERE is_official = true` — non-official tags can exist (curator-created, ETL-only) but never appear on the Home chip rail. Admin-controlled.
+**Public official-tag filter:** `WHERE is_official = true` — non-official tags can exist (curator-created, ETL-only) but never appear on the Home taxonomy filter UI. Admin-controlled.
 
 ### 12.2 Articles (core fields)
 

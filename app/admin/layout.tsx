@@ -17,9 +17,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <span className="font-semibold text-sm text-primary">Admin</span>
         <Link href="/admin/articles" className="text-sm text-muted hover:text-primary transition-colors">Articles</Link>
         <Link href="/admin/tags" className="text-sm text-muted hover:text-primary transition-colors">Tags</Link>
+        <Link
+          href="/admin/articles/new"
+          className="text-sm text-muted hover:text-primary transition-colors"
+        >
+          Create nugget
+        </Link>
         <Link href="/" className="ml-auto text-sm text-muted hover:text-primary transition-colors">← Site</Link>
       </nav>
-      <main className="max-w-5xl mx-auto px-6 py-8">
+      <main className="mx-auto w-full max-w-screen-2xl px-6 py-6">
         {children}
       </main>
     </div>
