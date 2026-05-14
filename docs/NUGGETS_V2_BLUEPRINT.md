@@ -442,23 +442,22 @@ Listen to [the macro context at 2:34](#yt=154) before reading further.
 
 #### Click behavior on a `#yt={seconds}` link
 
-Single client island on the detail page (`<YouTubePlayer />`) owns this state machine:
+`components/ui/timestamp-link-interceptor.tsx` dispatches `youtube-feed-play` with `{ videoId, title, startSeconds, articleId }`. `components/ui/global-youtube-mini-player.tsx` listens and:
 
 ```
-onClick(seconds):
-  if (state === 'poster' || state === 'outbound')
-    state = 'embed'
-    iframeSrc = `${embedUrl}?enablejsapi=1&start=${seconds}`
-    scroll embed into view
-  else if (state === 'embed')
-    iframe.contentWindow.postMessage({ event: 'command', func: 'seekTo', args: [seconds, true] })
-    iframe.contentWindow.postMessage({ event: 'command', func: 'playVideo', args: [] })
-    scroll embed into view
+onPlay(detail):
+  if (panel open && panel.videoId === detail.videoId)
+    postMessage seekTo(seconds); playVideo()
+    return same panel state (no iframe remount)
+  else
+    mount / remount iframe with embed URL including start when seconds > 0
 ```
 
-**`react-markdown` link override:** `a[href^="#yt="]` renders a `<button>` (not `<a>`) wired to the player island. Button styling looks like a link — no separate component for users.
+**Hero poster tap** on the nugget page uses `components/ui/article-detail-youtube-hero.tsx`, which dispatches the same `youtube-feed-play` event at `startSeconds: 0`.
 
-**Accessibility:** button has `aria-label="Play from 2:34"`; `prefers-reduced-motion` skips smooth-scroll into view, jumps directly.
+**`react-markdown`:** body links stay as `<a href="#yt=...">`; the interceptor uses click delegation (no per-link React wrapper in the markdown tree).
+
+**Accessibility:** mini-player host uses `role="complementary"` (docked player, not a blocking modal); **Escape** closes the player.
 
 #### Player implementation rules
 
@@ -466,8 +465,8 @@ onClick(seconds):
 - **Domain:** `youtube-nocookie.com` (privacy-respecting; CSP `frame-src` already includes it — §5.6).
 - **Sandbox:** `<iframe sandbox="allow-scripts allow-same-origin allow-presentation">` (no `allow-forms`).
 - **Aspect ratio:** `aspect-video` (16:9) container, fixed before mount → no CLS when iframe replaces poster.
-- **Cleanup:** on route leave, `<YouTubePlayer />` unmounts and tears down the postMessage listener.
-- **Forbidden (detail):** `<video>` with YouTube CDN URLs (illegal); pulling `youtube.com` (with cookies) instead of `nocookie`; mounting the **detail** iframe in a portal outside the nugget page flow. **Exception:** the **feed** mini-player (`PRODUCT` §0.14) uses a portal and is not the detail `<YouTubePlayer />`.
+- **Cleanup:** on route leave / close, the mini-player panel unmounts and clears the iframe.
+- **Forbidden:** `<video>` with YouTube CDN URLs (illegal); pulling `youtube.com` (with cookies) instead of `nocookie`. **Allowed:** the **shared** global mini-player portal for **both** Home feed and **nugget detail** (hero + `#yt=` taps) — one implementation, `youtube-nocookie` + `enablejsapi=1` only.
 
 #### Telemetry (optional, lightweight)
 

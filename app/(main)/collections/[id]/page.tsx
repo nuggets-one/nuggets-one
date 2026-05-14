@@ -20,11 +20,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meta = await getCollectionMeta(id)
 
   if (!meta) {
-    return { title: 'Collection not found — Nuggets' }
+    return { title: 'Collection not found' }
   }
 
   return {
-    title: `${meta.title} — Nuggets`,
+    title: meta.title,
     description: meta.description ?? undefined,
   }
 }

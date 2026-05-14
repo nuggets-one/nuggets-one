@@ -55,6 +55,8 @@ const nextConfig: NextConfig = {
     loader: 'custom',
     loaderFile: './lib/cloudinary-loader.ts',
     remotePatterns: IMAGE_REMOTE_HOSTS.map((hostname) => ({ protocol: 'https' as const, hostname })),
+    // Next 16 defaults to [75]; detail/cards use 80 for YouTube thumbs and hero images.
+    qualities: [75, 80],
   },
   async headers() {
     return [

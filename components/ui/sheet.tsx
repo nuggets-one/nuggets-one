@@ -24,7 +24,7 @@ const SWIPE_DISMISS_THRESHOLD = 80
  * /nuggets/[id]/[slug] route.
  *
  * - Desktop (`lg+`): right-anchored side panel, ~640px wide.
- * - Mobile (`<lg`): bottom sheet, ~92vh.
+ * - Mobile (`<lg`): bottom sheet, full dynamic viewport (`100dvh`) with safe-area insets.
  * - `Escape` and backdrop click → `router.back()` (closes the slot, restores
  *   the underlying route + scroll position).
  * - Touch swipe-down on the mobile sheet exceeding 80px dismisses.
@@ -138,7 +138,7 @@ export function Sheet({ children, ariaLabel }: Props) {
         onTouchEnd={onTouchEnd}
         style={dragOffset > 0 ? { transform: `translateY(${dragOffset}px)` } : undefined}
         data-mounted={mounted ? 'true' : 'false'}
-        className="relative flex h-[92vh] w-full flex-col overflow-y-auto rounded-t-[1.75rem] border border-border bg-surface text-primary shadow-panel ring-1 ring-elevated motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out translate-y-full data-[mounted=true]:translate-y-0 sm:max-w-[420px] lg:h-full lg:max-w-[500px] lg:rounded-none lg:rounded-l-[1.75rem] lg:border-b-0 lg:border-r-0 lg:border-t-0 lg:translate-y-0 lg:translate-x-full lg:data-[mounted=true]:translate-x-0 motion-reduce:!translate-y-0 lg:motion-reduce:!translate-x-0 motion-reduce:transition-none"
+        className="relative flex h-[100dvh] max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] w-full flex-col overflow-y-auto rounded-none border border-border bg-surface text-primary shadow-panel ring-1 ring-elevated motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out translate-y-full data-[mounted=true]:translate-y-0 sm:max-w-[420px] lg:h-full lg:max-w-[500px] lg:border-b-0 lg:border-r-0 lg:border-t-0 lg:translate-y-0 lg:translate-x-full lg:data-[mounted=true]:translate-x-0 motion-reduce:!translate-y-0 lg:motion-reduce:!translate-x-0 motion-reduce:transition-none"
       >
         <div className="flex justify-center px-4 pb-1 pt-2 lg:hidden" aria-hidden="true">
           <span className="h-1.5 w-12 rounded-full bg-border" />

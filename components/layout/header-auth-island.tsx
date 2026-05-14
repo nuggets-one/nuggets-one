@@ -9,6 +9,8 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { logoutAction } from '@/lib/actions/auth'
 import { readResponseJson } from '@/lib/http/parse-json-response'
+import type { LegalFooterLink } from '@/lib/queries/legal-pages'
+import { accountAvatarLetter } from '@/lib/ui/account-avatar-initial'
 
 // S2-F5: lazy-load the notification panel — must not block / first-byte path
 const NotificationPanel = dynamic(
@@ -27,7 +29,12 @@ const NotificationPanel = dynamic(
 type AuthState =
   | { status: 'loading' }
   | { status: 'anonymous' }
-  | { status: 'authenticated'; email: string | null; isAdmin: boolean }
+  | {
+      status: 'authenticated'
+      email: string | null
+      displayName: string | null
+      isAdmin: boolean
+    }
 
 function MenuHeading({ children }: { children: ReactNode }) {
   return (
@@ -37,7 +44,33 @@ function MenuHeading({ children }: { children: ReactNode }) {
   )
 }
 
-export function HeaderAuthIsland() {
+function LegalMenuBlock({ legalLinks }: { legalLinks: readonly LegalFooterLink[] }) {
+  const year = new Date().getFullYear()
+
+  return (
+    <nav aria-label="Legal" className="border-t border-border px-4 py-2">
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+        {legalLinks.map((item) => (
+          <Link
+            key={item.slug}
+            href={`/legal/${item.slug}`}
+            role="menuitem"
+            className="inline-flex text-[11px] font-normal leading-snug text-muted underline-offset-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/50 focus-visible:ring-offset-1 focus-visible:ring-offset-rail rounded-sm"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+      <p className="mt-1.5 text-[10px] leading-snug text-muted">© {year} Nuggets</p>
+    </nav>
+  )
+}
+
+type Props = {
+  legalLinks: readonly LegalFooterLink[]
+}
+
+export function HeaderAuthIsland({ legalLinks }: Props) {
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' })
 
   useEffect(() => {
@@ -53,6 +86,7 @@ export function HeaderAuthIsland() {
         const data = await readResponseJson<{
           authenticated?: boolean
           email?: string | null
+          displayName?: string | null
           isAdmin?: boolean
         }>(res)
         return data ?? { authenticated: false as const }
@@ -61,6 +95,7 @@ export function HeaderAuthIsland() {
         (data: {
           authenticated?: boolean
           email?: string | null
+          displayName?: string | null
           isAdmin?: boolean
         }) => {
           if (cancelled) return
@@ -68,6 +103,10 @@ export function HeaderAuthIsland() {
             setAuth({
               status: 'authenticated',
               email: data.email ?? null,
+              displayName:
+                typeof data.displayName === 'string' && data.displayName.trim()
+                  ? data.displayName.trim()
+                  : null,
               isAdmin: data.isAdmin === true,
             })
           } else {
@@ -130,30 +169,14 @@ export function HeaderAuthIsland() {
               Create account
             </Link>
 
-            <div className="my-2 border-t border-border" />
-
-            <MenuHeading>Legal</MenuHeading>
-            <Link
-              href="/legal/terms"
-              role="menuitem"
-              className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
-            >
-              Terms of use
-            </Link>
-            <Link
-              href="/legal/privacy"
-              role="menuitem"
-              className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
-            >
-              Privacy policy
-            </Link>
+            <LegalMenuBlock legalLinks={legalLinks} />
           </div>
         </details>
       </div>
     )
   }
 
-  const initials = (auth.email ?? 'U').charAt(0).toUpperCase()
+  const initials = accountAvatarLetter(auth.displayName, auth.email)
 
   return (
     <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -224,23 +247,7 @@ export function HeaderAuthIsland() {
             </>
           ) : null}
 
-          <div className="my-2 border-t border-border" />
-
-          <MenuHeading>Legal</MenuHeading>
-          <Link
-            href="/legal/terms"
-            role="menuitem"
-            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
-          >
-            Terms of use
-          </Link>
-          <Link
-            href="/legal/privacy"
-            role="menuitem"
-            className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
-          >
-            Privacy policy
-          </Link>
+          <LegalMenuBlock legalLinks={legalLinks} />
 
           <div className="my-2 border-t border-border" />
 

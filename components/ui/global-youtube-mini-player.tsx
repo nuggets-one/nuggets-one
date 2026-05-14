@@ -1,8 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { buildYouTubeNoCookieEmbedSrc } from '@/lib/ui/youtube-embed'
+import {
+  buildYouTubeNoCookieEmbedSrc,
+  postYouTubeIframeCommand,
+} from '@/lib/ui/youtube-embed'
 import {
   YOUTUBE_FEED_PLAY_EVENT,
   type YouTubeFeedPlayDetail,
@@ -12,7 +15,7 @@ type PanelState = {
   videoId: string
   title: string
   startSeconds: number
-  /** Bump to remount iframe when seeking the same video from feed. */
+  /** Bump to remount iframe when opening a different video or first open. */
   gen: number
 }
 
@@ -38,18 +41,33 @@ function CloseCrossIcon({ className }: { className?: string }) {
 
 export function GlobalYouTubeMiniPlayer() {
   const [panel, setPanel] = useState<PanelState | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
 
   useEffect(() => {
     function onPlay(e: Event) {
       const ce = e as CustomEvent<YouTubeFeedPlayDetail>
       const d = ce.detail
       if (!d?.videoId) return
-      setPanel((prev) => ({
-        videoId: d.videoId,
-        title: d.title,
-        startSeconds: d.startSeconds,
-        gen: (prev?.gen ?? 0) + 1,
-      }))
+      const vid = d.videoId.trim()
+      const secs = Math.max(0, Math.floor(Number(d.startSeconds ?? 0)))
+
+      setPanel((prev) => {
+        if (prev?.videoId === vid) {
+          window.setTimeout(() => {
+            const win = iframeRef.current?.contentWindow
+            if (!win) return
+            postYouTubeIframeCommand(win, 'seekTo', [secs, true])
+            postYouTubeIframeCommand(win, 'playVideo', [])
+          }, 0)
+          return prev.title === d.title ? prev : { ...prev, title: d.title }
+        }
+        return {
+          videoId: vid,
+          title: d.title,
+          startSeconds: secs,
+          gen: (prev?.gen ?? 0) + 1,
+        }
+      })
     }
     window.addEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlay)
     return () => window.removeEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlay)
@@ -83,18 +101,24 @@ export function GlobalYouTubeMiniPlayer() {
 
   return createPortal(
     <div
-      className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:inset-x-auto lg:bottom-4 lg:right-4 lg:left-auto lg:px-0"
-      role="dialog"
-      aria-modal="true"
+      className="fixed inset-x-0 bottom-0 z-[100] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:justify-end lg:px-4"
+      role="complementary"
       aria-label={dialogLabel}
     >
-      <div className="relative w-full max-w-lg overflow-hidden rounded-t-2xl border border-border bg-black shadow-panel ring-1 ring-elevated lg:rounded-2xl">
-        <div className="relative aspect-video w-full overflow-hidden">
+      {/*
+        Keep inset-x-0 on all breakpoints so this fixed box always has a definite
+        width (full viewport). Using left/right auto at lg (inset-x-auto) made the
+        shrink-to-fit width resolve to ~0 with a w-full child — iframe played audio
+        but had no visible horizontal size.
+      */}
+      <div className="relative w-full min-w-0 max-w-lg overflow-hidden rounded-t-2xl border border-border bg-black shadow-panel ring-1 ring-elevated lg:rounded-2xl">
+        <div className="relative aspect-video w-full min-h-0 overflow-hidden">
           <iframe
             key={panel.gen}
+            ref={iframeRef}
             src={iframeSrc}
             title={panel.title}
-            className="absolute inset-0 h-full w-full"
+            className="absolute inset-0 h-full w-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"

@@ -1,20 +1,24 @@
 import { Suspense } from 'react'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { Footer } from '@/components/layout/footer'
+import { FooterRouteGate } from '@/components/layout/footer-route-gate'
 import { GlobalYouTubeMiniPlayerHost } from '@/components/layout/global-youtube-mini-player-host'
 import { Header } from '@/components/layout/header'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
+import { listAccountMenuLegalLinks } from '@/lib/queries/legal-pages'
 
-export default function MainLayout({
+export default async function MainLayout({
   children,
   modal,
 }: {
   children: React.ReactNode
   modal: React.ReactNode
 }) {
+  const legalLinks = await listAccountMenuLegalLinks()
+
   return (
     <NuqsAdapter>
-      <Header />
+      <Header legalLinks={legalLinks} />
       <div className="pb-20 lg:pb-6">
         <main className="mx-auto max-w-[90rem] px-4 pt-6 lg:px-6">
           {children}
@@ -34,7 +38,9 @@ export default function MainLayout({
             </footer>
           }
         >
-          <Footer />
+          <FooterRouteGate>
+            <Footer />
+          </FooterRouteGate>
         </Suspense>
       </div>
       <Suspense fallback={<div aria-hidden className="lg:hidden pb-[calc(3rem+env(safe-area-inset-bottom))]" />}>

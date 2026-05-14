@@ -5,7 +5,7 @@ interface Props {
   searchParams: Promise<{ error?: string; message?: string }>
 }
 
-export const metadata = { title: 'Reset password — Nuggets' }
+export const metadata = { title: 'Reset password' }
 
 export default async function ForgotPasswordPage({ searchParams }: Props) {
   const { error, message } = await searchParams

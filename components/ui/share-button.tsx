@@ -12,13 +12,6 @@ type Props = {
   variant?: Variant
 }
 
-// Phase 8 placeholder. Replace with real telemetry POST once the helper lands.
-function logShare(channel: 'native' | 'copy', surface: Variant) {
-  if (typeof window !== 'undefined') {
-    console.log('[telemetry]', { event: 'share_initiated', surface, channel })
-  }
-}
-
 export function ShareButton({ title, href, variant = 'card' }: Props) {
   const [status, setStatus] = useState<Status>('idle')
   const [pending, setPending] = useState(false)
@@ -46,7 +39,6 @@ export function ShareButton({ title, href, variant = 'card' }: Props) {
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ title, url })
-        logShare('native', variant)
       } catch {
         // User dismissed or share rejected — no fallback per spec.
       }
@@ -56,7 +48,6 @@ export function ShareButton({ title, href, variant = 'card' }: Props) {
 
     try {
       await navigator.clipboard.writeText(url)
-      logShare('copy', variant)
       setStatus('copied')
     } catch {
       setStatus('failed')

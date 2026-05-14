@@ -1,0 +1,40 @@
+Here is what the repo defines for the browser favicon / app mark (matching your screenshot: yellow rounded tile, bold dark **N**).
+
+## Specs (source of truth)
+
+The project documents this in **`docs/BRAND_ASSET_HANDOFF.md`**. The live vector master is **`public/icon.svg`**, which encodes the exact numbers:
+
+| Aspect | Value |
+|--------|--------|
+| **Concept** | Rounded yellow square, flat, no gradients; centered uppercase **N**, bold |
+| **Tile fill** | `#facc15` (Tailwind yellow-400) |
+| **Letter** | `#111827` (slate-900) |
+| **Artboard** | `512×512` |
+| **Corner radius** | `96` (on the 512 canvas) — matches “slightly rounded square” |
+| **Typography (glyph)** | `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`; **uppercase N**, **font-weight 700** |
+| **SVG text metrics** | `font-size="320"`; positioned at `x="256"` `y="340"` with `text-anchor="middle"` (optical centering on the square) |
+
+Related **non-logo** UI tokens from the same handoff (used in manifest / theme, not the yellow tile itself):
+
+- **Manifest / browser chrome `theme_color`:** `#0f172a`
+- **PWA `background_color`:** `#f1f5f9`  
+  (see `public/manifest.json` and the handoff doc.)
+
+**Favicon in the tab bar:** Next root layout uses **`/icon.svg`** (primary) and **`/icons/favicon-32.png`** (`32×32` PNG). Browsers often pick the SVG where supported.
+
+## Where the assets live (this repo — nuggets_v3.0)
+
+**Regenerate all PNG exports from SVG (no other repo needed):** from the project root run **`npm run icons:generate`** (uses **`sharp`**; see `scripts/generate-brand-icons.mjs`). Edit sources first:
+
+- **`public/icon.svg`** — master 512×512 mark (drives favicon, PWA “any” sizes, apple-touch)
+- **`scripts/brand-icons/icon-maskable.svg`** — inset glyph for maskable PNG
+- **`scripts/brand-icons/badge.svg`** — white **N** on transparent (notification badge)
+
+**Generated outputs (commit after you change SVGs):**
+
+- **`public/icons/`** — `favicon-32.png`, `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `badge-72.png`
+- **`public/apple-touch-icon.png`** — 180×180
+
+**Full spec (colors, filenames, usage map):** **`docs/BRAND_ASSET_HANDOFF.md`** (same content as the old Project-Phoenix handoff; paths in this repo are under `public/` and `scripts/brand-icons/`).
+
+Production URLs (unchanged): **`https://nuggets.one/icon.svg`**, **`https://nuggets.one/icons/...`**, etc.

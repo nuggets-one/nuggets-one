@@ -1,14 +1,17 @@
 // S1-F3: server Header is deterministic static chrome — no cookies(), no auth reads.
 // Auth-aware controls (bell, avatar, sign-in) live in HeaderAuthIsland (client island).
-// This keeps the (main) layout out of the dynamic rendering path for anonymous users.
+// Legal footer links for the account menu are fetched in `(main)/layout` and passed in
+// so this component stays synchronous under NuqsAdapter (nuqs SSR + context).
 
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { HeaderSearch } from '@/components/layout/header-search'
 import { HeaderAuthIsland } from '@/components/layout/header-auth-island'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import type { LegalFooterLink } from '@/lib/queries/legal-pages'
 
-export function Header() {
+/** Legal links are loaded in `(main)/layout` so this shell stays synchronous under `NuqsAdapter` (nuqs context + Next App Router SSR). */
+export function Header({ legalLinks }: { legalLinks: LegalFooterLink[] }) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-header backdrop-blur-sm">
       <div className="mx-auto flex h-14 max-w-[90rem] items-center gap-3 px-4 lg:px-6">
@@ -18,7 +21,11 @@ export function Header() {
             className="flex min-w-0 shrink-0 items-center gap-2 rounded-md outline-none ring-focus ring-offset-2 ring-offset-[var(--color-bg)] focus-visible:ring-2"
           >
             <span
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent font-extrabold text-accent-foreground text-sm tracking-tighter shadow-sm"
+              className="flex size-9 shrink-0 items-center justify-center rounded-[18.75%] bg-[#facc15] text-sm font-bold tracking-tighter text-[#111827] shadow-sm"
+              style={{
+                fontFamily:
+                  "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              }}
               aria-hidden="true"
             >
               N
@@ -61,7 +68,7 @@ export function Header() {
 
         <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
           <ThemeToggle />
-          <HeaderAuthIsland />
+          <HeaderAuthIsland legalLinks={legalLinks} />
         </div>
       </div>
     </header>

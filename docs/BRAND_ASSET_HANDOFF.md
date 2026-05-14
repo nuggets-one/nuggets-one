@@ -80,11 +80,11 @@ Production base URL for all public assets: `https://nuggets.one`
    - `1200x630` PNG
    - Final OG/Twitter fallback image
 
-### C) Source templates used to generate final files
+### C) Source templates used to generate final files (this repo)
 
 - `scripts/brand-icons/icon-maskable.svg`
 - `scripts/brand-icons/badge.svg`
-- `scripts/generate-brand-icons.mjs`
+- `scripts/generate-brand-icons.mjs` (run **`npm run icons:generate`** — requires devDependency **`sharp`**)
 
 ## 4) Usage Map (Where each logo/image is used)
 
@@ -154,21 +154,14 @@ In `public/manifest.json`:
 - [ ] No icon/image 404s in browser network panel
 - [ ] PWA/icon-related checks pass in Lighthouse
 
-## 7) Optional Automation (Approved)
+## 7) Icon automation (this repo — no other project required)
 
-Use the existing icon generation script for deterministic output:
+Deterministic PNG exports from the SVG sources:
 
-1. Update source SVGs:
-   - `public/icon.svg`
-   - `scripts/brand-icons/icon-maskable.svg`
-   - `scripts/brand-icons/badge.svg`
-2. Run generation:
-   - `npm run icons:generate`
-3. Verify updated outputs:
-   - `public/icons/*`
-   - `public/apple-touch-icon.png`
-4. Smoke test:
-   - Browser favicon
-   - PWA install prompt/icon
-   - Notification icon/badge fallback
-   - OG fallback image
+1. Edit sources as needed:
+   - `public/icon.svg` (master mark)
+   - `scripts/brand-icons/icon-maskable.svg` (glyph inset for maskable safe area)
+   - `scripts/brand-icons/badge.svg` (white **N** on transparent for notification badge)
+2. Run **`npm run icons:generate`** (writes `public/icons/*` and `public/apple-touch-icon.png`).
+3. Commit updated PNGs when the mark changes.
+4. Smoke test: favicon, PWA install icons, OG fallback (`public/og-default.png` is separate from this script).

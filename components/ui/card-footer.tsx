@@ -1,6 +1,7 @@
 import { BookmarkButton } from '@/components/ui/bookmark-button'
 import { ShareButton } from '@/components/ui/share-button'
 import { CardMoreButton } from '@/components/ui/card-more-button'
+import { curatorChipFromDisplayName } from '@/lib/ui/author-curator-chip'
 
 const MS_PER_DAY = 86_400_000
 
@@ -31,16 +32,6 @@ function formatCompactDate(iso: string): string {
   }).format(d)
 }
 
-function getSourceChipLabel(sourceHost: string | null): string | null {
-  if (!sourceHost) return 'N'
-
-  const rootLabel = sourceHost.split('.')[0]?.replace(/[^a-z0-9]/gi, '') ?? ''
-  const label = rootLabel || sourceHost.replace(/[^a-z0-9]/gi, '')
-
-  if (!label) return 'N'
-  return label.length === 1 ? label.charAt(0).toUpperCase() : label.slice(0, 2).toUpperCase()
-}
-
 type Props = {
   href: string
   title: string
@@ -50,6 +41,7 @@ type Props = {
   articleId: string
   isAuthenticated: boolean
   initialBookmarked: boolean
+  curatorDisplayName: string | null
 }
 
 export function CardFooter({
@@ -61,21 +53,27 @@ export function CardFooter({
   articleId,
   isAuthenticated,
   initialBookmarked,
+  curatorDisplayName,
 }: Props) {
-  const sourceChipLabel = getSourceChipLabel(sourceHost)
   const compactDate = formatCompactDate(published_at)
+  const authorBadgeLabel = curatorChipFromDisplayName(curatorDisplayName)
+  const chipTitle = curatorDisplayName?.trim()
+    ? `Curated by ${curatorDisplayName.trim()}`
+    : 'Nuggets'
 
   return (
     <div className="mt-auto block px-4 py-2 md:border-t md:border-border">
       <div className="flex items-center justify-between gap-3">
         <div className="flex shrink-0 items-center gap-2 text-xs text-muted">
-          <span
-            aria-hidden="true"
-            title={sourceHost ?? 'Nuggets'}
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-chip-active-border bg-accent-soft text-[9px] font-bold text-body-link"
-          >
-            {sourceChipLabel}
-          </span>
+          <div className="relative shrink-0">
+            <span
+              title={chipTitle}
+              aria-label={chipTitle}
+              className="flex h-6 w-6 select-none items-center justify-center rounded-full border border-primary-600/20 bg-primary-100 text-[9px] font-bold text-body-link dark:border-primary-900/55 dark:bg-primary-900/30"
+            >
+              {authorBadgeLabel}
+            </span>
+          </div>
           <span className="shrink-0">
             {compactDate}
           </span>

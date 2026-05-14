@@ -1,14 +1,29 @@
+import { unstable_noStore } from 'next/cache'
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { createClient } from '@/lib/supabase/server'
+import { getFeedPage } from '@/lib/queries/feed'
+import { listOfficialTags } from '@/lib/queries/tags'
+import { getTagCountsForStream } from '@/lib/queries/tag-counts'
+import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
+import { ArticleCard } from '@/components/ui/article-card'
+import { FeedSkeleton } from '@/components/feed/feed-skeleton'
+import { FeedPager } from '@/components/feed/feed-pager'
+import { FeedEmpty } from '@/components/feed/feed-empty'
+import { FeedTopBar } from '@/components/feed/feed-top-bar'
+import { DEFAULT_STREAM } from '@/types/article'
+import type { ContentStream } from '@/types/article'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nuggets.one'
 const homeOgImage = `${siteUrl}/og-default.png`
 
 export const metadata: Metadata = {
-  title: 'Nuggets — Curated knowledge, delivered fast',
+  title: {
+    absolute: 'Nuggets: The Knowledge App',
+  },
   description: 'Hand-curated reads across technology, markets, and ideas. Standard and Market Pulse streams.',
   openGraph: {
-    title: 'Nuggets — Curated knowledge, delivered fast',
+    title: 'Nuggets: The Knowledge App',
     description: 'Hand-curated reads across technology, markets, and ideas.',
     url: siteUrl,
     siteName: 'Nuggets',
@@ -20,20 +35,6 @@ export const metadata: Metadata = {
     images: [homeOgImage],
   },
 }
-import { unstable_noStore } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
-import { getFeedPage } from '@/lib/queries/feed'
-import { listOfficialTags } from '@/lib/queries/tags'
-import { getTagCountsForStream } from '@/lib/queries/tag-counts'
-import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
-import { ArticleCard } from '@/components/ui/article-card'
-import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
-import { FeedSkeleton } from '@/components/feed/feed-skeleton'
-import { FeedPager } from '@/components/feed/feed-pager'
-import { FeedEmpty } from '@/components/feed/feed-empty'
-import { FeedTopBar } from '@/components/feed/feed-top-bar'
-import { DEFAULT_STREAM } from '@/types/article'
-import type { ContentStream } from '@/types/article'
 
 type SearchParams = {
   stream?: string
@@ -94,24 +95,23 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       ? await getBookmarkedArticleIdsForUser(user.id, articleIds)
       : new Set<string>()
 
-  // Batch bookmark check — BLUEPRINT: "one batched GET per feed page (24 IDs max)"
+  // First page: bookmark state comes from the server (getBookmarkedArticleIdsForUser).
+  // Client batch hydrator runs only inside FeedPager for paginated rows.
   return (
     <>
-      <div className="-mt-4 lg:-mt-4">
-        <FeedTopBar
-          tags={officialTags}
-          counts={tagCounts}
-          streamLabel={streamLabel}
-          shownCount={articles.length}
-          totalCount={totalCount}
-        />
-      </div>
+      <FeedTopBar
+        stream={stream}
+        tags={officialTags}
+        counts={tagCounts}
+        streamLabel={streamLabel}
+        shownCount={articles.length}
+        totalCount={totalCount}
+      />
 
       {articles.length === 0 ? (
         <FeedEmpty q={q} hasTags={tags.length > 0} />
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
-          <BookmarkBatchHydrator articleIds={articles.map((article) => article.id)} />
           {articles.map((article, index) => (
             <ArticleCard
               key={article.id}
@@ -142,24 +142,35 @@ export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams
 
   return (
-    <Suspense fallback={
-      <>
-        <section className="sticky top-[var(--header-height)] z-40 -mx-4 -mt-4 mb-5 min-h-[100px] border-b border-border bg-rail/95 backdrop-blur-sm lg:-mx-6 lg:-mt-4">
-          <div className="space-y-3 px-4 py-3 lg:px-6">
-            <div className="h-12 w-72 animate-pulse rounded-xl bg-border/35" />
-            <div className="flex items-center justify-between gap-3">
-              <div className="h-9 w-16 animate-pulse rounded-full bg-surface-raised/70" />
-              <div className="h-10 w-32 animate-pulse rounded-full bg-surface-raised/70" />
+    <Suspense
+      fallback={
+        <>
+          <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
+            <div className="min-h-[44px] border-b border-border bg-header px-4 pt-2 backdrop-blur-sm lg:px-6">
+              <div className="flex h-11 w-full gap-8">
+                <div className="h-4 flex-1 animate-pulse rounded bg-border/40 sm:h-4 sm:flex-none sm:w-24" />
+                <div className="h-4 flex-1 animate-pulse rounded bg-border/40 sm:h-4 sm:flex-none sm:w-36" />
+              </div>
             </div>
-            <div className="h-4 w-48 animate-pulse rounded bg-border/35" />
+            <section className="sticky top-[var(--header-height)] z-40 min-h-[88px] border-b border-border bg-rail/95 backdrop-blur-sm">
+              <div className="space-y-3 px-4 py-3 lg:px-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="h-9 w-16 animate-pulse rounded-full bg-surface-raised/70" />
+                  <div className="h-10 w-32 animate-pulse rounded-full bg-surface-raised/70" />
+                </div>
+                <div className="h-4 w-48 animate-pulse rounded bg-border/35" />
+              </div>
+            </section>
+            <div className="space-y-1.5 px-4 pb-0.5 pt-2 lg:px-6">
+              <div className="h-5 max-w-[62ch] animate-pulse rounded bg-border/35" />
+              <div className="h-3.5 max-w-[62ch] animate-pulse rounded bg-border/30" />
+              <div className="h-3.5 w-40 animate-pulse rounded bg-border/30" />
+            </div>
           </div>
-        </section>
-        <div className="mb-6">
-          <div className="h-8 w-full animate-pulse rounded-full bg-surface-raised" />
-        </div>
-        <FeedSkeleton count={6} />
-      </>
-    }>
+          <FeedSkeleton count={6} />
+        </>
+      }
+    >
       <FeedGrid searchParams={params} />
     </Suspense>
   )

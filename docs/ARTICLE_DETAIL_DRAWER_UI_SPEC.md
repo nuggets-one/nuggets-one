@@ -8,16 +8,20 @@
 >
 > Legacy Reference: `docs/article-detail-drawer-ui-spec old website.md` (non-implementable)
 >
-> Component Owners: `components/ui/sheet.tsx`, `components/ui/article-content.tsx`, `components/ui/article-body.tsx`, `components/ui/youtube-player.tsx`
+> Component Owners: `components/ui/sheet.tsx`, `components/ui/article-content.tsx`, `components/ui/article-body.tsx`, `components/ui/article-detail-header.tsx` (sheet), `components/ui/article-detail-inline-actions.tsx` (full page), `components/ui/article-detail-youtube-hero.tsx`, `components/ui/markdown-page-toc.tsx`, `components/layout/global-youtube-mini-player-host.tsx` / `components/ui/global-youtube-mini-player.tsx`, `components/ui/youtube-player.tsx` (legacy — not used on default detail hero path)
 
 This document describes the **intercepted-route nugget detail sheet**: the parallel slot `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` renders `<Sheet><ArticleContent /></Sheet>`. The same `ArticleContent` appears on the full-page route `/nuggets/[id]/[slug]`; only the **outer shell** differs (sheet vs page). Treat the canonical route as the product concept and the shell as the context-specific presentation.
 
 **Source files (in render order):**
 
 - `components/ui/sheet.tsx` — drawer chrome, backdrop, close bar, responsive behavior  
-- `components/ui/article-content.tsx` — article layout, hero, footer  
-- `components/ui/article-body.tsx` — markdown / prose body  
-- `components/ui/youtube-player.tsx` — optional hero video block  
+- `components/ui/article-content.tsx` — article layout, hero, footer; **full-page** wide shell, optional TOC grid (`!inSheet`); sheet stays compact  
+- `components/ui/article-body.tsx` — markdown / prose body; optional heading `id`s for TOC anchors  
+- `components/ui/markdown-page-toc.tsx` — sticky / mobile “On this page” nav (full-page nuggets with headings)  
+- `components/ui/article-detail-youtube-hero.tsx` — YouTube hero poster → deferred **global** mini-player  
+- `components/ui/article-detail-header.tsx` — **sheet only:** sticky brand row + share/bookmark/more + close  
+- `components/ui/article-detail-inline-actions.tsx` — **full page only:** share/bookmark/more on the date meta row (no duplicate site chrome)  
+- `components/ui/youtube-player.tsx` — legacy in-flow poster/iframe island (superseded on detail by global mini-player)  
 - `components/ui/bookmark-button.tsx`, `components/ui/share-button.tsx` — footer actions (`variant="detail"`)  
 - `components/ui/article-detail-skeleton.tsx` — loading placeholder inside Suspense  
 - `app/globals.css` — CSS variables for colors  
@@ -39,10 +43,12 @@ This document describes the **intercepted-route nugget detail sheet**: the paral
 | UI zone | Owner file | Rule |
 |---|---|---|
 | Sheet overlay, backdrop, panel motion, close mechanics, focus trap | `components/ui/sheet.tsx` | May not render article content zones. |
-| Top article controls (inside article surface) | `components/ui/article-content.tsx` | Must not be duplicated in `sheet.tsx`. |
+| Top article controls (inside article surface) | `components/ui/article-detail-header.tsx` | **Sheet only** — brand row + share/bookmark/more/close. Full-page detail has **no** duplicate toolbar; actions live on the meta row via `article-detail-inline-actions.tsx`. |
 | Tags/title/meta/source/media/body/disclaimer/footer rows | `components/ui/article-content.tsx` | Single owner for content hierarchy. |
+| Full-page TOC rail + “On this page” | `components/ui/article-content.tsx` + `components/ui/markdown-page-toc.tsx` | TOC only when `!inSheet` and markdown has extractable headings; must not duplicate legal-only copy. |
 | Markdown typography and element overrides | `components/ui/article-body.tsx` | Must not be duplicated elsewhere. |
-| YouTube hero poster/embed state machine | `components/ui/youtube-player.tsx` | Must remain a thin media island only. |
+| YouTube hero (poster → play) | `components/ui/article-detail-youtube-hero.tsx` + `components/ui/global-youtube-mini-player.tsx` | No in-flow iframe until user gesture; same deferred mini-player as the feed. |
+| Legacy YouTube in-flow island | `components/ui/youtube-player.tsx` | Not mounted on the default detail hero path; keep file only if a surface still imports it. |
 
 ### 0.3 No-duplication invariant
 
@@ -132,8 +138,8 @@ All semantic colors are **CSS variables** in `:root` and `.dark` in `app/globals
 
 **Mobile (default, `< lg`):**
 
-- **Size:** `h-[92vh]`, `w-full`  
-- **Shape:** `rounded-t-2xl` (top corners only)  
+- **Size:** `h-[100dvh]`, `w-full` — full visible viewport (dynamic viewport height); `max-lg:pt-[env(safe-area-inset-top)]` and `max-lg:pb-[env(safe-area-inset-bottom)]` keep chrome clear of notch / home indicator.  
+- **Shape:** `rounded-none` (full-bleed panel; drag pill remains the sheet affordance)  
 - **Background:** `bg-surface`  
 - **Text:** `text-primary`  
 - **Shadow:** `shadow-2xl`  
@@ -331,7 +337,7 @@ Mirrors content width: `max-w-2xl mx-auto py-8 px-4 animate-pulse`, `aria-hidden
 
 | Aspect | Drawer (`Sheet`) | Full page (`/nuggets/[id]/[slug]/page.tsx`) |
 |--------|------------------|-----------------------------------------------|
-| Shell | Fixed overlay + 92vh / 640px panel + sticky close bar | No `Sheet`; article sits in normal document flow under site chrome |
+| Shell | Fixed overlay + mobile `100dvh` sheet / desktop ~640px panel + sticky close bar | No `Sheet`; article sits in normal document flow under site chrome |
 | `ArticleContent` | Identical | Identical |
 
 To recreate **only the drawer**, implement the **Sheet** (§3) and reuse the **ArticleContent** block (§4–§7) as the scrollable body.

@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -12,6 +13,11 @@ import type {
 type Props = {
   markdown: string
   compact?: boolean
+  /**
+   * Ids for headings in **document order** (every `#`–`######`), aligned to
+   * `extractMarkdownToc().headingIdByPosition`.
+   */
+  headingIdByPosition?: (string | undefined)[]
 }
 
 const CLOUDINARY_ORIGIN = 'https://res.cloudinary.com'
@@ -122,7 +128,37 @@ function BodyTableCell({
   return <td {...rest} className={`${cellClassName} ${className ?? ''}`.trim()} />
 }
 
-export function ArticleBody({ markdown, compact = false }: Props) {
+function buildHeadingComponents(headingIdByPosition: (string | undefined)[] | undefined) {
+  const pos = { current: 0 }
+  const ids = headingIdByPosition
+
+  const mk = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
+    const Heading = ({ children, ...rest }: HTMLAttributes<HTMLHeadingElement>) => {
+      const idx = pos.current
+      pos.current += 1
+      const id = ids?.[idx]
+      const tag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+      return createElement(tag, { ...rest, id: id ?? undefined }, children)
+    }
+    Heading.displayName = `ArticleBodyH${level}`
+    return Heading
+  }
+
+  return {
+    h1: mk(1),
+    h2: mk(2),
+    h3: mk(3),
+    h4: mk(4),
+    h5: mk(5),
+    h6: mk(6),
+  }
+}
+
+export function ArticleBody({
+  markdown,
+  compact = false,
+  headingIdByPosition,
+}: Props) {
   const proseClassName = compact
     ? `prose max-w-none text-xs leading-relaxed text-muted
       prose-headings:mb-1 prose-headings:mt-1.5 prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-primary prose-headings:leading-tight
@@ -155,11 +191,14 @@ export function ArticleBody({ markdown, compact = false }: Props) {
       [&_blockquote_p:first-of-type]:before:content-none [&_blockquote_p:last-of-type]:after:content-none
       sm:text-base sm:prose-p:text-base sm:prose-li:text-base sm:prose-blockquote:text-base`
 
+  const headingComponents = buildHeadingComponents(headingIdByPosition)
+
   return (
     <div className={proseClassName}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          ...headingComponents,
           a: ({ href, children, ...props }) => (
             <BodyLink href={href} {...props}>
               {children}

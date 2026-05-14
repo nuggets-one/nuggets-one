@@ -4,9 +4,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { upsertNotifications } from '@/lib/notifications/fan-out'
 
-// Vercel Cron calls this every 60 seconds.
-// Auth: Bearer ${CRON_SECRET} header only — no Supabase session.
-// Never add this route to the middleware matcher.
+/** Max failed drain attempts before marking row drained (remaining IDs abandoned — see logs). */
+const MAX_DRAIN_ATTEMPTS = 15
+
+// Vercel Cron schedule: `vercel.json` — Hobby allows at most once daily (`0 0 * * *`);
+// Pro can use a tighter schedule. Auth: Bearer ${CRON_SECRET} only — no Supabase session.
+// Never add this route to the proxy matcher.
 
 // S7-F8: Vercel Cron issues GET — not POST. GET keeps the queue draining.
 export async function GET(req: NextRequest) {
@@ -23,7 +26,7 @@ export async function GET(req: NextRequest) {
     .select('*')
     .is('drained_at', null)
     .order('created_at', { ascending: true })
-    .limit(10)
+    .limit(25)
 
   if (fetchError) {
     console.error('[cron/notifications-fanout] fetch error:', fetchError)
@@ -37,22 +40,47 @@ export async function GET(req: NextRequest) {
   let totalDrained = 0
 
   for (const row of pending) {
+    const rowId = row.id as string
+    const attempts = Number(row.drain_attempts ?? 0)
+
     try {
       await upsertNotifications({
-        recipientIds: row.remaining_user_ids,
-        articleId: row.article_id,
-        stream: row.stream,
-        title: row.title,
+        recipientIds: row.remaining_user_ids as string[],
+        articleId: row.article_id as string,
+        stream: row.stream as 'standard' | 'pulse',
+        title: row.title as string,
       })
 
       await adminClient
         .from('pending_fanout')
         .update({ drained_at: new Date().toISOString() })
-        .eq('id', row.id)
+        .eq('id', rowId)
 
       totalDrained++
     } catch (err) {
-      console.error('[cron/notifications-fanout] drain error for row', row.id, err)
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[cron/notifications-fanout] drain error for row', rowId, err)
+
+      const nextAttempts = attempts + 1
+      const abandoned = nextAttempts >= MAX_DRAIN_ATTEMPTS
+
+      const { error: updateErr } = await adminClient
+        .from('pending_fanout')
+        .update({
+          drain_attempts: nextAttempts,
+          last_drain_error: message.slice(0, 2000),
+          ...(abandoned ? { drained_at: new Date().toISOString() } : {}),
+        })
+        .eq('id', rowId)
+
+      if (updateErr) {
+        console.error('[cron/notifications-fanout] failed to record drain_attempts', rowId, updateErr)
+      } else if (abandoned) {
+        console.error(
+          '[cron/notifications-fanout] abandoned pending_fanout row after max attempts:',
+          rowId
+        )
+      }
     }
   }
 

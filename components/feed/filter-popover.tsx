@@ -211,12 +211,12 @@ export function FilterPopover({
         className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
           activeCount > 0
             ? 'border-chip-active-border bg-chip-active-bg text-chip-active-text shadow-chip-active hover:bg-chip-active-bg'
-            : 'border-chip-inactive-border bg-transparent text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text'
+            : 'border-border bg-surface-raised text-primary shadow-sm hover:bg-surface-raised/80 hover:text-primary'
         }`}
       >
         <span>{triggerLabel}</span>
         <ChevronDown
-          className="h-4 w-4 shrink-0 opacity-70"
+          className={`h-4 w-4 shrink-0 ${activeCount > 0 ? 'opacity-70' : 'text-primary/80'}`}
           strokeWidth={2}
           aria-hidden="true"
         />

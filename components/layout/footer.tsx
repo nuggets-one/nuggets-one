@@ -1,9 +1,6 @@
 import Link from 'next/link'
 import { listLegalFooterLinks } from '@/lib/queries/legal-pages'
 
-const DISCLAIMER =
-  'Curated summaries and links are informational only—they are not financial, investment, legal, or tax advice.'
-
 export async function Footer() {
   const links = await listLegalFooterLinks()
   const year = new Date().getFullYear()
@@ -11,9 +8,7 @@ export async function Footer() {
   return (
     <footer role="contentinfo" className="border-t border-border bg-surface pb-10 pt-10">
       <div className="mx-auto max-w-[1800px] px-4 lg:px-6">
-        <p className="max-w-3xl text-xs leading-snug text-muted">{DISCLAIMER}</p>
-
-        <nav aria-label="Legal and contact" className="mt-5">
+        <nav aria-label="Legal and contact">
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-medium">
             {links.map((item) => (
               <li key={item.slug}>

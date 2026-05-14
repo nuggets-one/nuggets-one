@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getBookmarkedArticles } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
@@ -6,6 +7,10 @@ import { createClient } from '@/lib/supabase/server'
 
 // Bookmarks are user-specific — never ISR
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Bookmarks',
+}
 
 export default async function BookmarksPage() {
   const supabase = await createClient()

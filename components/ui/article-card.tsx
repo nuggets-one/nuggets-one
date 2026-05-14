@@ -4,21 +4,11 @@ import { CardBody } from '@/components/ui/card-body'
 import { YouTubeFeedHero } from '@/components/ui/youtube-feed-hero'
 import { CardFooter } from '@/components/ui/card-footer'
 import { CardThumbnailGrid } from '@/components/ui/card-thumbnail-grid'
-import { formatTagDisplayLabel } from '@/lib/ui/tag-display-label'
+import { getSourceHostLabel } from '@/lib/ui/source-host-label'
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import { isImageUrl } from '@/lib/ui/is-image-url'
 import { isPdfUrl } from '@/lib/ui/is-pdf-url'
 import type { ArticleCardProps } from '@/types/article'
-
-function getSourceHostLabel(url: string | null): string | null {
-  if (!url) return null
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '')
-    return host.length > 24 ? `${host.slice(0, 24)}…` : host
-  } catch {
-    return null
-  }
-}
 
 type Props = {
   article: ArticleCardProps
@@ -53,10 +43,10 @@ export function ArticleCard({
   const displayTags = tag_slugs
     .map((slug, index) => ({
       slug,
-      label: tag_labels[index] ?? formatTagDisplayLabel(slug),
+      label: tag_labels[index] ?? slug,
     }))
     .filter((tag) => tag.slug !== 'nuggets' && tag.slug !== 'pulse')
-  const sourceHost = getSourceHostLabel(source_url)
+  const sourceHost = getSourceHostLabel(source_url, { truncateAt: 24 })
 
   const trimmedHeroThumb = hero_thumb_url?.trim() ?? ''
   const rawVideoId = hero_video_id?.trim() ?? ''
@@ -101,7 +91,7 @@ export function ArticleCard({
 
   return (
     <article
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-border-strong bg-surface transition-shadow duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-accent"
+      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-border-strong bg-surface transition-shadow duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-accent"
       data-article-id={id}
     >
       {useThumbnailGrid ? (
@@ -180,6 +170,7 @@ export function ArticleCard({
         articleId={id}
         isAuthenticated={isAuthenticated}
         initialBookmarked={initialBookmarked}
+        curatorDisplayName={article.curator_display_name}
       />
     </article>
   )

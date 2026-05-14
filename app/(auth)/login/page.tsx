@@ -5,7 +5,7 @@ interface Props {
   searchParams: Promise<{ error?: string; message?: string; next?: string }>
 }
 
-export const metadata = { title: 'Sign in — Nuggets' }
+export const metadata = { title: 'Sign in' }
 
 export default async function LoginPage({ searchParams }: Props) {
   const { error, message, next } = await searchParams

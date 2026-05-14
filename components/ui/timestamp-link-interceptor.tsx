@@ -1,23 +1,26 @@
 'use client'
 
-// TimestampLinkInterceptor — Phase 6 / plan §6.3a.
-// Wraps an article body and uses event delegation to convert anchor clicks
-// like `[label](#yt=120)` into a `youtube-seek` window event consumed by
-// `<YouTubePlayer/>`. ArticleBody stays a Server Component (react-markdown
-// renders to static HTML); this thin client wrapper only adds one click
-// listener per detail page.
+// TimestampLinkInterceptor — opens / seeks the deferred global YouTube mini-player
+// for `#yt=` timestamp links on nuggets with a YouTube hero.
 
 import { type MouseEvent, type ReactNode } from 'react'
 import { resolveDetailYouTubeTimestampClick } from '@/lib/ui/youtube-inline-url'
-import { YOUTUBE_SEEK_EVENT, type YouTubeSeekDetail } from './youtube-player'
+import { dispatchYouTubeFeedPlay } from '@/lib/ui/youtube-feed-play'
 
 type Props = {
   children: ReactNode
   /** Hero YouTube id — full watch URLs are intercepted only when `v` matches. */
   heroVideoId: string
+  videoTitle: string
+  articleId: string
 }
 
-export function TimestampLinkInterceptor({ children, heroVideoId }: Props) {
+export function TimestampLinkInterceptor({
+  children,
+  heroVideoId,
+  videoTitle,
+  articleId,
+}: Props) {
   function handleClickCapture(e: MouseEvent<HTMLDivElement>) {
     const target = e.target
     if (!(target instanceof Element)) return
@@ -30,8 +33,12 @@ export function TimestampLinkInterceptor({ children, heroVideoId }: Props) {
 
     e.preventDefault()
     e.stopPropagation()
-    const detail: YouTubeSeekDetail = { seconds }
-    window.dispatchEvent(new CustomEvent(YOUTUBE_SEEK_EVENT, { detail }))
+    dispatchYouTubeFeedPlay({
+      videoId: heroVideoId.trim(),
+      title: videoTitle,
+      startSeconds: seconds,
+      articleId,
+    })
   }
 
   return <div onClickCapture={handleClickCapture}>{children}</div>

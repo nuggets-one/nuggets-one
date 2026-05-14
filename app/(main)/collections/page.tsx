@@ -9,7 +9,7 @@ import { StatusBlock } from '@/components/ui/status-block'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Collections — Nuggets',
+  title: 'Collections',
   description: 'Curated reading lists from the Nuggets community.',
 }
 

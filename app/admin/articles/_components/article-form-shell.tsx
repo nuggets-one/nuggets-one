@@ -6,6 +6,10 @@ type ArticleFormShellProps = {
   statusLabel?: string
   statusTone?: 'draft' | 'published'
   errorMessage?: string
+  /** Non-blocking warning after publish (e.g. notification fan-out). */
+  warningMessage?: string
+  /** Informational banner (e.g. large recipient queue). */
+  noticeMessage?: string
   liveHref?: string
   children: React.ReactNode
 }
@@ -16,6 +20,8 @@ export function ArticleFormShell({
   statusLabel,
   statusTone = 'draft',
   errorMessage,
+  warningMessage,
+  noticeMessage,
   liveHref,
   children,
 }: ArticleFormShellProps) {
@@ -61,6 +67,24 @@ export function ArticleFormShell({
       {errorMessage && (
         <div className="mb-5 rounded-xl border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           {errorMessage}
+        </div>
+      )}
+
+      {warningMessage && (
+        <div
+          role="status"
+          className="mb-5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-primary"
+        >
+          {warningMessage}
+        </div>
+      )}
+
+      {noticeMessage && (
+        <div
+          role="status"
+          className="mb-5 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-muted"
+        >
+          {noticeMessage}
         </div>
       )}
 

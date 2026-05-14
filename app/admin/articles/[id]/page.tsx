@@ -28,6 +28,16 @@ const PUBLISH_ERRORS: Record<string, string> = {
   media_update_failed: 'Media URLs could not be saved. Please try again.',
 }
 
+const PUBLISH_WARNINGS: Record<string, string> = {
+  fanout_failed:
+    'Published, but in-app notifications could not be sent. Check server logs and pending_fanout; you can republish after fixing the issue.',
+}
+
+const PUBLISH_NOTICES: Record<string, string> = {
+  fanout_queued:
+    'Published. Recipient list is large — remaining notifications will be delivered by the background job within a few minutes.',
+}
+
 export default async function EditArticlePage({
   params,
   searchParams,
@@ -37,6 +47,12 @@ export default async function EditArticlePage({
   const errorCode = Array.isArray(resolvedSearchParams.error)
     ? resolvedSearchParams.error[0]
     : resolvedSearchParams.error
+  const warningCode = Array.isArray(resolvedSearchParams.warning)
+    ? resolvedSearchParams.warning[0]
+    : resolvedSearchParams.warning
+  const noticeCode = Array.isArray(resolvedSearchParams.notice)
+    ? resolvedSearchParams.notice[0]
+    : resolvedSearchParams.notice
   const db = createAdminClient()
 
   const [articleResult, tagsResult, mediaResult] = await Promise.all([
@@ -87,6 +103,10 @@ export default async function EditArticlePage({
       statusTone={isPublished ? 'published' : 'draft'}
       liveHref={isPublished ? `/nuggets/${id}/${article.slug as string}` : undefined}
       errorMessage={errorCode ? PUBLISH_ERRORS[errorCode] ?? PUBLISH_ERRORS.publish_validation_failed : undefined}
+      warningMessage={
+        warningCode ? PUBLISH_WARNINGS[warningCode] ?? `Warning: ${warningCode}` : undefined
+      }
+      noticeMessage={noticeCode ? PUBLISH_NOTICES[noticeCode] ?? `Notice: ${noticeCode}` : undefined}
     >
       <form id="article-edit-form" action={updateArticleAction}>
         <ArticleFormFields defaults={defaults} tags={(tagsResult.data ?? []) as unknown as TagSummary[]} />

@@ -39,8 +39,7 @@ jobs:
           ! grep -rE "SUPABASE_SERVICE_ROLE_KEY" \
             --include="*.ts" --include="*.tsx" \
             app/ components/ lib/ \
-            | grep -v "lib/supabase/admin.ts" \
-            | grep -v "lib/env.ts"
+            | grep -v "lib/supabase/admin.ts"
 
       - name: No banned packages in dependencies
         run: |

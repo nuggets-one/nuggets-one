@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { updateDisplayNameAction } from '@/lib/actions/profile'
 import { AccountPrefsIsland } from './_components/AccountPrefsIsland'
 
-export const metadata = { title: 'Account — Nuggets' }
+export const metadata = { title: 'Account' }
 
 type Props = {
   searchParams: Promise<{ message?: string; error?: string }>

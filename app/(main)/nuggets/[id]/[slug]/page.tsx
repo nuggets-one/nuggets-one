@@ -5,8 +5,7 @@ import { getArticleMeta, getCanonicalArticleSlug } from '@/lib/queries/article'
 import { ArticleContent } from '@/components/ui/article-content'
 import { ArticleDetailSkeleton } from '@/components/ui/article-detail-skeleton'
 
-// Bookmark check requires cookies — serves dynamically per user.
-// ISR via revalidateTag('article:' + id) is deferred to PR-14 when PPR is added.
+// Per-user bookmark state uses cookies — route is dynamic. Article body is cached via `revalidateTag('article:' + id)` on publish.
 type Params = {
   id: string
   slug: string
@@ -23,11 +22,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const defaultOgImage = `${siteUrl}/og-default.png`
 
   if (!meta) {
-    return { title: 'Nugget not found — Nuggets' }
+    return { title: 'Nugget not found' }
   }
 
   return {
-    title: `${meta.title} — Nuggets`,
+    title: meta.title,
     description: meta.excerpt ?? undefined,
     openGraph: {
       title: meta.title,

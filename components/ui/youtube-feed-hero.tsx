@@ -44,16 +44,22 @@ function SourceExternalLinkIcon() {
   )
 }
 
-function YouTubeMiniMark({ className }: { className?: string }) {
+function YouTubeBrandMark() {
   return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-sm bg-[#FF0000] px-[1px] py-[1px] ${className ?? ''}`.trim()}
-      aria-hidden
-    >
-      <svg className="h-2 w-2 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <path d="M8 5v14l11-7z" />
+    <div className="shrink-0" aria-hidden>
+      <svg
+        className="h-3.5 w-3.5"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden
+      >
+        <path
+          d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+          fill="#FF0000"
+        />
       </svg>
-    </span>
+    </div>
   )
 }
 
@@ -137,15 +143,19 @@ export function YouTubeFeedHero({
             <NoPreviewPlaceholder />
           )}
 
+          {/*
+            Strong bottom scrim: some YouTube posters include channel/wordmark art
+            in this band; a light gradient reads as a "gap" between the SVG and title.
+          */}
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] bg-gradient-to-t from-black/88 via-black/45 to-transparent px-2 pb-1.5 pt-8"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[1] rounded-b-lg bg-gradient-to-t from-black/95 via-black/80 to-transparent px-2 py-1.5 backdrop-blur-[2px]"
             aria-hidden
           >
-            <div className="flex items-end gap-1.5">
-              <YouTubeMiniMark />
-              <span className="line-clamp-2 min-w-0 text-left text-[9px] font-medium leading-tight text-white/95 drop-shadow-sm sm:text-[10px] sm:leading-tight">
-                {title}
-              </span>
+            <div className="flex items-center gap-1.5">
+              <YouTubeBrandMark />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10px] font-medium text-white/90">{title}</p>
+              </div>
             </div>
           </div>
 

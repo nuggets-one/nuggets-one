@@ -1,16 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeNext } from '@/lib/auth/sanitize-next'
 import { NextResponse, type NextRequest } from 'next/server'
-
-// PRODUCT §0.7: open-redirect guard
-function sanitizeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/'
-  try {
-    if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(decodeURIComponent(raw))) return '/'
-  } catch {
-    return '/'
-  }
-  return raw
-}
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)

@@ -105,7 +105,9 @@ If some bookmarked **`article_id`** rows are **deleted or unpublished**, list sh
 
 **Home feed — YouTube hero:** Tapping the **hero poster** (single-image card, not the multi-thumbnail grid) opens a **global deferred mini-player** (portal + `youtube-nocookie` embed) so playback stays in-app. The mini-player script loads **client-only** (`dynamic` / no SSR) and the iframe mounts **only after** that tap — not for LCP. **Open article** on the hero and the **title** link still navigate to **`/nuggets/[id]/[slug]`** (detail-first reading). **Card preview** may include `[label](#yt=N)` links; on YouTube-backed cards they open the same mini-player at `N` seconds.
 
-**Body (detail)** timestamp links (`[2:34](#yt=154)` in `content_markdown`) load the detail embed (if not already loaded) and **seek** — full state machine in **`BLUEPRINT` §6.3a** — handled by the detail `YouTubePlayer` island, not the feed mini-player.
+**Nugget page (full-page share landing) — YouTube hero:** Tapping the **hero poster** opens the **same global deferred mini-player** as the Home feed so playback stays visible while reading the summary.
+
+**Body (detail)** timestamp links (`[2:34](#yt=154)` in `content_markdown`) open or seek the **same global deferred mini-player** as the Home feed (`youtube-nocookie` embed, `enablejsapi=1`) — **not** a separate in-flow detail-only iframe. Cold open uses `start` on the embed URL; when the same hero video is already playing, the player **seeks** via IFrame `postMessage` without remounting. Full interaction model: **`BLUEPRINT` §6.3a** (updated for mini-player parity).
 
 ---
 
@@ -483,7 +485,7 @@ The user clicked a link in WhatsApp/email/X — they expect the **content**, not
 
 | Type | Feed card | Detail page |
 |------|-----------|-------------|
-| **YouTube / video** | **Poster/thumbnail** (16:9); **hero tap** opens **deferred global mini-player** (in-app, not in-card iframe). **Open article** + **title** → canonical nugget. Preview **`#yt=`** links on YouTube-backed cards seek the mini-player. **No** iframe in card HTML on first paint. | **§0.14** — poster + **Watch on YouTube**; detail embed only behind explicit load; body **`[2:34](#yt=154)`** → `BLUEPRINT` §6.3a. |
+| **YouTube / video** | **Poster/thumbnail** (16:9); **hero tap** opens **deferred global mini-player** (in-app, not in-card iframe). **Open article** + **title** → canonical nugget. Preview **`#yt=`** links on YouTube-backed cards seek the mini-player. **No** iframe in card HTML on first paint. | **§0.14** — poster + **Watch on YouTube**; **detail** hero + body **`[2:34](#yt=154)`** use the **same** global mini-player (cold `start`, warm `postMessage` seek); **no** autoplay on first paint. |
 | **Image** | Image fills aspect region; lightbox **defer** — tap goes to detail | Large image; pinch/zoom **defer** |
 | **Blog / article** | Thumbnail + excerpt | **`prose`** markdown body; outbound **source** button |
 | **Report / PDF** | Generic doc icon + title if no thumb | Link to PDF opens **new tab**; inline PDF viewer **defer** |
