@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS articles (
   hero_video_id text,
   hero_media_id uuid,
   tag_slugs text[] NOT NULL DEFAULT '{}',
-  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  curator_display_name text,
   search_vector tsvector GENERATED ALWAYS AS (
     setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
     setweight(to_tsvector('english', coalesce(excerpt, '')), 'B') ||
@@ -198,6 +199,7 @@ ALTER TABLE user_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "profiles: user owns row" ON profiles;
+DROP POLICY IF EXISTS "profiles: public read published curators" ON profiles;
 DROP POLICY IF EXISTS "articles: anon reads published" ON articles;
 DROP POLICY IF EXISTS "bookmarks: user owns row" ON bookmarks;
 DROP POLICY IF EXISTS "notification_preferences: user owns row" ON notification_preferences;
@@ -205,6 +207,15 @@ DROP POLICY IF EXISTS "user_notifications: user owns row" ON user_notifications;
 
 CREATE POLICY "profiles: user owns row"
   ON profiles FOR ALL USING (id = auth.uid());
+
+CREATE POLICY "profiles: public read published curators"
+  ON profiles FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM articles a
+      WHERE a.created_by = profiles.id
+        AND a.status = 'published'
+    )
+  );
 
 CREATE POLICY "articles: anon reads published"
   ON articles FOR SELECT USING (status = 'published');
