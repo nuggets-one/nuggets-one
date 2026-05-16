@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { NuggetDetailLink } from '@/components/ui/nugget-detail-link'
 import { CardPreviewYouTubeTimestamps } from '@/components/ui/card-preview-youtube-timestamps'
 
 const CARD_PREVIEW_BODY_CLASS =
@@ -84,11 +85,11 @@ export function CardBody({
         </div>
       )}
 
-      <Link href={href} className="flex min-h-[44px] items-start focus:outline-none">
+      <NuggetDetailLink href={href} className="flex min-h-[44px] items-start focus:outline-none">
         <h2 className="line-clamp-2 text-xs font-semibold leading-snug text-card-title transition-colors group-hover:text-slate-950 dark:group-hover:text-slate-100">
           {title}
         </h2>
-      </Link>
+      </NuggetDetailLink>
 
       {hasPreview && (
         <div className="relative">

@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import { NuggetDetailLink } from '@/components/ui/nugget-detail-link'
 import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import {
   canRenderWithNextImage,
@@ -51,7 +51,7 @@ export function CardThumbnailGrid({
   return (
     <div className="relative w-full overflow-hidden rounded-t-xl pt-2 px-2 pb-2">
       <div className="aspect-video rounded-lg overflow-hidden w-full bg-surface-raised">
-        <Link
+        <NuggetDetailLink
           href={href}
           className="block h-full w-full"
           tabIndex={-1}
@@ -78,7 +78,7 @@ export function CardThumbnailGrid({
               )
             })}
           </div>
-        </Link>
+        </NuggetDetailLink>
       </div>
     </div>
   )

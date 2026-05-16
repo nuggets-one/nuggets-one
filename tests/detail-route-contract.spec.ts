@@ -37,6 +37,21 @@ function buildStaleSlugHref(href: string) {
   return `/nuggets/${id}/stale-slug-${id.slice(0, 6)}`
 }
 
+test('detail route: View Full Article opens intercepted sheet', async ({ page }) => {
+  await gotoHome(page)
+  const cta = page.getByRole('link', { name: 'View full article' }).first()
+  await expect(cta).toBeVisible()
+
+  const href = await cta.getAttribute('href')
+  expect(href).toMatch(/^\/nuggets\//)
+
+  await cta.click()
+
+  const dialog = page.getByRole('dialog', { name: 'Nugget detail' })
+  await expect(dialog).toBeVisible()
+  await expect.poll(() => new URL(page.url()).pathname).toBe(href)
+})
+
 test('detail route: feed click opens intercepted sheet and Escape closes it', async ({ page }) => {
   const { href } = await openInterceptedDetail(page)
 

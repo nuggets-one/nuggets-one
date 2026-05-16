@@ -54,6 +54,7 @@ async function CollectionContent({ id }: { id: string }) {
     data: { user },
   } = await supabase.auth.getUser()
   const isAuthenticated = !!user
+  const isAdmin = user?.app_metadata?.is_admin === true
   const collectionArticleIds = collection.articles.map((a) => a.id)
   const bookmarkedIds =
     user && collectionArticleIds.length > 0
@@ -94,6 +95,7 @@ async function CollectionContent({ id }: { id: string }) {
               priority={index === 0}
               isAuthenticated={isAuthenticated}
               initialBookmarked={bookmarkedIds.has(article.id)}
+              adminEditHref={isAdmin ? `/admin/articles/${article.id}` : null}
             />
           ))}
         </div>

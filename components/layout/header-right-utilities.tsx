@@ -1,0 +1,296 @@
+'use client'
+
+// S1-F3: single client island for header right cluster (create · theme · bell · avatar).
+// One /api/auth/status fetch; server Header stays cookie-free.
+
+import { useState, useEffect, type ReactNode } from 'react'
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { Sparkles } from 'lucide-react'
+import { logoutAction } from '@/lib/actions/auth'
+import { readResponseJson } from '@/lib/http/parse-json-response'
+import type { LegalFooterLink } from '@/lib/queries/legal-pages'
+import { accountAvatarLetter } from '@/lib/ui/account-avatar-initial'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
+
+const NotificationPanel = dynamic(
+  () =>
+    import('@/components/notifications/NotificationPanel').then((m) => ({
+      default: m.NotificationPanel,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-9 w-9 rounded-lg bg-surface-raised animate-pulse" aria-hidden="true" />
+    ),
+  }
+)
+
+type AuthState =
+  | { status: 'loading' }
+  | { status: 'anonymous' }
+  | {
+      status: 'authenticated'
+      email: string | null
+      displayName: string | null
+      isAdmin: boolean
+    }
+
+function CreateNuggetHeaderLink() {
+  return (
+    <Link
+      href="/admin/articles/new"
+      data-testid="create-nugget-button"
+      aria-label="Create Nugget"
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+    >
+      <Sparkles className="size-4 text-yellow-500" aria-hidden />
+    </Link>
+  )
+}
+
+function MenuHeading({ children }: { children: ReactNode }) {
+  return (
+    <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+      {children}
+    </p>
+  )
+}
+
+function LegalMenuBlock({ legalLinks }: { legalLinks: readonly LegalFooterLink[] }) {
+  const year = new Date().getFullYear()
+
+  return (
+    <nav aria-label="Legal" className="border-t border-border px-4 py-2">
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+        {legalLinks.map((item) => (
+          <Link
+            key={item.slug}
+            href={`/legal/${item.slug}`}
+            role="menuitem"
+            className="inline-flex rounded-sm text-[11px] font-normal leading-snug text-muted underline-offset-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/50 focus-visible:ring-offset-1 focus-visible:ring-offset-rail"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+      <p className="mt-1.5 text-[10px] leading-snug text-muted">© {year} Nuggets</p>
+    </nav>
+  )
+}
+
+function AnonymousAccountMenu({ legalLinks }: { legalLinks: readonly LegalFooterLink[] }) {
+  return (
+    <details className="group relative">
+      <summary
+        aria-label="Open account menu"
+        className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus/60 [&:-moz-focusring]:outline-none"
+      >
+        <span className="inline-flex size-9 select-none items-center justify-center rounded-full border border-border bg-surface-raised text-xs font-semibold text-primary transition-colors hover:bg-surface active:bg-surface-raised">
+          G
+        </span>
+      </summary>
+
+      <div
+        role="menu"
+        className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-rail py-2 shadow-panel ring-1 ring-elevated"
+      >
+        <Link
+          href="/login"
+          role="menuitem"
+          className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/signup"
+          role="menuitem"
+          className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+        >
+          Create account
+        </Link>
+
+        <LegalMenuBlock legalLinks={legalLinks} />
+      </div>
+    </details>
+  )
+}
+
+function AuthenticatedAccountMenu({
+  auth,
+  legalLinks,
+}: {
+  auth: Extract<AuthState, { status: 'authenticated' }>
+  legalLinks: readonly LegalFooterLink[]
+}) {
+  const initials = accountAvatarLetter(auth.displayName, auth.email)
+
+  return (
+    <details className="group relative">
+      <summary
+        aria-label="Open account menu"
+        className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus/60 [&:-moz-focusring]:outline-none"
+      >
+        <span className="inline-flex size-9 select-none items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-hover">
+          {initials}
+        </span>
+      </summary>
+
+      <div
+        role="menu"
+        className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-xl border border-border bg-rail py-2 shadow-panel ring-1 ring-elevated"
+      >
+        {auth.email ? (
+          <>
+            <MenuHeading>Signed in as</MenuHeading>
+            <p className="-mt-2 line-clamp-2 break-all px-3 pb-2 text-xs text-muted">
+              {auth.email}
+            </p>
+          </>
+        ) : null}
+
+        <Link
+          href="/bookmarks"
+          role="menuitem"
+          className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+        >
+          Bookmarks
+        </Link>
+
+        <Link
+          href="/collections"
+          role="menuitem"
+          className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+        >
+          Collections
+        </Link>
+
+        <Link
+          href="/account"
+          role="menuitem"
+          className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+        >
+          Account settings
+        </Link>
+
+        {auth.isAdmin ? (
+          <>
+            <Link
+              href="/admin/articles"
+              role="menuitem"
+              className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+            >
+              Admin
+            </Link>
+            <Link
+              href="/admin/articles/new"
+              role="menuitem"
+              className="block px-3 py-2 text-sm font-medium text-primary hover:bg-surface-raised"
+            >
+              Create nugget
+            </Link>
+          </>
+        ) : null}
+
+        <LegalMenuBlock legalLinks={legalLinks} />
+
+        <div className="my-2 border-t border-border" />
+
+        <form action={logoutAction} role="presentation">
+          <button
+            type="submit"
+            role="menuitem"
+            className="w-full px-3 py-2 text-left text-sm font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
+    </details>
+  )
+}
+
+type Props = {
+  legalLinks: readonly LegalFooterLink[]
+}
+
+export function HeaderRightUtilities({ legalLinks }: Props) {
+  const [auth, setAuth] = useState<AuthState>({ status: 'loading' })
+
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
+    const timeout = setTimeout(() => {
+      controller.abort()
+    }, 4000)
+
+    fetch('/api/auth/status', { cache: 'no-store', signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) return { authenticated: false as const }
+        const data = await readResponseJson<{
+          authenticated?: boolean
+          email?: string | null
+          displayName?: string | null
+          isAdmin?: boolean
+        }>(res)
+        return data ?? { authenticated: false as const }
+      })
+      .then(
+        (data: {
+          authenticated?: boolean
+          email?: string | null
+          displayName?: string | null
+          isAdmin?: boolean
+        }) => {
+          if (cancelled) return
+          if (data.authenticated) {
+            setAuth({
+              status: 'authenticated',
+              email: data.email ?? null,
+              displayName:
+                typeof data.displayName === 'string' && data.displayName.trim()
+                  ? data.displayName.trim()
+                  : null,
+              isAdmin: data.isAdmin === true,
+            })
+          } else {
+            setAuth({ status: 'anonymous' })
+          }
+        }
+      )
+      .catch(() => {
+        if (!cancelled) setAuth({ status: 'anonymous' })
+      })
+      .finally(() => {
+        clearTimeout(timeout)
+      })
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [])
+
+  return (
+    <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
+      {auth.status === 'authenticated' && auth.isAdmin ? <CreateNuggetHeaderLink /> : null}
+
+      <ThemeToggle />
+
+      {auth.status === 'loading' ? (
+        <div
+          className="h-8 w-16 rounded-lg bg-surface-raised animate-pulse"
+          aria-hidden="true"
+        />
+      ) : auth.status === 'anonymous' ? (
+        <AnonymousAccountMenu legalLinks={legalLinks} />
+      ) : auth.status === 'authenticated' ? (
+        <>
+          <NotificationPanel />
+          <AuthenticatedAccountMenu auth={auth} legalLinks={legalLinks} />
+        </>
+      ) : null}
+    </div>
+  )
+}

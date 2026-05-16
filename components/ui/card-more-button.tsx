@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { ExternalLink, MoreVertical } from 'lucide-react'
+import Link from 'next/link'
+import { ExternalLink, MoreVertical, Pencil } from 'lucide-react'
 
 type Props = {
   sourceUrl: string
   sourceHost: string | null
+  editHref?: string | null
   menuPlacement?: 'above' | 'below'
   variant?: 'default' | 'toolbar'
 }
@@ -13,6 +15,7 @@ type Props = {
 export function CardMoreButton({
   sourceUrl,
   sourceHost,
+  editHref = null,
   menuPlacement = 'above',
   variant = 'default',
 }: Props) {
@@ -64,22 +67,35 @@ export function CardMoreButton({
             menuPlacement === 'below' ? 'top-full mt-1' : 'bottom-full mb-1'
           }`}
         >
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            role="menuitem"
-            onClick={closeMenu}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary"
-            aria-label={
-              sourceHost
-                ? `Open source on ${sourceHost} (opens in new tab)`
-                : 'Open source (opens in new tab)'
-            }
-          >
-            <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
-            <span>View Source</span>
-          </a>
+          {editHref ? (
+            <Link
+              href={editHref}
+              role="menuitem"
+              onClick={closeMenu}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary"
+            >
+              <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
+              <span>Edit nugget</span>
+            </Link>
+          ) : null}
+          {sourceUrl ? (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              role="menuitem"
+              onClick={closeMenu}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary"
+              aria-label={
+                sourceHost
+                  ? `Open source on ${sourceHost} (opens in new tab)`
+                  : 'Open source (opens in new tab)'
+              }
+            >
+              <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
+              <span>View Source</span>
+            </a>
+          ) : null}
         </div>
       )}
     </div>

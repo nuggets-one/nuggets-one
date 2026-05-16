@@ -89,6 +89,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
     data: { user },
   } = await supabase.auth.getUser()
   const isAuthenticated = !!user
+  const isAdmin = user?.app_metadata?.is_admin === true
   const articleIds = articles.map((a) => a.id)
   const bookmarkedIds =
     user && articleIds.length > 0
@@ -119,6 +120,9 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
               priority={index === 0}
               isAuthenticated={isAuthenticated}
               initialBookmarked={bookmarkedIds.has(article.id)}
+              adminEditHref={
+                isAdmin ? `/admin/articles/${article.id}` : null
+              }
             />
           ))}
         </div>

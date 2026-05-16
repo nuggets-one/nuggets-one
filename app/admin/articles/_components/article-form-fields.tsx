@@ -1,6 +1,13 @@
 'use client'
 
 import { useMemo, useRef, useState, type ClipboardEvent, type MouseEvent } from 'react'
+import { CardCoverPreviewPanel } from './card-cover-preview'
+import { isYouTubeUrl } from '@/lib/ui/excerpt-card'
+import {
+  describeCardCoverPreview,
+  parseAdminMediaUrlList,
+  resolveArticleHeroFields,
+} from '@/lib/ui/resolve-article-hero'
 
 // S1-F1: moved from new/page.tsx — page files must only export the default page
 // component plus Next.js-approved named exports (metadata, generateMetadata, etc.).
@@ -45,6 +52,7 @@ export function ArticleFormFields({
     : defaults?.hero_thumb_url
       ? [defaults.hero_thumb_url]
       : []
+  const [sourceUrl, setSourceUrl] = useState(defaults?.source_url ?? '')
   const [mediaUrlsValue, setMediaUrlsValue] = useState(initialMediaUrls.join(', '))
   const [thumbnailUrl, setThumbnailUrl] = useState(defaults?.hero_thumb_url ?? initialMediaUrls[0] ?? '')
   const [body, setBody] = useState(defaults?.content_markdown ?? '')
@@ -54,6 +62,17 @@ export function ArticleFormFields({
   const effectiveThumbnailUrl = mediaPreviewUrls.includes(thumbnailUrl)
     ? thumbnailUrl
     : mediaPreviewUrls[0] ?? ''
+
+  const cardCoverPreview = useMemo(() => {
+    const resolved = resolveArticleHeroFields({
+      source_url: sourceUrl.trim() || null,
+      hero_thumb_url: effectiveThumbnailUrl || null,
+      media_urls: parseAdminMediaUrlList(mediaUrlsValue),
+    })
+    return describeCardCoverPreview(resolved)
+  }, [sourceUrl, effectiveThumbnailUrl, mediaUrlsValue])
+
+  const sourceIsYouTube = isYouTubeUrl(sourceUrl.trim() || null)
 
   return (
     <div className="space-y-4 py-1">
@@ -68,10 +87,18 @@ export function ArticleFormFields({
             <input
               type="url"
               name="source_url"
-              placeholder="https://example.com/article"
-              defaultValue={defaults?.source_url ?? ''}
+              placeholder="https://example.com/article or YouTube link"
+              value={sourceUrl}
+              onChange={(event) => setSourceUrl(event.target.value)}
               className="rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
+            <p className="text-[11px] leading-snug text-muted">
+              Outbound link on the card (View Source). For podcasts and videos, paste the YouTube URL here — we
+              use it as the feed cover and detail player.
+            </p>
+            {sourceIsYouTube ? (
+              <p className="text-[11px] font-medium text-primary">YouTube detected — card cover will use the video poster.</p>
+            ) : null}
           </label>
 
           <div className="flex flex-col gap-1.5">
@@ -83,17 +110,23 @@ export function ArticleFormFields({
           </div>
 
           <label className="flex flex-col gap-1.5 lg:col-span-2">
-            <span className="text-xs font-bold uppercase tracking-wide text-muted">Media URLs</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-muted">Card images (optional)</span>
             <textarea
               name="media_urls"
               rows={2}
               value={mediaUrlsValue}
               onChange={(event) => setMediaUrlsValue(event.target.value)}
-              placeholder="Paste image URLs separated by commas, spaces, or new lines..."
+              placeholder="Image URLs only — comma, space, or new line separated (not YouTube links)"
               className="w-full resize-y rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
+            <p className="text-[11px] leading-snug text-muted">
+              Optional images for the feed card gallery. Pick one as the card cover below. YouTube covers come from
+              Source URL, not this field.
+            </p>
           </label>
         </div>
+
+        <CardCoverPreviewPanel preview={cardCoverPreview} />
 
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <label className="flex flex-col gap-1.5">
@@ -173,8 +206,10 @@ export function ArticleFormFields({
       {mediaPreviewUrls.length > 0 && (
         <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-2">
-            <p className="text-sm font-semibold text-primary">Media ({mediaPreviewUrls.length})</p>
-            <p className="text-xs text-muted">Choose the thumbnail. Drag-free order uses the URL order below.</p>
+            <p className="text-sm font-semibold text-primary">Card images ({mediaPreviewUrls.length})</p>
+            <p className="text-xs text-muted">
+              Choose which image is the feed card cover. Order follows the list in Card images above.
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             {mediaPreviewUrls.map((url, index) => (
@@ -197,7 +232,7 @@ export function ArticleFormFields({
                       checked={effectiveThumbnailUrl === url}
                       onChange={() => setThumbnailUrl(url)}
                     />
-                    Thumbnail
+                    Card cover
                   </label>
                   <div className="flex items-center justify-between gap-1">
                     <span className="truncate">Image {index + 1}</span>

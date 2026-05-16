@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import { NuggetDetailLink } from '@/components/ui/nugget-detail-link'
 import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import {
   canRenderWithNextImage,
@@ -42,7 +42,7 @@ export function CardMedia({
   return (
     <div className="w-full rounded-t-xl px-2 pb-2 pt-2">
       <div className="relative aspect-video overflow-hidden rounded-lg bg-bg">
-        <Link
+        <NuggetDetailLink
           href={href}
           className={`relative block h-full w-full ${cardMediaGroupClasses}`}
           tabIndex={-1}
@@ -71,7 +71,7 @@ export function CardMedia({
           ) : (
             <NoPreviewPlaceholder />
           )}
-        </Link>
+        </NuggetDetailLink>
       </div>
     </div>
   )

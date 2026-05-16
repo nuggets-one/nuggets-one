@@ -1,11 +1,12 @@
-import Link from 'next/link'
 import { CardMedia } from '@/components/ui/card-media'
+import { NuggetDetailLink } from '@/components/ui/nugget-detail-link'
 import { CardBody } from '@/components/ui/card-body'
 import { YouTubeFeedHero } from '@/components/ui/youtube-feed-hero'
 import { CardFooter } from '@/components/ui/card-footer'
 import { CardThumbnailGrid } from '@/components/ui/card-thumbnail-grid'
 import { getSourceHostLabel } from '@/lib/ui/source-host-label'
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
+import { extractYouTubeVideoId, isCanonicalYouTubeVideoId } from '@/lib/ui/youtube-video-id'
 import { isImageUrl } from '@/lib/ui/is-image-url'
 import { isPdfUrl } from '@/lib/ui/is-pdf-url'
 import type { ArticleCardProps } from '@/types/article'
@@ -15,6 +16,8 @@ type Props = {
   priority?: boolean
   isAuthenticated?: boolean
   initialBookmarked?: boolean
+  /** When set (admin session), 3-dot menu includes Edit nugget. */
+  adminEditHref?: string | null
 }
 
 export function ArticleCard({
@@ -22,6 +25,7 @@ export function ArticleCard({
   priority = false,
   isAuthenticated = false,
   initialBookmarked = false,
+  adminEditHref = null,
 }: Props) {
   const {
     id,
@@ -49,14 +53,22 @@ export function ArticleCard({
   const sourceHost = getSourceHostLabel(source_url, { truncateAt: 24 })
 
   const trimmedHeroThumb = hero_thumb_url?.trim() ?? ''
-  const rawVideoId = hero_video_id?.trim() ?? ''
-  const looksLikeYouTubeId = /^[\w-]{11}$/.test(rawVideoId)
+  const rawVideoId = (() => {
+    const stored = hero_video_id?.trim() ?? ''
+    if (stored && isCanonicalYouTubeVideoId(stored)) return stored
+    for (const candidate of [hero_thumb_url, source_url]) {
+      const fromUrl = extractYouTubeVideoId(candidate)
+      if (fromUrl && isCanonicalYouTubeVideoId(fromUrl)) return fromUrl
+    }
+    return stored
+  })()
+  const looksLikeYouTubeId = isCanonicalYouTubeVideoId(rawVideoId)
   // Legacy parity: poster when YouTube (or unknown kind with a plausible 11-char id).
   const youtubePosterFallback =
     rawVideoId &&
     !trimmedHeroThumb &&
     looksLikeYouTubeId &&
-    (hero_media_kind === 'youtube' || hero_media_kind === null)
+    (hero_media_kind === 'youtube' || hero_media_kind === null || extractYouTubeVideoId(trimmedHeroThumb))
       ? youTubePosterHqUrl(rawVideoId)
       : null
   // Match legacy CardMedia / getThumbnailUrl: single grid image backs the hero
@@ -79,13 +91,16 @@ export function ArticleCard({
   }
   const useThumbnailGrid = images.length >= 2
 
-  const showYouTubeFeedHero =
-    !useThumbnailGrid &&
+  const youtubeIdFromSource = extractYouTubeVideoId(source_url)
+  const hasYouTubePlayback =
     Boolean(rawVideoId) &&
     looksLikeYouTubeId &&
-    (hero_media_kind === 'youtube' || hero_media_kind === null)
+    (hero_media_kind === 'youtube' ||
+      hero_media_kind === null ||
+      (hero_media_kind === 'image' && Boolean(youtubeIdFromSource)))
+  const showYouTubeFeedHero = !useThumbnailGrid && hasYouTubePlayback
   const youtubePreview =
-    rawVideoId && looksLikeYouTubeId && (hero_media_kind === 'youtube' || hero_media_kind === null)
+    rawVideoId && looksLikeYouTubeId && hasYouTubePlayback
       ? { videoId: rawVideoId, title, articleId: id }
       : undefined
 
@@ -131,14 +146,13 @@ export function ArticleCard({
         youtubePreview={youtubePreview}
       />
 
-      {showYouTubeFeedHero ? (
-        <div className="px-4 py-2">
+      <div className="px-4 py-2">
           <div className="flex justify-center">
-            <Link
-              href={href}
-              aria-label="View full article"
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-            >
+          <NuggetDetailLink
+            href={href}
+            aria-label="View full article"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          >
               <span>View Full Article</span>
               <svg
                 width="12"
@@ -156,10 +170,9 @@ export function ArticleCard({
                   strokeLinejoin="round"
                 />
               </svg>
-            </Link>
-          </div>
+          </NuggetDetailLink>
         </div>
-      ) : null}
+      </div>
 
       <CardFooter
         href={href}
@@ -171,6 +184,7 @@ export function ArticleCard({
         isAuthenticated={isAuthenticated}
         initialBookmarked={initialBookmarked}
         curatorDisplayName={article.curator_display_name}
+        adminEditHref={adminEditHref}
       />
     </article>
   )

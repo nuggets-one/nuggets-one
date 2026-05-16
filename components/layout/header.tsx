@@ -1,13 +1,12 @@
 // S1-F3: server Header is deterministic static chrome — no cookies(), no auth reads.
-// Auth-aware controls (bell, avatar, sign-in) live in HeaderAuthIsland (client island).
+// Auth-aware controls (create · theme · bell · avatar) live in HeaderRightUtilities (client island).
 // Legal footer links for the account menu are fetched in `(main)/layout` and passed in
 // so this component stays synchronous under NuqsAdapter (nuqs SSR + context).
 
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { HeaderSearch } from '@/components/layout/header-search'
-import { HeaderAuthIsland } from '@/components/layout/header-auth-island'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { HeaderRightUtilities } from '@/components/layout/header-right-utilities'
 import type { LegalFooterLink } from '@/lib/queries/legal-pages'
 
 /** Legal links are loaded in `(main)/layout` so this shell stays synchronous under `NuqsAdapter` (nuqs context + Next App Router SSR). */
@@ -66,10 +65,7 @@ export function Header({ legalLinks }: { legalLinks: LegalFooterLink[] }) {
           </Suspense>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
-          <ThemeToggle />
-          <HeaderAuthIsland legalLinks={legalLinks} />
-        </div>
+        <HeaderRightUtilities legalLinks={legalLinks} />
       </div>
     </header>
   )

@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateArticle, revalidateOfficialTags } from '@/lib/cache'
 import { generateArticleSlug, slugify } from '@shared/slug'
 import { resolveCardPreview } from '@shared/article-preview'
+import { resolveArticleHeroFields } from '@/lib/admin/resolve-article-hero'
+import { syncArticleTags } from '@/lib/admin/sync-article-tags'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
 import { normalizePublishPayload } from '@/lib/validation/publish-article'
 import type { ContentStream } from '@/types/article'
@@ -66,7 +68,13 @@ function parseMediaUrls(formData: FormData): string[] {
   return [...new Set(urls)]
 }
 
-async function syncManualImageMedia(db: AdminDb, articleId: string, urls: string[], requestedHeroUrl: string | null) {
+async function syncManualImageMedia(
+  db: AdminDb,
+  articleId: string,
+  urls: string[],
+  requestedHeroUrl: string | null,
+  options?: { preserveYouTubeHero?: boolean }
+) {
   const { error: deleteError } = await db
     .from('article_media')
     .delete()
@@ -77,6 +85,14 @@ async function syncManualImageMedia(db: AdminDb, articleId: string, urls: string
   if (deleteError) return deleteError
 
   if (urls.length === 0) {
+    const { data: existing } = await db
+      .from('articles')
+      .select('hero_media_kind')
+      .eq('id', articleId)
+      .maybeSingle()
+    if (existing?.hero_media_kind === 'youtube') {
+      return null
+    }
     const { error: clearHeroError } = await db
       .from('articles')
       .update({
@@ -104,6 +120,10 @@ async function syncManualImageMedia(db: AdminDb, articleId: string, urls: string
     .select('id, url, hero_thumb_url, sort_order')
 
   if (insertError) return insertError
+
+  if (options?.preserveYouTubeHero) {
+    return null
+  }
 
   const orderedMedia = (insertedMedia ?? []).sort((a, b) => a.sort_order - b.sort_order)
   const heroMedia = orderedMedia.find((media) => media.url === requestedHeroUrl) ?? orderedMedia[0]
@@ -146,6 +166,7 @@ export async function createArticleAction(formData: FormData) {
   const tag_slugs = parseTagSlugs(formData)
   const media_urls = parseMediaUrls(formData)
   const card_preview = resolveCardPreview({ content_markdown, excerpt })
+  const heroFields = resolveArticleHeroFields({ source_url, hero_thumb_url, media_urls })
 
   if (!title) {
     redirect('/admin/articles/new?error=missing_title')
@@ -166,8 +187,10 @@ export async function createArticleAction(formData: FormData) {
     content_markdown,
     content_stream,
     source_url,
-    hero_thumb_url,
+    hero_thumb_url: heroFields.hero_thumb_url,
     hero_alt_text,
+    hero_media_kind: heroFields.hero_media_kind,
+    hero_video_id: heroFields.hero_video_id,
     tag_slugs: [],
     created_by: user.id,
     curator_display_name,
@@ -185,19 +208,20 @@ export async function createArticleAction(formData: FormData) {
   }
 
   if (tag_slugs.length > 0) {
-    const { error: tagError } = await db.rpc('upsert_article_tags', {
-      p_article_id: id,
-      p_tag_slugs: tag_slugs,
-    })
-    if (tagError) {
-      // Clean up orphaned article if tag resolution fails
+    const tagResult = await syncArticleTags(db, id, tag_slugs)
+    if (!tagResult.ok) {
       await db.from('articles').delete().eq('id', id)
-      const code = tagError.message.includes('unknown_tag_slugs') ? 'unknown_tags' : 'tag_update_failed'
-      redirect(`/admin/articles/new?error=${encodeURIComponent(code)}`)
+      redirect(`/admin/articles/new?error=${encodeURIComponent(tagResult.code)}`)
     }
   }
 
-  const mediaError = await syncManualImageMedia(db, id, media_urls, hero_thumb_url)
+  const mediaError = await syncManualImageMedia(
+    db,
+    id,
+    heroFields.imageMediaUrls,
+    heroFields.hero_media_kind === 'image' ? heroFields.hero_thumb_url : null,
+    { preserveYouTubeHero: heroFields.hero_media_kind === 'youtube' }
+  )
   if (mediaError) {
     await db.from('articles').delete().eq('id', id)
     redirect('/admin/articles/new?error=media_update_failed')
@@ -222,6 +246,7 @@ export async function updateArticleAction(formData: FormData) {
   const tag_slugs = parseTagSlugs(formData)
   const media_urls = parseMediaUrls(formData)
   const card_preview = resolveCardPreview({ content_markdown, excerpt })
+  const heroFields = resolveArticleHeroFields({ source_url, hero_thumb_url, media_urls })
 
   if (!id) {
     redirect('/admin/articles')
@@ -244,8 +269,10 @@ export async function updateArticleAction(formData: FormData) {
     content_markdown,
     content_stream,
     source_url,
-    hero_thumb_url,
+    hero_thumb_url: heroFields.hero_thumb_url,
     hero_alt_text,
+    hero_media_kind: heroFields.hero_media_kind,
+    hero_video_id: heroFields.hero_video_id,
     curator_display_name,
   }
 
@@ -259,18 +286,18 @@ export async function updateArticleAction(formData: FormData) {
     redirect(`/admin/articles/${id}?error=save_failed`)
   }
 
-  // S6-F4: article_tags is canonical; upsert_article_tags atomically replaces join rows
-  // and recomputes articles.tag_slugs from the join table (admin CLAUDE.md SQL pattern)
-  const { error: tagError } = await db.rpc('upsert_article_tags', {
-    p_article_id: id,
-    p_tag_slugs: tag_slugs,
-  })
-  if (tagError) {
-    const code = tagError.message.includes('unknown_tag_slugs') ? 'unknown_tags' : 'tag_update_failed'
-    redirect(`/admin/articles/${id}?error=${encodeURIComponent(code)}`)
+  const tagResult = await syncArticleTags(db, id, tag_slugs)
+  if (!tagResult.ok) {
+    redirect(`/admin/articles/${id}?error=${encodeURIComponent(tagResult.code)}`)
   }
 
-  const mediaError = await syncManualImageMedia(db, id, media_urls, hero_thumb_url)
+  const mediaError = await syncManualImageMedia(
+    db,
+    id,
+    heroFields.imageMediaUrls,
+    heroFields.hero_media_kind === 'image' ? heroFields.hero_thumb_url : null,
+    { preserveYouTubeHero: heroFields.hero_media_kind === 'youtube' }
+  )
   if (mediaError) {
     redirect(`/admin/articles/${id}?error=media_update_failed`)
   }

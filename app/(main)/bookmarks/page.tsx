@@ -24,6 +24,7 @@ export default async function BookmarksPage() {
   }
 
   const articles = await getBookmarkedArticles()
+  const isAdmin = user.app_metadata?.is_admin === true
 
   return (
     <div>
@@ -48,6 +49,7 @@ export default async function BookmarksPage() {
               priority={index === 0}
               isAuthenticated={!!user}
               initialBookmarked={true}
+              adminEditHref={isAdmin ? `/admin/articles/${article.id}` : null}
             />
           ))}
         </div>

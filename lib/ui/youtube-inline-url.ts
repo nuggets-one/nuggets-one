@@ -4,10 +4,7 @@
  */
 
 import { parseYtHashSecondsFromHref } from '@/lib/ui/youtube-timestamp-href'
-
-function isLikelyYoutubeVideoId(id: string): boolean {
-  return /^[\w-]{11}$/.test(id)
-}
+import { extractYouTubeVideoId, isCanonicalYouTubeVideoId } from '@/lib/ui/youtube-video-id'
 
 function isYouTubeHost(host: string): boolean {
   const h = host.toLowerCase()
@@ -62,26 +59,8 @@ export function parseYouTubeInlineNavigation(href: string | null | undefined): {
 
   if (!isYouTubeHost(url.hostname)) return null
 
-  let videoId: string | null = null
-  const host = url.hostname.toLowerCase()
-
-  if (host === 'youtu.be') {
-    const seg = url.pathname.split('/').filter(Boolean)[0] ?? ''
-    if (isLikelyYoutubeVideoId(seg)) videoId = seg
-  } else {
-    const v = url.searchParams.get('v')
-    if (v && isLikelyYoutubeVideoId(v)) videoId = v
-    if (!videoId) {
-      const embed = url.pathname.match(/^\/embed\/([^/?#]+)/)
-      if (embed?.[1] && isLikelyYoutubeVideoId(embed[1])) videoId = embed[1]
-    }
-    if (!videoId) {
-      const shorts = url.pathname.match(/^\/shorts\/([^/?#]+)/)
-      if (shorts?.[1] && isLikelyYoutubeVideoId(shorts[1])) videoId = shorts[1]
-    }
-  }
-
-  if (!videoId) return null
+  const videoId = extractYouTubeVideoId(url.href)
+  if (!videoId || !isCanonicalYouTubeVideoId(videoId)) return null
 
   let startSeconds = 0
   const startParam = url.searchParams.get('start')

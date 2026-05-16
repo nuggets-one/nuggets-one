@@ -31,6 +31,44 @@ export function buildBatchKey(
  * notification_preferences row still receive notifications.
  * Defaults baked in via COALESCE (BLUEPRINT §6.6).
  */
+function isMissingNotificationRpc(error: { code?: string; message?: string }): boolean {
+  return error.code === 'PGRST202' || /get_notification_recipients/i.test(error.message ?? '')
+}
+
+async function getRecipientsFallback(stream: 'standard' | 'pulse'): Promise<string[]> {
+  const adminClient = getAdminClient()
+  const streamField = stream === 'pulse' ? 'stream_pulse' : 'stream_standard'
+
+  const { data: prefs, error: prefsError } = await adminClient
+    .from('notification_preferences')
+    .select('user_id, mute_all, stream_standard, stream_pulse')
+
+  if (prefsError) throw new Error(`getRecipients fallback prefs error: ${prefsError.message}`)
+
+  const prefByUser = new Map((prefs ?? []).map((row) => [row.user_id as string, row]))
+  const recipientIds: string[] = []
+  let page = 1
+  const perPage = 1000
+
+  while (true) {
+    const { data: listed, error: listError } = await adminClient.auth.admin.listUsers({ page, perPage })
+    if (listError) throw new Error(`getRecipients fallback listUsers error: ${listError.message}`)
+
+    for (const user of listed.users) {
+      const pref = prefByUser.get(user.id)
+      if (pref?.mute_all === true) continue
+      const streamEnabled = pref?.[streamField as keyof typeof pref]
+      if (streamEnabled === false) continue
+      recipientIds.push(user.id)
+    }
+
+    if (listed.users.length < perPage) break
+    page += 1
+  }
+
+  return recipientIds
+}
+
 export async function getRecipients(
   stream: 'standard' | 'pulse'
 ): Promise<string[]> {
@@ -42,8 +80,15 @@ export async function getRecipients(
     { p_stream_col: streamCol }
   )
 
-  if (error) throw new Error(`getRecipients error: ${error.message}`)
-  return (data ?? []).map((r: { user_id: string }) => r.user_id)
+  if (!error) {
+    return (data ?? []).map((r: { user_id: string }) => r.user_id)
+  }
+
+  if (isMissingNotificationRpc(error)) {
+    return getRecipientsFallback(stream)
+  }
+
+  throw new Error(`getRecipients error: ${error.message}`)
 }
 
 /**
@@ -79,6 +124,18 @@ export async function upsertNotifications({
         ignoreDuplicates: true,
         count: 'exact',
       })
+
+    if (error?.code === '42P10') {
+      // Partial unique index only — insert rows and ignore duplicate pairs.
+      for (const row of chunk) {
+        const { error: insertError } = await adminClient.from('user_notifications').insert(row)
+        if (insertError && insertError.code !== '23505') {
+          throw new Error(`upsertNotifications insert error: ${insertError.message}`)
+        }
+      }
+      inserted += chunk.length
+      continue
+    }
 
     if (error) throw new Error(`upsertNotifications error: ${error.message}`)
     inserted += count ?? 0
@@ -124,13 +181,24 @@ export async function fanOutOnPublish({
     title,
   })
 
-  await adminClient.from('pending_fanout').insert({
+  const { error: queueError } = await adminClient.from('pending_fanout').insert({
     article_id: articleId,
     stream,
     title,
     batch_key: batchKey,
     remaining_user_ids: recipients.slice(FAN_OUT_CAP),
   })
+
+  if (queueError) {
+    if (queueError.code === 'PGRST205' || /pending_fanout/i.test(queueError.message ?? '')) {
+      console.warn(
+        '[fanOutOnPublish] pending_fanout table missing; remaining recipients were not queued:',
+        recipients.length - FAN_OUT_CAP
+      )
+      return { inserted: FAN_OUT_CAP, mode: 'sync' }
+    }
+    throw new Error(`pending_fanout insert error: ${queueError.message}`)
+  }
 
   return { inserted: FAN_OUT_CAP, mode: 'queued' }
 }

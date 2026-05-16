@@ -42,6 +42,7 @@ type Props = {
   isAuthenticated: boolean
   initialBookmarked: boolean
   curatorDisplayName: string | null
+  adminEditHref?: string | null
 }
 
 export function CardFooter({
@@ -54,6 +55,7 @@ export function CardFooter({
   isAuthenticated,
   initialBookmarked,
   curatorDisplayName,
+  adminEditHref = null,
 }: Props) {
   const compactDate = formatCompactDate(published_at)
   const authorBadgeLabel = curatorChipFromDisplayName(curatorDisplayName)
@@ -91,9 +93,13 @@ export function CardFooter({
               variant="footer"
             />
           </div>
-          {source_url && (
+          {(source_url || adminEditHref) && (
             <div className="shrink-0">
-              <CardMoreButton sourceUrl={source_url} sourceHost={sourceHost} />
+              <CardMoreButton
+                sourceUrl={source_url ?? ''}
+                sourceHost={sourceHost}
+                editHref={adminEditHref}
+              />
             </div>
           )}
         </div>
