@@ -1,3 +1,4 @@
+import { resolveCardPreviewDisplayUrl } from '@/lib/ui/card-preview-display-url'
 import { extractYouTubeVideoId, isCanonicalYouTubeVideoId } from '@/lib/ui/youtube-video-id'
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import { isImageUrl } from '@/lib/ui/is-image-url'
@@ -103,7 +104,7 @@ export function describeCardCoverPreview(resolved: ResolvedArticleHero): CardCov
       isImageUrl(resolved.hero_thumb_url)
     return {
       kind: 'youtube',
-      posterUrl: resolved.hero_thumb_url,
+      posterUrl: resolveCardPreviewDisplayUrl(resolved.hero_thumb_url),
       videoId: resolved.hero_video_id,
       summary: customImage
         ? 'Feed card: your chosen image (YouTube still plays from Source URL).'
@@ -114,7 +115,7 @@ export function describeCardCoverPreview(resolved: ResolvedArticleHero): CardCov
   if (resolved.hero_media_kind === 'image' && resolved.hero_thumb_url) {
     return {
       kind: 'image',
-      posterUrl: resolved.hero_thumb_url,
+      posterUrl: resolveCardPreviewDisplayUrl(resolved.hero_thumb_url),
       videoId: null,
       summary: 'Feed card: selected image cover.',
     }

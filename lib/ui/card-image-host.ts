@@ -11,9 +11,8 @@
  *    False → set `unoptimized={true}` on `<Image>` so Vercel's image optimizer
  *    is bypassed (preserves Hobby quota; layout stability still preserved).
  *
- * Phase 14.5 will collapse these — every external image will route through
- * `res.cloudinary.com/image/fetch/...`, so `shouldOptimizeImage` becomes
- * always-true and the passthrough hosts can be dropped from `remotePatterns`.
+ * Passthrough hosts (Twitter, Contentful, …) use `unoptimized={true}` on cards.
+ * Long-tail hosts still use Cloudinary `image/fetch` when `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` is set.
  */
 
 import { cloudinaryFetchUrl } from '@/lib/ui/cloudinary-fetch'

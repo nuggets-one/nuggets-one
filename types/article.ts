@@ -30,11 +30,14 @@ export type ArticleCardProps = {
   /**
    * Up to 4 image rows from `article_media` (kind='image', sort_order ASC).
    * Populated only by the feed query (Phase 14); other surfaces leave it `[]`.
-   * The card renders the multi-image grid when length ≥ 2; when length === 1
-   * and `hero_thumb_url` is empty, that URL backs the single hero (legacy
-   * `getThumbnailUrl` / grid fallback parity).
+   * Combined with `hero_thumb_url` via `buildCardGalleryImages` for the grid.
    */
   images: CardImage[]
+  /**
+   * Total `article_media` image rows for this article (before the 4-cell cap).
+   * Used for the "+N" overlay on the 4th grid cell.
+   */
+  image_count: number
 }
 
 export type CardImage = {

@@ -11,6 +11,7 @@ export function extractYouTubeVideoId(url: unknown): string | null {
     new RegExp(`youtube\\.com/live/${YT_ID}(?:[?&#/]|$)`),
     new RegExp(`youtube\\.com/shorts/${YT_ID}(?:[?&#/]|$)`),
     new RegExp(`i\\.ytimg\\.com/vi/${YT_ID}/`),
+    new RegExp(`img\\.youtube\\.com/vi/${YT_ID}/`),
   ]
   for (const pattern of patterns) {
     const match = raw.match(pattern)

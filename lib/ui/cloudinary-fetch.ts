@@ -5,6 +5,10 @@ type CloudinaryFetchOptions = {
   width?: number
 }
 
+export function hasCloudinaryCloudName(): boolean {
+  return cloudinaryCloudName() !== null
+}
+
 function cloudinaryCloudName(): string | null {
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim()
   if (cloud) return cloud
