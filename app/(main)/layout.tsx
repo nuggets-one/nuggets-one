@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { Footer } from '@/components/layout/footer'
 import { FooterRouteGate } from '@/components/layout/footer-route-gate'
+import { GlobalImageLightboxHost } from '@/components/layout/global-image-lightbox-host'
 import { GlobalYouTubeMiniPlayerHost } from '@/components/layout/global-youtube-mini-player-host'
 import { Header } from '@/components/layout/header'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
@@ -47,6 +48,7 @@ export default async function MainLayout({
         <MobileBottomNav />
       </Suspense>
       <GlobalYouTubeMiniPlayerHost />
+      <GlobalImageLightboxHost />
       {/* The canonical nugget detail route may also render here as an intercepted
           in-context sheet. Direct URL hits still render via the full page route. */}
       {modal}
