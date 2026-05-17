@@ -150,6 +150,7 @@ export async function getBookmarkedArticles(): Promise<ArticleCardProps[]> {
   const rowsWithoutLabels = normalized.map((article) => ({
     ...article,
     images: [],
+    image_count: 0,
     hero_media_kind: normalizeHeroMediaKind(article.hero_media_kind),
   })) as unknown as ArticleRowBase[]
 

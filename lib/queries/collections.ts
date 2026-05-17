@@ -222,6 +222,7 @@ export async function getCollectionById(id: string): Promise<CollectionDetail> {
   const rowsWithoutLabels: ArticleRowBase[] = normalized.map((flat) => ({
     ...flat,
     images: [],
+    image_count: 0,
     hero_media_kind: normalizeHeroMediaKind(flat.hero_media_kind),
   })) as unknown as ArticleRowBase[]
 

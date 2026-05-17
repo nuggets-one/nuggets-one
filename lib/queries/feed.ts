@@ -3,7 +3,7 @@ import { normalizeCuratorDisplayNameOnRows } from '@/lib/queries/normalize-curat
 import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
 import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
 import { attachCardPreviewHtml } from '@/lib/ui/card-preview-markdown'
-import { isImageUrl } from '@/lib/ui/is-image-url'
+import { isGalleryImageUrl } from '@/lib/ui/gallery-image-url'
 import {
   normalizeHeroMediaKind,
   type ArticleCardProps,
@@ -327,13 +327,16 @@ async function attachImagesToRows(
     return rows.map((r) => ({
       ...r,
       images: [],
+      image_count: 0,
       hero_media_kind: normalizeHeroMediaKind(r.hero_media_kind),
     }))
   }
 
   const byArticle = new Map<string, CardImage[]>()
+  const countByArticle = new Map<string, number>()
   for (const m of (mediaRows ?? []) as { article_id: string; url: string }[]) {
-    if (typeof m.url !== 'string' || !isImageUrl(m.url)) continue
+    if (typeof m.url !== 'string' || !isGalleryImageUrl(m.url)) continue
+    countByArticle.set(m.article_id, (countByArticle.get(m.article_id) ?? 0) + 1)
     const list = byArticle.get(m.article_id) ?? []
     if (list.length >= MAX_IMAGES_PER_CARD) continue
     list.push({ url: m.url, alt: null })
@@ -343,6 +346,7 @@ async function attachImagesToRows(
   return rows.map((r) => ({
     ...r,
     images: byArticle.get(r.id) ?? [],
+    image_count: countByArticle.get(r.id) ?? 0,
     hero_media_kind: normalizeHeroMediaKind(r.hero_media_kind),
   }))
 }
