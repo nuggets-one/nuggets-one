@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { cardMediaImageClasses } from '@/lib/ui/card-media-hover'
+import {
+  cardMediaContainImageClasses,
+  cardMediaCoverImageClasses,
+} from '@/lib/ui/card-media-hover'
 
 type Props = {
   src: string
@@ -9,6 +12,7 @@ type Props = {
   priority: boolean
   /** When true, image scales slightly on `group/media` hover (see `card-media-hover`). */
   imageHover?: boolean
+  fit?: 'cover' | 'contain'
 }
 
 /**
@@ -16,7 +20,13 @@ type Props = {
  * Vite feed’s native `<img>` path (no `next/image` + custom loader edge cases).
  * `onError` maps failed loads to the same “No preview” affordance as empty hero.
  */
-export function CardMediaRaster({ src, alt, priority, imageHover = false }: Props) {
+export function CardMediaRaster({
+  src,
+  alt,
+  priority,
+  imageHover = false,
+  fit = 'cover',
+}: Props) {
   const [failed, setFailed] = useState(false)
   const onError = useCallback(() => {
     setFailed(true)
@@ -24,8 +34,30 @@ export function CardMediaRaster({ src, alt, priority, imageHover = false }: Prop
 
   if (failed) {
     return (
-      <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-bg text-xs font-medium text-muted">
+      <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-slate-100 text-xs font-medium text-muted dark:bg-slate-800">
         No preview
+      </div>
+    )
+  }
+
+  const imageClass =
+    fit === 'contain'
+      ? cardMediaContainImageClasses(imageHover)
+      : cardMediaCoverImageClasses(imageHover)
+
+  if (fit === 'contain') {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          className={imageClass}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          {...(priority ? { fetchPriority: 'high' as const } : {})}
+          onError={onError}
+        />
       </div>
     )
   }
@@ -37,7 +69,7 @@ export function CardMediaRaster({ src, alt, priority, imageHover = false }: Prop
       <img
         src={src}
         alt={alt}
-        className={`absolute inset-0 h-full w-full ${cardMediaImageClasses(imageHover)}`}
+        className={`absolute inset-0 h-full w-full ${imageClass}`}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
         {...(priority ? { fetchPriority: 'high' as const } : {})}
