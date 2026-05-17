@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { cardMediaImageHoverClasses } from '@/lib/ui/card-media-hover'
+import { cardMediaImageClasses } from '@/lib/ui/card-media-hover'
 
 type Props = {
   src: string
@@ -37,7 +37,7 @@ export function CardMediaRaster({ src, alt, priority, imageHover = false }: Prop
       <img
         src={src}
         alt={alt}
-        className={`absolute inset-0 h-full w-full object-cover${imageHover ? ` ${cardMediaImageHoverClasses}` : ''}`}
+        className={`absolute inset-0 h-full w-full ${cardMediaImageClasses(imageHover)}`}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
         {...(priority ? { fetchPriority: 'high' as const } : {})}

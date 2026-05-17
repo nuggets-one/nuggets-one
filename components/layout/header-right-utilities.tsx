@@ -6,7 +6,7 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { Sparkles } from 'lucide-react'
+import { LogIn, Sparkles } from 'lucide-react'
 import { logoutAction } from '@/lib/actions/auth'
 import { readResponseJson } from '@/lib/http/parse-json-response'
 import type { LegalFooterLink } from '@/lib/queries/legal-pages'
@@ -83,11 +83,11 @@ function AnonymousAccountMenu({ legalLinks }: { legalLinks: readonly LegalFooter
   return (
     <details className="group relative">
       <summary
-        aria-label="Open account menu"
+        aria-label="Sign in"
         className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus/60 [&:-moz-focusring]:outline-none"
       >
-        <span className="inline-flex size-9 select-none items-center justify-center rounded-full border border-border bg-surface-raised text-xs font-semibold text-primary transition-colors hover:bg-surface active:bg-surface-raised">
-          G
+        <span className="inline-flex min-h-11 min-w-11 select-none items-center justify-center rounded-full bg-gray-900 p-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">
+          <LogIn className="size-[18px]" strokeWidth={2} aria-hidden />
         </span>
       </summary>
 

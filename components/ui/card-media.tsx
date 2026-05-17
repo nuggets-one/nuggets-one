@@ -1,5 +1,6 @@
+'use client'
+
 import Image from 'next/image'
-import { NuggetDetailLink } from '@/components/ui/nugget-detail-link'
 import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import {
   canRenderWithNextImage,
@@ -7,10 +8,13 @@ import {
   safeHostname,
   shouldOptimizeImage,
 } from '@/lib/ui/card-image-host'
+import { CardSourceBadge } from '@/components/ui/card-source-badge'
+import { GalleryImageTrigger } from '@/components/ui/gallery-image-trigger'
 import {
   cardMediaGroupClasses,
-  cardMediaImageHoverClasses,
+  cardMediaImageClasses,
 } from '@/lib/ui/card-media-hover'
+import type { CardImage } from '@/types/article'
 
 function NoPreviewPlaceholder() {
   return (
@@ -21,35 +25,57 @@ function NoPreviewPlaceholder() {
 }
 
 type Props = {
+  articleId: string
   href: string
   title: string
   hero_thumb_url: string | null
   hero_alt_text: string | null
+  mediaImages: CardImage[]
+  imageCount: number
   priority: boolean
+  sourceUrl?: string | null
+  sourceHost?: string | null
 }
 
 export function CardMedia({
+  articleId,
   href,
   title,
   hero_thumb_url,
   hero_alt_text,
+  mediaImages,
+  imageCount,
   priority,
+  sourceUrl,
+  sourceHost,
 }: Props) {
+  const showSource = Boolean(sourceUrl?.trim())
   const resolvedHeroUrl = resolveCardImageUrl(hero_thumb_url)
   const canShow = canRenderWithNextImage(resolvedHeroUrl)
   const useFetchRaster = Boolean(resolvedHeroUrl?.includes('/image/fetch/'))
+  const totalCount = Math.max(imageCount, mediaImages.length, canShow ? 1 : 0)
 
   return (
     <div className="w-full rounded-t-xl px-2 pb-2 pt-2">
       <div className="relative aspect-video overflow-hidden rounded-lg bg-bg">
-        <NuggetDetailLink
-          href={href}
-          className={`relative block h-full w-full ${cardMediaGroupClasses}`}
-          tabIndex={-1}
-          aria-hidden="true"
-        >
-          {canShow && resolvedHeroUrl ? (
-            useFetchRaster ? (
+        {showSource && sourceUrl ? (
+          <CardSourceBadge href={sourceUrl} label={sourceHost} />
+        ) : null}
+        {canShow && resolvedHeroUrl ? (
+          <GalleryImageTrigger
+            articleId={articleId}
+            title={hero_alt_text ?? title}
+            detailHref={href}
+            clickedUrl={hero_thumb_url ?? resolvedHeroUrl}
+            heroThumbUrl={hero_thumb_url}
+            allImages={mediaImages}
+            totalCount={totalCount}
+            imageIndex={0}
+            sourceUrl={sourceUrl}
+            sourceHost={sourceHost}
+            className={`absolute inset-0 overflow-hidden ${cardMediaGroupClasses} cursor-zoom-in`}
+          >
+            {useFetchRaster ? (
               <CardMediaRaster
                 src={resolvedHeroUrl}
                 alt={hero_alt_text ?? title}
@@ -61,17 +87,17 @@ export function CardMedia({
                 src={resolvedHeroUrl}
                 alt={hero_alt_text ?? title}
                 fill
-                className={`object-cover ${cardMediaImageHoverClasses}`}
+                className={cardMediaImageClasses(true)}
                 sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc((100vw - 3rem) / 2), (max-width: 1536px) calc((100vw - 4rem) / 4), 320px"
                 quality={75}
                 priority={priority}
                 unoptimized={!shouldOptimizeImage(safeHostname(resolvedHeroUrl))}
               />
-            )
-          ) : (
-            <NoPreviewPlaceholder />
-          )}
-        </NuggetDetailLink>
+            )}
+          </GalleryImageTrigger>
+        ) : (
+          <NoPreviewPlaceholder />
+        )}
       </div>
     </div>
   )

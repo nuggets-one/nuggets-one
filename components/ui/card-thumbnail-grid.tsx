@@ -1,121 +1,58 @@
-import Image from 'next/image'
-import { NuggetDetailLink } from '@/components/ui/nugget-detail-link'
-import { CardMediaRaster } from '@/components/ui/card-media-raster'
-import {
-  canRenderWithNextImage,
-  resolveCardImageUrl,
-  safeHostname,
-  shouldOptimizeImage,
-} from '@/lib/ui/card-image-host'
-import {
-  cardMediaGroupClasses,
-  cardMediaImageHoverClasses,
-} from '@/lib/ui/card-media-hover'
+﻿import { CardSourceBadge } from '@/components/ui/card-source-badge'
+import { ThumbnailGrid } from '@/components/ui/thumbnail-grid'
 import type { CardImage } from '@/types/article'
 
 type Props = {
+  articleId: string
   href: string
   title: string
+  heroThumbUrl: string | null
   images: CardImage[]
-  /** Total available image count — used to render the "+N" overlay when > 4. */
-  totalCount?: number
+  mediaImages: CardImage[]
+  totalCount: number
+  sourceUrl?: string | null
+  sourceHost?: string | null
 }
 
-/**
- * Multi-image card grid (Phase 14, §2.J / replication spec §8).
- *
- * Layouts (cells positioned via Tailwind grid-area utilities):
- *   - 2 images: 50/50 split.
- *   - 3 images: 1 large left + 2 stacked right.
- *   - 4+ images: 2x2 with `+N` overlay on cell 4.
- *
- * The single-image case is handled by `<CardMedia>` via `ArticleCard` when
- * the hero is empty and `images.length === 1`; this component is only invoked
- * when `images.length >= 2`.
- *
- * Server Component. The whole grid is wrapped in one outer `<Link>` so
- * clicking any cell navigates to the article (matches single-hero behavior).
- */
+/** Feed card wrapper around shared {@link ThumbnailGrid}. */
 export function CardThumbnailGrid({
+  articleId,
   href,
   title,
+  heroThumbUrl,
   images,
+  mediaImages,
   totalCount,
+  sourceUrl,
+  sourceHost,
 }: Props) {
   if (images.length < 2) return null
 
-  const cells = images.slice(0, 4)
-  const overflow = Math.max(0, (totalCount ?? cells.length) - 4)
-  const layout = cells.length === 2 ? 'two' : cells.length === 3 ? 'three' : 'four'
+  const showSource = Boolean(sourceUrl?.trim())
 
   return (
-    <div className="relative w-full overflow-hidden rounded-t-xl pt-2 px-2 pb-2">
-      <div className="aspect-video rounded-lg overflow-hidden w-full bg-surface-raised">
-        <NuggetDetailLink
-          href={href}
-          className="block h-full w-full"
-          tabIndex={-1}
-          aria-hidden="true"
-        >
-          <div className={gridClass(layout)}>
-            {cells.map((img, idx) => {
-              const isOverflowCell = layout === 'four' && idx === 3 && overflow > 0
-              return (
-                <div
-                  key={`${img.url}-${idx}`}
-                  className={`relative overflow-hidden bg-surface-raised ${cardMediaGroupClasses} ${cellClass(layout, idx)}`}
-                >
-                  <CellImage url={img.url} alt={img.alt ?? title} />
-                  {isOverflowCell && (
-                    <span
-                      className="absolute inset-0 flex items-center justify-center bg-overlay-strong text-base font-semibold text-inverse"
-                      aria-hidden="true"
-                    >
-                      +{overflow}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </NuggetDetailLink>
+    <div className="relative w-full overflow-hidden rounded-t-xl px-2 pb-2 pt-2">
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-raised">
+        {showSource && sourceUrl ? (
+          <CardSourceBadge href={sourceUrl} label={sourceHost} />
+        ) : null}
+        <ThumbnailGrid
+          title={title}
+          images={images}
+          totalCount={totalCount}
+          variant="card"
+          showSourceBadge={false}
+          lightbox={{
+            articleId,
+            title,
+            detailHref: href,
+            heroThumbUrl,
+            allImages: mediaImages,
+            sourceUrl,
+            sourceHost,
+          }}
+        />
       </div>
     </div>
   )
-}
-
-function CellImage({ url, alt }: { url: string; alt: string }) {
-  const resolvedUrl = resolveCardImageUrl(url)
-  // Host not in remotePatterns — Next/Image would error. Skip media instead
-  // of crashing; outer container's bg-surface-raised remains visible.
-  if (!resolvedUrl || !canRenderWithNextImage(resolvedUrl)) {
-    return null
-  }
-  if (resolvedUrl.includes('/image/fetch/')) {
-    return <CardMediaRaster src={resolvedUrl} alt={alt} priority={false} imageHover />
-  }
-  const host = safeHostname(resolvedUrl)
-  return (
-    <Image
-      src={resolvedUrl}
-      alt={alt}
-      fill
-      className={`object-cover ${cardMediaImageHoverClasses}`}
-      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
-      quality={75}
-      unoptimized={!shouldOptimizeImage(host)}
-    />
-  )
-}
-
-// 1px gap mirrors the replication spec — keeps each cell visually distinct.
-function gridClass(layout: 'two' | 'three' | 'four'): string {
-  if (layout === 'two') return 'grid h-full w-full grid-cols-2 gap-px'
-  if (layout === 'three') return 'grid h-full w-full grid-cols-2 grid-rows-2 gap-px'
-  return 'grid h-full w-full grid-cols-2 grid-rows-2 gap-px'
-}
-
-function cellClass(layout: 'two' | 'three' | 'four', idx: number): string {
-  if (layout === 'three' && idx === 0) return 'row-span-2'
-  return ''
 }

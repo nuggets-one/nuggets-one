@@ -1,13 +1,15 @@
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { getArticleById } from '@/lib/queries/article'
+import { getArticleGalleryMedia } from '@/lib/queries/article-media'
+import { buildCardGalleryImages } from '@/lib/ui/build-card-gallery'
+import { DetailHeroImage } from '@/components/ui/detail-hero-image'
+import { ThumbnailGrid } from '@/components/ui/thumbnail-grid'
 import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
 import { ArticleBody } from '@/components/ui/article-body'
 import { ArticleDetailHeader } from '@/components/ui/article-detail-header'
 import { ArticleDetailInlineActions } from '@/components/ui/article-detail-inline-actions'
 import { ArticleDetailYouTubeHero } from '@/components/ui/article-detail-youtube-hero'
 import { ConsumerDisclaimerMarkdown } from '@/components/legal/consumer-disclaimer-markdown'
-import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import { MarkdownPageToc } from '@/components/ui/markdown-page-toc'
 import { TimestampLinkInterceptor } from '@/components/ui/timestamp-link-interceptor'
 import {
@@ -59,8 +61,9 @@ function getStreamLabel(stream: 'standard' | 'pulse'): string {
  */
 export async function ArticleContent({ id, inSheet = false }: Props) {
   const supabase = await createClient()
-  const [article, authResult, consumerDisclaimer] = await Promise.all([
+  const [article, galleryMedia, authResult, consumerDisclaimer] = await Promise.all([
     getArticleById(id),
+    getArticleGalleryMedia(id),
     supabase.auth.getUser(),
     getConsumerDisclaimer(),
   ])
@@ -76,7 +79,14 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
     isYouTubeHero && article.hero_video_id?.trim() && !trimmedHeroThumb
       ? youTubePosterHqUrl(article.hero_video_id)
       : null
-  const heroThumbForDetail = resolveCardImageUrl(trimmedHeroThumb || youtubePosterFallback || null)
+  const heroThumbRaw = trimmedHeroThumb || youtubePosterFallback || null
+  const { displayImages, totalImageCount } = buildCardGalleryImages(
+    heroThumbRaw,
+    galleryMedia.images,
+    galleryMedia.imageCount
+  )
+  const useDetailGallery = displayImages.length >= 2 && !isYouTubeHero
+  const heroThumbForDetail = resolveCardImageUrl(heroThumbRaw)
   const canRenderHeroImage = canRenderWithNextImage(heroThumbForDetail)
   const heroHost = heroThumbForDetail ? safeHostname(heroThumbForDetail) : ''
   const optimizeHeroImage = shouldOptimizeImage(heroHost)
@@ -86,6 +96,15 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
       : article.tag_slugs.slice()
   const detailHref = `/nuggets/${article.id}/${article.slug}`
   const sourceHost = getSourceHostLabel(article.source_url)
+  const detailLightbox = {
+    articleId: article.id,
+    title: article.hero_alt_text ?? article.title,
+    detailHref,
+    heroThumbUrl: heroThumbRaw,
+    allImages: galleryMedia.allImages,
+    sourceUrl: article.source_url,
+    sourceHost,
+  }
   const streamLabel = getStreamLabel(article.content_stream)
   const heroImageSizes = inSheet
     ? '(max-width: 1024px) 100vw, 500px'
@@ -205,27 +224,35 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
           sourceHost={sourceHost}
           imageSizes={heroImageSizes}
         />
+      ) : useDetailGallery ? (
+        <ThumbnailGrid
+          title={article.hero_alt_text ?? article.title}
+          images={displayImages}
+          totalCount={totalImageCount}
+          sourceUrl={article.source_url}
+          sourceHost={sourceHost}
+          variant="detail"
+          priority
+          imageSizes={heroImageSizes}
+          lightbox={detailLightbox}
+        />
       ) : canRenderHeroImage && heroThumbForDetail ? (
-        <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-raised">
-          {heroThumbForDetail.includes('/image/fetch/') ? (
-            <CardMediaRaster
-              src={heroThumbForDetail}
-              alt={article.hero_alt_text ?? article.title}
-              priority
-            />
-          ) : (
-            <Image
-              src={heroThumbForDetail}
-              alt={article.hero_alt_text ?? article.title}
-              fill
-              className="object-cover"
-              sizes={heroImageSizes}
-              quality={80}
-              priority
-              unoptimized={!optimizeHeroImage}
-            />
-          )}
-        </div>
+        <DetailHeroImage
+          articleId={article.id}
+          title={article.hero_alt_text ?? article.title}
+          detailHref={detailHref}
+          heroThumbUrl={heroThumbRaw}
+          allImages={galleryMedia.allImages}
+          totalImageCount={galleryMedia.imageCount}
+          sourceUrl={article.source_url}
+          sourceHost={sourceHost}
+          imageUrl={heroThumbForDetail}
+          alt={article.hero_alt_text ?? article.title}
+          imageSizes={heroImageSizes}
+          priority
+          unoptimized={!optimizeHeroImage}
+          useFetchRaster={heroThumbForDetail.includes('/image/fetch/')}
+        />
       ) : (
         <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl bg-surface-raised text-sm text-muted">
           Media unavailable

@@ -136,6 +136,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
           tags={tags}
           q={q}
           isAuthenticated={isAuthenticated}
+          isAdmin={isAdmin}
         />
       )}
     </>

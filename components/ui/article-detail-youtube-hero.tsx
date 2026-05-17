@@ -3,34 +3,14 @@
 import Image from 'next/image'
 import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import { dispatchYouTubeFeedPlay } from '@/lib/ui/youtube-feed-play'
+import { CardSourceBadge } from '@/components/ui/card-source-badge'
 import {
   canRenderWithNextImage,
   resolveCardImageUrl,
   safeHostname,
   shouldOptimizeImage,
 } from '@/lib/ui/card-image-host'
-
-function SourceExternalLinkIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="shrink-0"
-      aria-hidden
-    >
-      <path d="M15 3h6v6" />
-      <path d="M10 14 21 3" />
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-    </svg>
-  )
-}
+import { cardMediaImageClasses } from '@/lib/ui/card-media-hover'
 
 function YouTubeBrandMark() {
   return (
@@ -81,19 +61,7 @@ export function ArticleDetailYouTubeHero({
     <div className="w-full">
       <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-raised">
         {sourceUrl ? (
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            aria-label={
-              sourceHost ? `Open source on ${sourceHost} (opens in new tab)` : 'Open source in new tab'
-            }
-            className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-xs font-bold tracking-wide text-white backdrop-blur-sm transition-colors hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/70"
-          >
-            <SourceExternalLinkIcon />
-            <span>Source</span>
-          </a>
+          <CardSourceBadge href={sourceUrl} label={sourceHost} />
         ) : null}
         <button
           type="button"
@@ -121,7 +89,7 @@ export function ArticleDetailYouTubeHero({
                 src={resolvedHeroUrl}
                 alt={heroAltText ?? title}
                 fill
-                className="object-cover transition-opacity group-hover:opacity-95"
+                className={`${cardMediaImageClasses(false)} transition-opacity group-hover:opacity-95`}
                 sizes={imageSizes}
                 quality={80}
                 priority

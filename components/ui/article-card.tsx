@@ -7,8 +7,10 @@ import { CardThumbnailGrid } from '@/components/ui/card-thumbnail-grid'
 import { getSourceHostLabel } from '@/lib/ui/source-host-label'
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import { extractYouTubeVideoId, isCanonicalYouTubeVideoId } from '@/lib/ui/youtube-video-id'
-import { isImageUrl } from '@/lib/ui/is-image-url'
+import { isGalleryImageUrl } from '@/lib/ui/gallery-image-url'
 import { isPdfUrl } from '@/lib/ui/is-pdf-url'
+import { normalizeHeroThumbUrl } from '@/lib/ui/normalize-hero-thumb-url'
+import { buildCardGalleryImages } from '@/lib/ui/build-card-gallery'
 import type { ArticleCardProps } from '@/types/article'
 
 type Props = {
@@ -41,6 +43,7 @@ export function ArticleCard({
     tag_labels,
     source_url,
     images,
+    image_count,
   } = article
 
   const href = `/nuggets/${id}/${slug}`
@@ -52,7 +55,7 @@ export function ArticleCard({
     .filter((tag) => tag.slug !== 'nuggets' && tag.slug !== 'pulse')
   const sourceHost = getSourceHostLabel(source_url, { truncateAt: 24 })
 
-  const trimmedHeroThumb = hero_thumb_url?.trim() ?? ''
+  const trimmedHeroThumb = normalizeHeroThumbUrl(hero_thumb_url) ?? ''
   const rawVideoId = (() => {
     const stored = hero_video_id?.trim() ?? ''
     if (stored && isCanonicalYouTubeVideoId(stored)) return stored
@@ -86,10 +89,15 @@ export function ArticleCard({
   if (heroThumbForCard && isPdfUrl(heroThumbForCard)) {
     const raster = images
       .map((i) => i.url.trim())
-      .find((u) => u && !isPdfUrl(u) && isImageUrl(u))
+      .find((u) => u && isGalleryImageUrl(u))
     if (raster) heroThumbForCard = raster
   }
-  const useThumbnailGrid = images.length >= 2
+  const { displayImages, totalImageCount } = buildCardGalleryImages(
+    heroThumbForCard,
+    images,
+    image_count
+  )
+  const useThumbnailGrid = displayImages.length >= 2
 
   const youtubeIdFromSource = extractYouTubeVideoId(source_url)
   const hasYouTubePlayback =
@@ -111,10 +119,15 @@ export function ArticleCard({
     >
       {useThumbnailGrid ? (
         <CardThumbnailGrid
+          articleId={id}
           href={href}
           title={hero_alt_text ?? title}
-          images={images}
-          totalCount={images.length}
+          heroThumbUrl={heroThumbForCard}
+          images={displayImages}
+          mediaImages={images}
+          totalCount={totalImageCount}
+          sourceUrl={source_url}
+          sourceHost={sourceHost}
         />
       ) : showYouTubeFeedHero ? (
         <YouTubeFeedHero
@@ -129,11 +142,16 @@ export function ArticleCard({
         />
       ) : (
         <CardMedia
+          articleId={id}
           href={href}
           title={title}
           hero_thumb_url={heroThumbForCard}
           hero_alt_text={hero_alt_text}
+          mediaImages={images}
+          imageCount={image_count}
           priority={priority}
+          sourceUrl={source_url}
+          sourceHost={sourceHost}
         />
       )}
 

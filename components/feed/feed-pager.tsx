@@ -14,6 +14,7 @@ type Props = {
   tags: string[]
   q: string
   isAuthenticated: boolean
+  isAdmin: boolean
 }
 
 type FeedApiResponse = {
@@ -21,7 +22,7 @@ type FeedApiResponse = {
   nextCursor: FeedCursor | null
 }
 
-export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated }: Props) {
+export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated, isAdmin }: Props) {
   const [cards, setCards] = useState<ArticleCardProps[]>([])
   const [cursor, setCursor] = useState<FeedCursor | null>(initialCursor)
   const [isLoading, setIsLoading] = useState(false)
@@ -106,6 +107,9 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated }: P
               article={article}
               isAuthenticated={isAuthenticated}
               initialBookmarked={false}
+              adminEditHref={
+                isAdmin ? `/admin/articles/${article.id}` : null
+              }
             />
           ))}
         </div>
