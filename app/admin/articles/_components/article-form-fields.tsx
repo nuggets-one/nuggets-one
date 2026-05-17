@@ -1,8 +1,11 @@
 'use client'
 
 import { useMemo, useRef, useState, type ClipboardEvent, type MouseEvent } from 'react'
+import { AdminCardImagePreview } from './admin-card-image-preview'
 import { CardCoverPreviewPanel } from './card-cover-preview'
+import { hasCloudinaryCloudName } from '@/lib/ui/cloudinary-fetch'
 import { isYouTubeUrl } from '@/lib/ui/excerpt-card'
+import { isImageUrl } from '@/lib/ui/is-image-url'
 import {
   describeCardCoverPreview,
   parseAdminMediaUrlList,
@@ -73,6 +76,9 @@ export function ArticleFormFields({
   }, [sourceUrl, effectiveThumbnailUrl, mediaUrlsValue])
 
   const sourceIsYouTube = isYouTubeUrl(sourceUrl.trim() || null)
+  const showCloudinaryEnvWarning =
+    !hasCloudinaryCloudName() &&
+    parseAdminMediaUrlList(mediaUrlsValue).some((url) => isImageUrl(url) && !isYouTubeUrl(url))
 
   return (
     <div className="space-y-4 py-1">
@@ -126,7 +132,10 @@ export function ArticleFormFields({
           </label>
         </div>
 
-        <CardCoverPreviewPanel preview={cardCoverPreview} />
+        <CardCoverPreviewPanel
+          preview={cardCoverPreview}
+          showCloudinaryEnvWarning={showCloudinaryEnvWarning}
+        />
 
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <label className="flex flex-col gap-1.5">
@@ -220,9 +229,7 @@ export function ArticleFormFields({
                 }`}
               >
                 <div className="aspect-video bg-surface">
-                  {/* Admin previews accept arbitrary pasted URLs; next/image remotePatterns are intentionally narrower. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  <AdminCardImagePreview url={url} />
                 </div>
                 <figcaption className="space-y-2 px-2 py-2 text-[11px] text-muted">
                   <label className="flex cursor-pointer items-center gap-1.5 font-medium text-primary">
@@ -477,8 +484,10 @@ function parseUrls(value: string): string[] {
       if (!url || seen.has(url)) return false
       try {
         const parsed = new URL(url)
-        const isImageLike = /\.(avif|gif|jpe?g|png|webp)(\?.*)?$/i.test(parsed.pathname) || parsed.hostname === 'res.cloudinary.com'
-        if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && isImageLike) {
+        if (
+          (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+          (isImageUrl(url) || parsed.hostname === 'res.cloudinary.com')
+        ) {
           seen.add(url)
           return true
         }
