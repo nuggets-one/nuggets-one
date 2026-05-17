@@ -32,7 +32,7 @@ export function CardThumbnailGrid({
 
   return (
     <div className="relative w-full overflow-hidden rounded-t-xl px-2 pb-2 pt-2">
-      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-raised">
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
         {showSource && sourceUrl ? (
           <CardSourceBadge href={sourceUrl} label={sourceHost} />
         ) : null}

@@ -12,7 +12,7 @@ import {
 } from '@/lib/ui/card-image-host'
 import {
   cardMediaGroupClasses,
-  cardMediaImageClasses,
+  cardMediaCoverImageClasses,
 } from '@/lib/ui/card-media-hover'
 import { normalizeHeroThumbUrl } from '@/lib/ui/normalize-hero-thumb-url'
 import type { CardImage } from '@/types/article'
@@ -85,7 +85,7 @@ export function ThumbnailGrid({
       <div className={gridClass(layout)}>
         {cells.map((img, idx) => {
           const isOverflowCell = layout === 'four' && idx === 3 && overflow > 0
-          const cellClassName = `relative h-full min-h-[44px] overflow-hidden bg-surface-raised ${
+          const cellClassName = `relative h-full min-h-[44px] overflow-hidden bg-slate-100 dark:bg-slate-800 ${
             isDetail ? '' : cardMediaGroupClasses
           } ${cellClass(layout, idx)}`
           const cellInner = (
@@ -99,7 +99,7 @@ export function ThumbnailGrid({
               />
               {isOverflowCell ? (
                 <span
-                  className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-black/70 text-inverse"
+                  className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-black/80 text-inverse backdrop-blur-sm"
                   aria-hidden="true"
                 >
                   <GridMoreIcon />
@@ -166,7 +166,7 @@ function CellImage({
   const resolvedUrl = resolveCardImageUrl(normalizeHeroThumbUrl(url))
   if (!resolvedUrl || !canRenderWithNextImage(resolvedUrl)) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-surface-raised text-[10px] font-medium text-muted">
+      <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-[10px] font-medium text-muted dark:bg-slate-800">
         Preview
       </div>
     )
@@ -187,7 +187,7 @@ function CellImage({
       src={resolvedUrl}
       alt={alt}
       fill
-      className={cardMediaImageClasses(imageHover)}
+      className={cardMediaCoverImageClasses(imageHover)}
       sizes={sizes}
       quality={imageHover ? 75 : 80}
       priority={priority}
@@ -197,8 +197,8 @@ function CellImage({
 }
 
 function gridClass(layout: 'two' | 'three' | 'four'): string {
-  if (layout === 'two') return 'grid h-full w-full grid-cols-2 gap-px'
-  return 'grid h-full w-full grid-cols-2 grid-rows-2 gap-px'
+  if (layout === 'two') return 'grid h-full w-full grid-cols-2 gap-1'
+  return 'grid h-full w-full grid-cols-2 grid-rows-2 gap-1'
 }
 
 function cellClass(layout: 'two' | 'three' | 'four', idx: number): string {
