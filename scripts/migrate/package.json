@@ -6,6 +6,9 @@
     "etl:articles": "tsx migrate-articles.ts",
     "etl:collections": "tsx migrate-collections.ts",
     "backfill:card-preview": "tsx backfill-card-preview.ts",
+    "backfill:legacy-media": "tsx backfill-legacy-media-heroes.ts",
+    "backfill:cloudinary-heroes": "tsx backfill-external-heroes-to-cloudinary.ts",
+    "backfill:missing-previews": "tsx backfill-missing-card-previews.ts",
     "test:handoff": "tsx --test tests/*.test.ts",
     "apply:migration": "node apply-migration.mjs",
     "apply:legal-pages": "node apply-migration.mjs supabase/migrations/20240001000008_legal_pages.sql"

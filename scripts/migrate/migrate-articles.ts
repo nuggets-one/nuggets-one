@@ -7,15 +7,21 @@
 //   status (string, ~2% presence) → wins over isPublished if present
 //   contentStream 'both'|null|missing → 'standard'; 'pulse' → 'pulse'
 //   content → content_markdown
-//   sourceUrl / externalLinks[0] → source_url
+//   sourceUrl / externalLinks → source_url (attribution — may be PDF)
 //   created_at derived from ObjectId timestamp (no createdAt field in docs)
-//   primaryMedia image → hero_thumb_url + article_media kind='image'
-//   primaryMedia video → hero_media_kind='youtube' + hero_video_id + article_media kind='youtube'
-//   hero_media_id → article_media.id (always set when media exists; null only if no media)
+//   primaryMedia + supportingMedia + media + images + displayImageIndex → article_media + hero_*
+//   (see legacy-article-media.ts — PDFs are never card heroes)
+//   hero_media_id → article_media.id for chosen hero row
 //   tags/tagIds (legacy shape variants) → article_tags join rows + tag_slugs[]
 
 import { connectMongo, disconnectMongo } from './mongo-client'
 import { db } from './supabase-client'
+import {
+  firstExternalLinkUrl,
+  heroFieldsFromCardRow,
+  resolveLegacyMedia,
+  type LegacyMongoArticle,
+} from './legacy-article-media'
 import { generateArticleSlug } from '../shared/slug'
 import { resolveCardPreview } from '../shared/article-preview'
 import mongoose from 'mongoose'
@@ -67,8 +73,7 @@ const ArticleSchema = new mongoose.Schema({
 const MongoArticle = mongoose.models.Article ||
   mongoose.model('Article', ArticleSchema, 'articles')
 
-type LegacyArticleDoc = {
-  [key: string]: unknown
+type LegacyArticleDoc = LegacyMongoArticle & {
   _id: mongoose.Types.ObjectId
   title?: string
   excerpt?: string
@@ -78,12 +83,8 @@ type LegacyArticleDoc = {
   isPublished?: boolean
   publishedAt?: Date | string | null
   visibility?: string
-  sourceUrl?: string
-  externalLinks?: unknown
   tags?: unknown
   tagIds?: unknown
-  primaryMedia?: unknown
-  media?: unknown
 }
 
 // Blueprint §12.2: 'both'|null|undefined → 'standard'; 'pulse' → 'pulse'
@@ -99,152 +100,9 @@ function normalizeSlug(raw: string | null | undefined): string | null {
   return slug || null
 }
 
-// Derive hero fields + article_media payload from primaryMedia
-// Blueprint §12.2a: hero_media_id must always be set when media exists
-function deriveMedia(primaryMedia: unknown): {
-  hero_thumb_url: string | null
-  hero_alt_text: string | null
-  hero_media_kind: 'image' | 'youtube' | null
-  hero_video_id: string | null
-  mediaRow: { url: string; kind: 'image' | 'youtube'; video_id: string | null } | null
-} {
-  const media = (primaryMedia ?? {}) as {
-    url?: unknown
-    type?: unknown
-    kind?: unknown
-    mediaType?: unknown
-    videoId?: unknown
-    thumbnail_url?: unknown
-    alt?: unknown
-  }
-  if (typeof media.url !== 'string' || !media.url.trim()) {
-    return { hero_thumb_url: null, hero_alt_text: null, hero_media_kind: null, hero_video_id: null, mediaRow: null }
-  }
-
-  const typeRaw = String(media.type ?? media.kind ?? media.mediaType ?? '').toLowerCase()
-  const isYoutube = typeRaw.includes('youtube')
-  const isVideo = typeRaw.includes('video') || isYoutube
-  const inferredVideoId = typeof media.videoId === 'string'
-    ? media.videoId
-    : extractYouTubeVideoId(media.url)
-
-  if (isVideo && inferredVideoId) {
-    return {
-      hero_thumb_url: typeof media.thumbnail_url === 'string' ? media.thumbnail_url : null,
-      hero_alt_text: typeof media.alt === 'string' ? media.alt : null,
-      hero_media_kind: 'youtube',
-      hero_video_id: inferredVideoId,
-      mediaRow: { url: media.url, kind: 'youtube', video_id: inferredVideoId },
-    }
-  }
-
-  return {
-    hero_thumb_url: media.url,
-    hero_alt_text: typeof media.alt === 'string' ? media.alt : null,
-    hero_media_kind: 'image',
-    hero_video_id: null,
-    mediaRow: { url: media.url, kind: 'image', video_id: null },
-  }
-}
-
-function extractYouTubeVideoId(url: unknown): string | null {
-  if (typeof url !== 'string' || !url.trim()) return null
-  const raw = url.trim()
-  const shortMatch = raw.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/)
-  if (shortMatch) return shortMatch[1]
-  const longMatch = raw.match(/[?&]v=([a-zA-Z0-9_-]{6,})/)
-  if (longMatch) return longMatch[1]
-  const embedMatch = raw.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/)
-  if (embedMatch) return embedMatch[1]
-  return null
-}
-
-/**
- * Legacy media appears under several shapes: primaryMedia, media[], heroImage, etc.
- * Normalize to the shape expected by deriveMedia().
- */
-function pickPrimaryMedia(doc: LegacyArticleDoc): { url: string; alt?: string; type?: string; videoId?: string } | null {
-  const candidate = doc.primaryMedia
-  if (candidate && typeof candidate === 'object') {
-    const c = candidate as Record<string, unknown>
-    const url = String(c.url ?? c.src ?? c.secure_url ?? '').trim()
-    if (url) {
-      return {
-        url,
-        alt: typeof c.alt === 'string' ? c.alt : undefined,
-        type: typeof c.type === 'string' ? c.type : undefined,
-        videoId: typeof c.videoId === 'string' ? c.videoId : undefined,
-      }
-    }
-  }
-
-  if (doc.media && typeof doc.media === 'object' && !Array.isArray(doc.media)) {
-    const mediaObj = doc.media as Record<string, unknown>
-    const url = String(mediaObj.url ?? mediaObj.src ?? mediaObj.secure_url ?? '').trim()
-    if (url) {
-      return {
-        url,
-        alt: typeof mediaObj.alt === 'string' ? mediaObj.alt : undefined,
-        type: typeof mediaObj.type === 'string' ? mediaObj.type : undefined,
-        videoId: typeof mediaObj.videoId === 'string' ? mediaObj.videoId : undefined,
-      }
-    }
-  }
-
-  if (Array.isArray(doc.media)) {
-    for (const m of doc.media) {
-      if (!m || typeof m !== 'object') continue
-      const url = String(m.url ?? m.src ?? m.secure_url ?? '').trim()
-      if (!url) continue
-      const kind = String(m.type ?? m.kind ?? m.mediaType ?? '').toLowerCase()
-      const videoId = typeof m.videoId === 'string' ? m.videoId : undefined
-      return {
-        url,
-        alt: typeof m.alt === 'string' ? m.alt : undefined,
-        type: kind.includes('video') || videoId ? 'video' : 'image',
-        videoId,
-      }
-    }
-  }
-
-  for (const key of ['heroImage', 'hero_image', 'thumbnail', 'coverImage', 'image']) {
-    const raw = doc[key]
-    if (typeof raw === 'string' && raw.trim()) {
-      return { url: raw.trim(), type: 'image' }
-    }
-    if (raw && typeof raw === 'object') {
-      const rawObj = raw as Record<string, unknown>
-      const url = String(rawObj.url ?? rawObj.src ?? rawObj.secure_url ?? '').trim()
-      if (url) return { url, alt: typeof rawObj.alt === 'string' ? rawObj.alt : undefined, type: 'image' }
-    }
-  }
-
-  return null
-}
-
 // Derive created_at from ObjectId timestamp (Migration Plan §3.2: no createdAt field on docs)
 function objectIdToDate(id: mongoose.Types.ObjectId): string {
   return new Date(parseInt(id.toString().slice(0, 8), 16) * 1000).toISOString()
-}
-
-/** Legacy externalLinks may be string[] or { url }[] (or mixed). */
-function firstExternalLinkUrl(links: unknown): string | null {
-  if (!Array.isArray(links) || links.length === 0) return null
-  const first = links[0]
-  if (typeof first === 'string') {
-    const t = first.trim()
-    return t || null
-  }
-  if (first && typeof first === 'object') {
-    const u = (first as { url?: string; href?: string; link?: string }).url
-      ?? (first as { href?: string }).href
-      ?? (first as { link?: string }).link
-    if (typeof u === 'string') {
-      const t = u.trim()
-      return t || null
-    }
-  }
-  return null
 }
 
 function resolveTagSlugs(doc: LegacyArticleDoc, mongoTagIdToSlug: Map<string, string>): string[] {
@@ -379,25 +237,20 @@ async function main() {
     // Resolve tags from either embedded tags[] or referenced tagIds[]
     const tag_slugs: string[] = resolveTagSlugs(doc, mongoTagIdToSlug)
 
-    // source_url: prefer sourceUrl, fall back to first externalLink
-    const source_url =
-      ((doc.sourceUrl as string) ?? '').trim() ||
-      firstExternalLinkUrl(doc.externalLinks) ||
-      null
-
-    const { hero_thumb_url, hero_alt_text, hero_media_kind, hero_video_id, mediaRow } =
-      deriveMedia(pickPrimaryMedia(doc))
+    const legacyMedia = resolveLegacyMedia(doc)
+    const source_url = legacyMedia.source_url
+    const heroRow =
+      legacyMedia.heroIndex >= 0 ? legacyMedia.cardMedia[legacyMedia.heroIndex] : null
+    const heroFields = heroRow ? heroFieldsFromCardRow(heroRow) : null
     const excerpt = ((doc.excerpt as string) ?? '').trim() || null
     const content_markdown = ((doc.content as string) ?? '').trim() || null
     const card_preview = resolveCardPreview({ content_markdown, excerpt })
 
     const id = crypto.randomUUID()
     const slug = generateArticleSlug(title, id)
-    const media_id = mediaRow ? crypto.randomUUID() : null
-
     if (isDryRun) {
       console.log(
-        `  [dry] ${status.toUpperCase()} | ${content_stream} | media=${mediaRow?.kind ?? 'none'} | tags=${tag_slugs.length} | ${title.slice(0, 55)}`
+        `  [dry] ${status.toUpperCase()} | ${content_stream} | media=${legacyMedia.cardMedia.length} | tags=${tag_slugs.length} | ${title.slice(0, 55)}`
       )
       inserted++
       continue
@@ -416,10 +269,10 @@ async function main() {
       published_at,
       created_at,
       source_url,
-      hero_thumb_url,
-      hero_alt_text,
-      hero_media_kind,
-      hero_video_id,
+      hero_thumb_url: heroFields?.hero_thumb_url ?? null,
+      hero_alt_text: null,
+      hero_media_kind: heroFields?.hero_media_kind ?? null,
+      hero_video_id: heroFields?.hero_video_id ?? null,
       hero_media_id: null,
       tag_slugs,
       legacy_mongo_id: legacyMongoId,
@@ -431,26 +284,36 @@ async function main() {
       continue
     }
 
-    // Insert article_media row
-    if (mediaRow && media_id) {
-      const { error: mediaErr } = await db.from('article_media').insert({
-        id: media_id,
+    if (legacyMedia.cardMedia.length > 0) {
+      const mediaInserts = legacyMedia.cardMedia.map((media) => ({
+        id: crypto.randomUUID(),
         article_id: id,
-        kind: mediaRow.kind,
-        url: mediaRow.url,
-        video_id: mediaRow.video_id,
-        sort_order: 0,
-        origin: 'manual',
-      })
+        kind: media.kind,
+        url: media.url,
+        video_id: media.video_id,
+        sort_order: media.sort_order,
+        origin: 'manual' as const,
+        hero_thumb_url: media.hero_thumb_url,
+      }))
+
+      const { data: insertedMedia, error: mediaErr } = await db
+        .from('article_media')
+        .insert(mediaInserts)
+        .select('id, url')
+
       if (mediaErr) {
         console.warn(`  ⚠ article_media insert failed for ${title.slice(0, 40)}: ${mediaErr.message}`)
-      } else {
-        const { error: heroRefErr } = await db
-          .from('articles')
-          .update({ hero_media_id: media_id })
-          .eq('id', id)
-        if (heroRefErr) {
-          console.warn(`  ⚠ hero_media_id update failed for ${title.slice(0, 40)}: ${heroRefErr.message}`)
+      } else if (heroRow) {
+        const heroMedia =
+          (insertedMedia ?? []).find((m) => m.url === heroRow.url) ?? insertedMedia?.[0]
+        if (heroMedia?.id) {
+          const { error: heroRefErr } = await db
+            .from('articles')
+            .update({ hero_media_id: heroMedia.id as string })
+            .eq('id', id)
+          if (heroRefErr) {
+            console.warn(`  ⚠ hero_media_id update failed for ${title.slice(0, 40)}: ${heroRefErr.message}`)
+          }
         }
       }
     }

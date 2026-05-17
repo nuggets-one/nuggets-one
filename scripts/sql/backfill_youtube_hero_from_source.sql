@@ -7,7 +7,11 @@ SET
   hero_media_kind = 'youtube',
   hero_thumb_url = 'https://i.ytimg.com/vi/' || (regexp_match(a.source_url, 'youtu\.be/([a-zA-Z0-9_-]{11})'))[1] || '/hqdefault.jpg'
 WHERE a.source_url ~ 'youtu\.be/[a-zA-Z0-9_-]{11}'
-  AND (a.hero_video_id IS NULL OR a.hero_media_kind IS DISTINCT FROM 'youtube');
+  AND (
+    a.hero_video_id IS NULL
+    OR a.hero_media_kind IS DISTINCT FROM 'youtube'
+    OR a.hero_thumb_url IS NULL
+  );
 
 UPDATE articles a
 SET
@@ -15,7 +19,11 @@ SET
   hero_media_kind = 'youtube',
   hero_thumb_url = 'https://i.ytimg.com/vi/' || (regexp_match(a.source_url, '[?&]v=([a-zA-Z0-9_-]{11})'))[1] || '/hqdefault.jpg'
 WHERE a.source_url ~ '[?&]v=[a-zA-Z0-9_-]{11}'
-  AND (a.hero_video_id IS NULL OR a.hero_media_kind IS DISTINCT FROM 'youtube');
+  AND (
+    a.hero_video_id IS NULL
+    OR a.hero_media_kind IS DISTINCT FROM 'youtube'
+    OR a.hero_thumb_url IS NULL
+  );
 
 UPDATE articles a
 SET
@@ -23,4 +31,8 @@ SET
   hero_media_kind = 'youtube',
   hero_thumb_url = 'https://i.ytimg.com/vi/' || (regexp_match(a.source_url, 'youtube\.com/live/([a-zA-Z0-9_-]{11})'))[1] || '/hqdefault.jpg'
 WHERE a.source_url ~ 'youtube\.com/live/[a-zA-Z0-9_-]{11}'
-  AND (a.hero_video_id IS NULL OR a.hero_media_kind IS DISTINCT FROM 'youtube');
+  AND (
+    a.hero_video_id IS NULL
+    OR a.hero_media_kind IS DISTINCT FROM 'youtube'
+    OR a.hero_thumb_url IS NULL
+  );
