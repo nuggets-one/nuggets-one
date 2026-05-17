@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import { GalleryImageTrigger } from '@/components/ui/gallery-image-trigger'
-import { cardMediaImageClasses } from '@/lib/ui/card-media-hover'
+import { cardMediaContainImageClasses } from '@/lib/ui/card-media-hover'
 import type { CardImage } from '@/types/article'
 
 type Props = {
@@ -54,16 +54,17 @@ export function DetailHeroImage({
       imageIndex={0}
       sourceUrl={sourceUrl}
       sourceHost={sourceHost}
-      className="relative block aspect-video w-full cursor-zoom-in overflow-hidden rounded-2xl bg-surface-raised"
+      className="relative flex aspect-video w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800"
     >
       {useFetchRaster ? (
-        <CardMediaRaster src={imageUrl} alt={alt} priority={priority} />
+        <CardMediaRaster src={imageUrl} alt={alt} priority={priority} fit="contain" />
       ) : (
         <Image
           src={imageUrl}
           alt={alt}
-          fill
-          className={cardMediaImageClasses(false)}
+          width={640}
+          height={360}
+          className={cardMediaContainImageClasses(false)}
           sizes={imageSizes}
           quality={80}
           priority={priority}

@@ -10,7 +10,7 @@ import {
   safeHostname,
   shouldOptimizeImage,
 } from '@/lib/ui/card-image-host'
-import { cardMediaImageClasses } from '@/lib/ui/card-media-hover'
+import { cardMediaCoverImageClasses } from '@/lib/ui/card-media-hover'
 
 function YouTubeBrandMark() {
   return (
@@ -59,7 +59,7 @@ export function ArticleDetailYouTubeHero({
 
   return (
     <div className="w-full">
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-raised">
+      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-slate-900">
         {sourceUrl ? (
           <CardSourceBadge href={sourceUrl} label={sourceHost} />
         ) : null}
@@ -73,7 +73,7 @@ export function ArticleDetailYouTubeHero({
               articleId,
             })
           }
-          className="group relative block h-full w-full min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised"
+          className="group relative block h-full w-full min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           aria-label={`Play YouTube video: ${title}`}
         >
           {canShow && resolvedHeroUrl ? (
@@ -83,13 +83,14 @@ export function ArticleDetailYouTubeHero({
                 alt={heroAltText ?? title}
                 priority
                 imageHover
+                fit="cover"
               />
             ) : (
               <Image
                 src={resolvedHeroUrl}
                 alt={heroAltText ?? title}
                 fill
-                className={`${cardMediaImageClasses(false)} transition-opacity group-hover:opacity-95`}
+                className={`${cardMediaCoverImageClasses(false)} transition-opacity group-hover:opacity-95`}
                 sizes={imageSizes}
                 quality={80}
                 priority
@@ -97,11 +98,11 @@ export function ArticleDetailYouTubeHero({
               />
             )
           ) : (
-            <span className="absolute inset-0 bg-surface-raised" aria-hidden />
+            <span className="absolute inset-0 bg-slate-900" aria-hidden />
           )}
 
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[1] bg-gradient-to-t from-black/90 via-black/70 to-transparent px-3 py-2"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[1] bg-gradient-to-t from-black/70 to-transparent px-3 py-2"
             aria-hidden
           >
             <div className="flex items-center gap-1.5">
