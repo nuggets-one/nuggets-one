@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import { GalleryImageTrigger } from '@/components/ui/gallery-image-trigger'
+import { cardMediaImageClasses } from '@/lib/ui/card-media-hover'
 import type { CardImage } from '@/types/article'
 
 type Props = {
