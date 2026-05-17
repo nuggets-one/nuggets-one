@@ -5,12 +5,15 @@
  */
 export const cardMediaGroupClasses = 'group/media cursor-pointer'
 
-/** Legacy feed cards: fill the frame, anchor to top (screenshots, banners). */
-export const cardMediaObjectFitClasses = 'object-cover object-top'
-
 export const cardMediaImageHoverClasses =
   'transition-transform duration-300 motion-reduce:transition-none motion-reduce:group-hover/media:scale-100 group-hover/media:scale-105'
 
-export function cardMediaImageClasses(imageHover = false): string {
-  return `${cardMediaObjectFitClasses}${imageHover ? ` ${cardMediaImageHoverClasses}` : ''}`
+/** YouTube posters and multi-image grid cells — fill frame edge-to-edge. */
+export function cardMediaCoverImageClasses(imageHover = false): string {
+  return `object-cover${imageHover ? ` ${cardMediaImageHoverClasses}` : ''}`
+}
+
+/** Uploaded/screenshot heroes — letterbox inside 16:9 frame (no crop). */
+export function cardMediaContainImageClasses(imageHover = false): string {
+  return `max-h-full max-w-full h-auto w-auto object-contain${imageHover ? ` ${cardMediaImageHoverClasses}` : ''}`
 }
