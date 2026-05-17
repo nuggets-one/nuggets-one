@@ -11,13 +11,13 @@ import {
 } from '@/lib/ui/card-image-host'
 import { CardSourceBadge } from '@/components/ui/card-source-badge'
 import {
+  cardMediaCoverImageClasses,
   cardMediaGroupClasses,
-  cardMediaImageClasses,
 } from '@/lib/ui/card-media-hover'
 
 function NoPreviewPlaceholder() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-bg text-xs font-medium text-muted">
+    <div className="flex h-full w-full items-center justify-center bg-slate-900 text-xs font-medium text-muted">
       No preview
     </div>
   )
@@ -69,7 +69,7 @@ export function YouTubeFeedHero({
 
   return (
     <div className="w-full rounded-t-xl px-2 pb-2 pt-2">
-      <div className="relative aspect-video overflow-hidden rounded-lg bg-bg">
+      <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900">
         {sourceUrl ? (
           <CardSourceBadge href={sourceUrl} label={sourceHost} />
         ) : null}
@@ -93,13 +93,14 @@ export function YouTubeFeedHero({
                 alt={hero_alt_text ?? title}
                 priority={priority}
                 imageHover
+                fit="cover"
               />
             ) : (
               <Image
                 src={resolvedHeroUrl}
                 alt={hero_alt_text ?? title}
                 fill
-                className={cardMediaImageClasses(true)}
+                className={cardMediaCoverImageClasses(true)}
                 sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc((100vw - 3rem) / 2), (max-width: 1536px) calc((100vw - 4rem) / 4), 320px"
                 quality={75}
                 priority={priority}
@@ -110,12 +111,8 @@ export function YouTubeFeedHero({
             <NoPreviewPlaceholder />
           )}
 
-          {/*
-            Strong bottom scrim: some YouTube posters include channel/wordmark art
-            in this band; a light gradient reads as a "gap" between the SVG and title.
-          */}
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[1] rounded-b-lg bg-gradient-to-t from-black/95 via-black/80 to-transparent px-2 py-1.5 backdrop-blur-[2px]"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[1] rounded-b-lg bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5"
             aria-hidden
           >
             <div className="flex items-center gap-1.5">
