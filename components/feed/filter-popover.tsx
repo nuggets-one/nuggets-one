@@ -18,6 +18,7 @@ import {
   filterTagsVisibleInPicker,
   groupedSortedByCount,
 } from '@/lib/feed/group-official-tags'
+import { useScrollLock } from '@/lib/ui/use-scroll-lock'
 
 type Props = {
   tags: TagSummary[]
@@ -114,6 +115,7 @@ export function FilterPopover({
   )
 
   const [open, setOpen] = useState(false)
+  useScrollLock(open)
   const [localSelected, setLocalSelected] = useState<string[]>(committed)
   const [query, setQuery] = useState('')
 

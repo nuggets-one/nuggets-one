@@ -26,7 +26,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium-desktop',
+      testIgnore: /sheet-scroll-mobile\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chromium-mobile',
+      testMatch: /sheet-scroll-mobile\.spec\.ts/,
+      use: { ...devices['iPhone 13'] },
     },
   ],
 })

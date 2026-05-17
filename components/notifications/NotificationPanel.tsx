@@ -10,6 +10,7 @@ import {
 } from '@/lib/actions/notifications'
 import type { NotificationRow } from '@/lib/queries/notifications'
 import { readResponseJson } from '@/lib/http/parse-json-response'
+import { useScrollLock } from '@/lib/ui/use-scroll-lock'
 
 type Prefs = {
   mute_all: boolean
@@ -43,7 +44,7 @@ function BellButton({
       type="button"
       onClick={onClick}
       aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
-      className="relative shrink-0 flex items-center justify-center w-9 h-9 rounded-lg text-muted hover:text-primary hover:bg-surface-raised active:bg-surface-raised/80 transition-colors"
+      className="relative flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-primary active:bg-surface-raised/80"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -221,6 +222,7 @@ export function NotificationPanel({
 }) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  useScrollLock(isOpen)
   const [notifications, setNotifications] = useState<NotificationWithSlug[]>([])
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount)
   const [prefs, setPrefs] = useState<Prefs>({
