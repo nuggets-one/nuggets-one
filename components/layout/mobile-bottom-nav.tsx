@@ -3,7 +3,10 @@
 import clsx from 'clsx'
 import { Activity, Bookmark, House, Layers, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useQueryState } from 'nuqs'
+import { useEffect, useState } from 'react'
+import { DEFAULT_STREAM, type ContentStream } from '@/types/article'
 
 function pathActive(pathname: string, base: string) {
   return pathname === base || pathname.startsWith(`${base}/`)
@@ -30,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
 function isItemActive(
   id: NavItemId,
   pathname: string,
-  stream: string | null,
+  stream: ContentStream,
 ): boolean {
   const onHome = pathname === '/'
   switch (id) {
@@ -46,9 +49,18 @@ function isItemActive(
 }
 
 export function MobileBottomNav() {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const stream = searchParams.get('stream')
+  const pathname = usePathname() ?? ''
+  const [stream] = useQueryState<ContentStream>('stream', {
+    defaultValue: DEFAULT_STREAM,
+    parse: (v): ContentStream => (v === 'pulse' ? 'pulse' : 'standard'),
+    shallow: true,
+  })
+  // Active tab uses pathname + stream; defer until mount so SSR and the first
+  // client paint match (usePathname / URL state can differ during hydration).
+  const [navReady, setNavReady] = useState(false)
+  useEffect(() => {
+    setNavReady(true)
+  }, [])
 
   return (
     <nav
@@ -58,7 +70,7 @@ export function MobileBottomNav() {
     >
       <div className="grid min-h-[64px] grid-cols-4 items-stretch px-2 pb-1 pt-1">
         {NAV_ITEMS.map(({ id, label, href, icon: Icon, scroll, compactLabel }) => {
-          const active = isItemActive(id, pathname, stream)
+          const active = navReady && isItemActive(id, pathname, stream)
           return (
             <Link
               key={id}
