@@ -17,8 +17,16 @@ This paragraph should still be included after the quote.
 
   assert.equal(
     preview,
-    '> Markets are repricing faster than expected. Risk premia have widened materially.\n\nThis paragraph should still be included after the quote.'
+    '**Heading**\n\n> Markets are repricing faster than expected. Risk premia have widened materially.\n\nThis paragraph should still be included after the quote.'
   )
+})
+
+test('card preview bolds markdown heading lines', () => {
+  const preview = buildCardPreviewFromMarkdown(`## Speaker Details
+
+Body text after the heading.`)
+
+  assert.equal(preview, '**Speaker Details**\n\nBody text after the heading.')
 })
 
 test('card preview falls back to excerpt when body markdown is unavailable', () => {
@@ -53,6 +61,30 @@ test('card preview preserves legacy html blockquotes from excerpt fallback', () 
   assert.equal(
     preview,
     '> "If you have a take a lick of the lollipop of mediocrity you will suck forever." - **Sally Kornbluth (quoting a Duke colleague)** [00:04:28]\n\nTrailing context still appears after the quote.'
+  )
+})
+
+test('card preview preserves header plus bullet list from podcast metadata shape', () => {
+  const preview = buildCardPreviewFromMarkdown(`**Episode and Speaker Intelligence** [00:00:00]
+* **Podcast:** *The Markets* (Goldman Sachs)
+* **Host:** Chris Hussey
+* **Guest:** Shawn Tuteja`)
+
+  assert.equal(
+    preview,
+    '**Episode and Speaker Intelligence** [00:00:00]\n\n- **Podcast:** *The Markets* (Goldman Sachs)\n- **Host:** Chris Hussey\n- **Guest:** Shawn Tuteja'
+  )
+})
+
+test('card preview preserves list when header is separated by blank line', () => {
+  const preview = buildCardPreviewFromMarkdown(`**Episode** [00:00:00]
+
+- **Podcast:** The Markets
+- **Host:** Chris`)
+
+  assert.equal(
+    preview,
+    '**Episode** [00:00:00]\n\n- **Podcast:** The Markets\n- **Host:** Chris'
   )
 })
 

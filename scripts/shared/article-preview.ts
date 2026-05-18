@@ -86,18 +86,66 @@ function normalizeQuoteBlock(lines: string[]): string {
   return text ? `> ${text}` : ''
 }
 
+const LIST_LINE_RE = /^([-*+]|\d+\.)\s+/
+const HEADING_LINE_RE = /^#{1,6}\s+/
+
+function isListLine(line: string): boolean {
+  return LIST_LINE_RE.test(line)
+}
+
+function isHeadingLine(line: string): boolean {
+  return HEADING_LINE_RE.test(line)
+}
+
+function boldifyHeadingText(text: string): string {
+  const normalized = normalizeInlineMarkup(text)
+  if (!normalized) return ''
+  if (/^\*\*[^*][\s\S]*\*\*$/.test(normalized)) return normalized
+  return `**${normalized}**`
+}
+
+function normalizeParagraphLine(line: string): string {
+  if (isHeadingLine(line)) {
+    return boldifyHeadingText(line.replace(HEADING_LINE_RE, ''))
+  }
+  return normalizeInlineMarkup(line)
+}
+
 function normalizeListBlock(lines: string[]): string {
   const items = lines
-    .map((line) => normalizeInlineMarkup(line.replace(/^([-*+]|\d+\.)\s+/, ' ')))
+    .map((line) => normalizeInlineMarkup(line.replace(LIST_LINE_RE, ' ')))
     .filter(Boolean)
 
   return items.map((item) => `- ${item}`).join('\n')
 }
 
 function normalizeParagraphBlock(lines: string[]): string {
-  const text = normalizeInlineMarkup(lines.map((line) => line.replace(/^#{1,6}\s+/, '')).join(' '))
+  return lines.map(normalizeParagraphLine).filter(Boolean).join(' ')
+}
 
-  return text
+function normalizeMixedBlock(lines: string[]): string {
+  const parts: string[] = []
+  let run: string[] = []
+  let runKind: 'paragraph' | 'list' | null = null
+
+  function flush() {
+    if (run.length === 0 || !runKind) return
+    const normalized =
+      runKind === 'list' ? normalizeListBlock(run) : normalizeParagraphBlock(run)
+    if (normalized) parts.push(normalized)
+    run = []
+    runKind = null
+  }
+
+  for (const line of lines) {
+    const kind = isListLine(line) ? 'list' : 'paragraph'
+    if (runKind && runKind !== kind) flush()
+    runKind = kind
+    run.push(line)
+  }
+  flush()
+
+  return parts.join('\n\n')
 }
 
 function normalizeMarkdownBlock(block: string): string {
@@ -112,9 +160,10 @@ function normalizeMarkdownBlock(block: string): string {
     .filter(Boolean)
 
   if (lines.length === 0) return ''
-  if (lines.every((line) => /^#{1,6}\s+/.test(line))) return ''
+  if (lines.every(isHeadingLine)) return normalizeParagraphBlock(lines)
   if (lines.every((line) => /^>\s?/.test(line))) return normalizeQuoteBlock(lines)
-  if (lines.every((line) => /^([-*+]|\d+\.)\s+/.test(line))) return normalizeListBlock(lines)
+  if (lines.every(isListLine)) return normalizeListBlock(lines)
+  if (lines.some(isListLine)) return normalizeMixedBlock(lines)
   return normalizeParagraphBlock(lines)
 }
 
