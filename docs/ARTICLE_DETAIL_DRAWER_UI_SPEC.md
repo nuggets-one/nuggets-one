@@ -8,7 +8,7 @@
 >
 > Legacy Reference: `docs/article-detail-drawer-ui-spec old website.md` (non-implementable)
 >
-> Component Owners: `components/ui/sheet.tsx`, `components/ui/article-content.tsx`, `components/ui/article-body.tsx`, `components/ui/article-detail-header.tsx` (sheet), `components/ui/article-detail-inline-actions.tsx` (full page), `components/ui/article-detail-youtube-hero.tsx`, `components/ui/markdown-page-toc.tsx`, `components/layout/global-youtube-mini-player-host.tsx` / `components/ui/global-youtube-mini-player.tsx`, `components/ui/youtube-player.tsx` (legacy — not used on default detail hero path)
+> Component Owners: `components/ui/sheet.tsx`, `components/ui/article-content.tsx`, `components/ui/article-body.tsx`, `components/ui/article-detail-header.tsx` (sheet), `components/ui/article-detail-inline-actions.tsx` (full page), `components/ui/article-detail-youtube-hero.tsx`, `components/ui/timestamp-link-interceptor.tsx`, `components/ui/youtube-jump-to-hero.tsx`, `components/ui/markdown-page-toc.tsx`, `components/layout/global-youtube-mini-player-host.tsx` / `components/ui/global-youtube-mini-player.tsx`
 
 This document describes the **intercepted-route nugget detail sheet**: the parallel slot `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` renders `<Sheet><ArticleContent /></Sheet>`. The same `ArticleContent` appears on the full-page route `/nuggets/[id]/[slug]`; only the **outer shell** differs (sheet vs page). Treat the canonical route as the product concept and the shell as the context-specific presentation.
 
@@ -21,7 +21,8 @@ This document describes the **intercepted-route nugget detail sheet**: the paral
 - `components/ui/article-detail-youtube-hero.tsx` — YouTube hero poster → deferred **global** mini-player  
 - `components/ui/article-detail-header.tsx` — **sheet only:** sticky brand row + share/bookmark/more + close  
 - `components/ui/article-detail-inline-actions.tsx` — **full page only:** share/bookmark/more on the date meta row (no duplicate site chrome)  
-- `components/ui/youtube-player.tsx` — legacy in-flow poster/iframe island (superseded on detail by global mini-player)  
+- `components/ui/timestamp-link-interceptor.tsx` — `#yt=` body link delegation → global mini-player
+- `components/ui/youtube-jump-to-hero.tsx` — FAB when hero scrolls off-screen during playback  
 - `components/ui/bookmark-button.tsx`, `components/ui/share-button.tsx` — footer actions (`variant="detail"`)  
 - `components/ui/article-detail-skeleton.tsx` — loading placeholder inside Suspense  
 - `app/globals.css` — CSS variables for colors  
@@ -48,7 +49,7 @@ This document describes the **intercepted-route nugget detail sheet**: the paral
 | Full-page TOC rail + “On this page” | `components/ui/article-content.tsx` + `components/ui/markdown-page-toc.tsx` | TOC only when `!inSheet` and markdown has extractable headings; must not duplicate legal-only copy. |
 | Markdown typography and element overrides | `components/ui/article-body.tsx` | Must not be duplicated elsewhere. |
 | YouTube hero (poster → play) | `components/ui/article-detail-youtube-hero.tsx` + `components/ui/global-youtube-mini-player.tsx` | No in-flow iframe until user gesture; same deferred mini-player as the feed. |
-| Legacy YouTube in-flow island | `components/ui/youtube-player.tsx` | Not mounted on the default detail hero path; keep file only if a surface still imports it. |
+| YouTube body timestamps + jump FAB | `timestamp-link-interceptor.tsx`, `youtube-jump-to-hero.tsx`, `lib/ui/youtube-hero-scroll.ts` | Hero anchor `#nugget-youtube-hero`; scroll root `#nugget-doc-body` when TOC or YouTube hero. |
 
 ### 0.3 No-duplication invariant
 
@@ -212,6 +213,8 @@ Sections below are **top to bottom**.
 
 - Markdown: `<ArticleBody />` (§6)  
 - Optional `<TimestampLinkInterceptor>` wrapper when YouTube hero is present  
+- Body links `[label](#yt={seconds})` seek the **global mini-player**; hero scrolls into view on tap; `<YouTubeJumpToHero />` FAB when hero is off-screen  
+- Legacy `(MM:SS)` in markdown is normalized server-side in `<ArticleBody />`  
 - **Empty state:** `<p className="text-muted text-sm italic">No content available.</p>`  
 
 ### 4.6 Footer
