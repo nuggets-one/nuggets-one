@@ -6,6 +6,7 @@ import { CardCoverPreviewPanel } from './card-cover-preview'
 import { hasCloudinaryCloudName } from '@/lib/ui/cloudinary-fetch'
 import { isYouTubeUrl } from '@/lib/ui/excerpt-card'
 import { isImageUrl } from '@/lib/ui/is-image-url'
+import { convertClipboardHtmlToMarkdown } from '@/lib/markdown/html-clipboard-to-markdown'
 import {
   describeCardCoverPreview,
   parseAdminMediaUrlList,
@@ -272,9 +273,23 @@ export function ArticleFormFields({
   )
 
   async function handleBodyPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
-    const imageFiles = Array.from(event.clipboardData.files).filter((file) => file.type.startsWith('image/'))
-    if (imageFiles.length === 0) return
+    const { clipboardData } = event
+    const imageFiles = Array.from(clipboardData.files).filter((file) => file.type.startsWith('image/'))
+    if (imageFiles.length > 0) {
+      await pasteImages(event, imageFiles)
+      return
+    }
 
+    const html = clipboardData.getData('text/html')
+    if (html) {
+      event.preventDefault()
+      const plain = clipboardData.getData('text/plain')
+      insertAtCursor(convertClipboardHtmlToMarkdown(html, plain))
+      return
+    }
+  }
+
+  async function pasteImages(event: ClipboardEvent<HTMLTextAreaElement>, imageFiles: File[]) {
     event.preventDefault()
     setPasteStatus(`Uploading ${imageFiles.length} image${imageFiles.length === 1 ? '' : 's'}...`)
 
