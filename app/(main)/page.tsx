@@ -13,25 +13,30 @@ import { FeedEmpty } from '@/components/feed/feed-empty'
 import { FeedTopBar } from '@/components/feed/feed-top-bar'
 import { DEFAULT_STREAM } from '@/types/article'
 import type { ContentStream } from '@/types/article'
+import { getDefaultOgImageUrl, getSiteUrl } from '@/lib/seo/site-url'
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nuggets.one'
-const homeOgImage = `${siteUrl}/og-default.png`
+const HOME_TITLE = 'Nuggets: The Knowledge App'
+const HOME_DESCRIPTION =
+  'Hand-curated reads across technology, markets, and ideas. Standard and Market Pulse streams.'
+const homeOgImage = getDefaultOgImageUrl()
 
 export const metadata: Metadata = {
   title: {
-    absolute: 'Nuggets: The Knowledge App',
+    absolute: HOME_TITLE,
   },
-  description: 'Hand-curated reads across technology, markets, and ideas. Standard and Market Pulse streams.',
+  description: HOME_DESCRIPTION,
   openGraph: {
-    title: 'Nuggets: The Knowledge App',
+    title: HOME_TITLE,
     description: 'Hand-curated reads across technology, markets, and ideas.',
-    url: siteUrl,
+    url: getSiteUrl(),
     siteName: 'Nuggets',
     type: 'website',
-    images: [{ url: homeOgImage }],
+    images: [{ url: homeOgImage, width: 1200, height: 630, alt: HOME_TITLE }],
   },
   twitter: {
     card: 'summary_large_image',
+    title: HOME_TITLE,
+    description: 'Hand-curated reads across technology, markets, and ideas.',
     images: [homeOgImage],
   },
 }

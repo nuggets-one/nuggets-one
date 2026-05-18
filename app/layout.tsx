@@ -3,9 +3,11 @@ import { Providers } from "@/components/providers";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { getSiteUrl } from "@/lib/seo/site-url";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: {
     default: "Nuggets",
     template: "%s | Nuggets",

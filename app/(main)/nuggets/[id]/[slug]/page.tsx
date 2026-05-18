@@ -2,6 +2,10 @@ import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { getArticleMeta, getCanonicalArticleSlug } from '@/lib/queries/article'
+import { buildOgDescription } from '@/lib/seo/og-description'
+import { buildOgImageMetadata, resolveOgImageUrl } from '@/lib/seo/og-image'
+import { buildOgPageTitle } from '@/lib/seo/og-title'
+import { getSiteUrl } from '@/lib/seo/site-url'
 import { ArticleContent } from '@/components/ui/article-content'
 import { ArticleDetailSkeleton } from '@/components/ui/article-detail-skeleton'
 
@@ -18,33 +22,34 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const meta = await getArticleMeta(id)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nuggets.one'
-  const defaultOgImage = `${siteUrl}/og-default.png`
 
   if (!meta) {
     return { title: 'Nugget not found' }
   }
 
+  const pageTitle = buildOgPageTitle(meta.title)
+  const description = buildOgDescription(meta.excerpt)
+  const canonicalUrl = `${getSiteUrl()}/nuggets/${id}/${meta.slug}`
+  const ogImageUrl = resolveOgImageUrl(meta.hero_thumb_url)
+
   return {
-    title: meta.title,
-    description: meta.excerpt ?? undefined,
+    title: { absolute: pageTitle },
+    description,
     openGraph: {
-      title: meta.title,
-      description: meta.excerpt ?? undefined,
+      title: pageTitle,
+      description,
       type: 'article',
-      url: `${siteUrl}/nuggets/${id}/${meta.slug}`,
-      images: [
-        {
-          url: meta.hero_thumb_url ?? defaultOgImage,
-          width: 1200,
-          height: 630,
-          alt: meta.title,
-        },
-      ],
+      url: canonicalUrl,
+      images: buildOgImageMetadata(meta.hero_thumb_url, meta.title),
     },
-    twitter: { card: 'summary_large_image' },
+    twitter: {
+      card: 'summary_large_image',
+      title: pageTitle,
+      description,
+      images: [ogImageUrl],
+    },
     alternates: {
-      canonical: `${siteUrl}/nuggets/${id}/${meta.slug}`,
+      canonical: canonicalUrl,
     },
   }
 }
