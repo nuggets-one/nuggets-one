@@ -3,27 +3,9 @@ import { ShareButton } from '@/components/ui/share-button'
 import { CardMoreButton } from '@/components/ui/card-more-button'
 import { curatorChipFromDisplayName } from '@/lib/ui/author-curator-chip'
 
-const MS_PER_DAY = 86_400_000
-
 function formatCompactDate(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-
-  const now = Date.now()
-  const diffMs = now - d.getTime()
-  if (diffMs < 0) {
-    return new Intl.DateTimeFormat(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(d)
-  }
-
-  const ageDays = Math.floor(diffMs / MS_PER_DAY)
-  if (ageDays < 7) {
-    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
-    return rtf.format(-ageDays, 'day')
-  }
 
   return new Intl.DateTimeFormat(undefined, {
     day: 'numeric',

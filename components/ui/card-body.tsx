@@ -3,7 +3,7 @@ import { NuggetDetailLink } from '@/components/ui/nugget-detail-link'
 import { CardPreviewYouTubeTimestamps } from '@/components/ui/card-preview-youtube-timestamps'
 
 const CARD_PREVIEW_BODY_CLASS =
-  'max-h-[8.75rem] overflow-hidden text-xs leading-5 text-muted [&_a]:text-body-link [&_a]:no-underline [&_a:hover]:underline [&_blockquote]:my-4 [&_blockquote]:ml-0 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted [&_em]:italic [&_p]:m-0 [&_p]:mb-1.5 [&_strong]:font-bold [&_strong]:text-primary'
+  'max-h-[8.75rem] overflow-hidden text-xs leading-5 text-muted [&_a]:text-body-link [&_a]:no-underline [&_a:hover]:underline [&_blockquote]:my-4 [&_blockquote]:ml-0 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted [&_em]:italic [&_li]:mb-0.5 [&_ol]:my-0 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:m-0 [&_p]:mb-1.5 [&_strong]:font-bold [&_strong]:text-primary [&_ul]:my-0 [&_ul]:list-disc [&_ul]:pl-4'
 
 type Props = {
   href: string
