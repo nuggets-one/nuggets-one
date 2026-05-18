@@ -12,6 +12,11 @@ import { ArticleDetailYouTubeHero } from '@/components/ui/article-detail-youtube
 import { ConsumerDisclaimerMarkdown } from '@/components/legal/consumer-disclaimer-markdown'
 import { MarkdownPageToc } from '@/components/ui/markdown-page-toc'
 import { TimestampLinkInterceptor } from '@/components/ui/timestamp-link-interceptor'
+import { YouTubeJumpToHero } from '@/components/ui/youtube-jump-to-hero'
+import {
+  NUGGET_DOC_BODY_ID,
+  NUGGET_YOUTUBE_HERO_ID,
+} from '@/lib/ui/youtube-hero-scroll'
 import {
   canRenderWithNextImage,
   resolveCardImageUrl,
@@ -22,8 +27,6 @@ import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import { getSourceHostLabel } from '@/lib/ui/source-host-label'
 import { getConsumerDisclaimer } from '@/lib/queries/site-settings'
 import { extractMarkdownToc } from '@/lib/markdown/extract-markdown-toc'
-
-const NUGGET_DOC_BODY_ID = 'nugget-doc-body'
 
 type Props = {
   id: string
@@ -212,7 +215,10 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
   )
 
   const heroSection = (
-    <section className={inSheet ? 'overflow-hidden rounded-2xl bg-surface-raised' : ''}>
+    <section
+      id={isYouTubeHero && article.hero_video_id?.trim() ? NUGGET_YOUTUBE_HERO_ID : undefined}
+      className={inSheet ? 'overflow-hidden rounded-2xl bg-surface-raised' : ''}
+    >
       {isYouTubeHero && article.hero_video_id?.trim() ? (
         <ArticleDetailYouTubeHero
           videoId={article.hero_video_id.trim()}
@@ -334,7 +340,11 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
         {heroSection}
       </div>
 
-      <div id={showToc ? NUGGET_DOC_BODY_ID : undefined} className={docBlockClassName}>
+      <div id={
+          showToc || (isYouTubeHero && article.hero_video_id?.trim())
+            ? NUGGET_DOC_BODY_ID
+            : undefined
+        } className={docBlockClassName}>
         {bodyBlock}
         {disclaimerSection}
       </div>
@@ -380,6 +390,11 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
   )
 
   return (
-    <article className={`mx-auto w-full ${inSheet ? 'max-w-none pb-8' : 'pb-10'}`}>{articleShell}</article>
+    <article className={`mx-auto w-full ${inSheet ? 'max-w-none pb-8' : 'pb-10'}`}>
+      {articleShell}
+      {isYouTubeHero && article.hero_video_id?.trim() ? (
+        <YouTubeJumpToHero articleId={article.id} />
+      ) : null}
+    </article>
   )
 }

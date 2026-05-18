@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { CardMediaRaster } from '@/components/ui/card-media-raster'
 import { dispatchYouTubeFeedPlay } from '@/lib/ui/youtube-feed-play'
+import { trackYouTubePlay } from '@/lib/telemetry/youtube-play'
 import { CardSourceBadge } from '@/components/ui/card-source-badge'
 import {
   canRenderWithNextImage,
@@ -65,14 +66,20 @@ export function ArticleDetailYouTubeHero({
         ) : null}
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
             dispatchYouTubeFeedPlay({
               videoId,
               title,
               startSeconds: 0,
               articleId,
             })
-          }
+            trackYouTubePlay({
+              video_id: videoId,
+              seconds: 0,
+              source: 'poster',
+              article_id: articleId,
+            })
+          }}
           className="group relative block h-full w-full min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           aria-label={`Play YouTube video: ${title}`}
         >

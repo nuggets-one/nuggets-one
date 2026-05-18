@@ -4,8 +4,13 @@
 // for `#yt=` timestamp links on nuggets with a YouTube hero.
 
 import { type MouseEvent, type ReactNode } from 'react'
-import { resolveDetailYouTubeTimestampClick } from '@/lib/ui/youtube-inline-url'
+import { scrollYouTubeHeroIntoView } from '@/lib/ui/youtube-hero-scroll'
+import {
+  parseYouTubeInlineNavigation,
+  resolveDetailYouTubeTimestampClick,
+} from '@/lib/ui/youtube-inline-url'
 import { dispatchYouTubeFeedPlay } from '@/lib/ui/youtube-feed-play'
+import { trackYouTubePlay } from '@/lib/telemetry/youtube-play'
 
 type Props = {
   children: ReactNode
@@ -28,17 +33,33 @@ export function TimestampLinkInterceptor({
     if (!anchor) return
 
     const href = anchor.getAttribute('href')
-    const seconds = resolveDetailYouTubeTimestampClick(href, heroVideoId.trim())
-    if (seconds === null) return
+    const trimmedHeroId = heroVideoId.trim()
+    const seconds = resolveDetailYouTubeTimestampClick(href, trimmedHeroId)
+
+    if (seconds === null) {
+      const nav = parseYouTubeInlineNavigation(href)
+      if (!nav) return
+      e.preventDefault()
+      e.stopPropagation()
+      window.open(href ?? '', '_blank', 'noopener,noreferrer')
+      return
+    }
 
     e.preventDefault()
     e.stopPropagation()
     dispatchYouTubeFeedPlay({
-      videoId: heroVideoId.trim(),
+      videoId: trimmedHeroId,
       title: videoTitle,
       startSeconds: seconds,
       articleId,
     })
+    trackYouTubePlay({
+      video_id: trimmedHeroId,
+      seconds,
+      source: 'timestamp',
+      article_id: articleId,
+    })
+    scrollYouTubeHeroIntoView()
   }
 
   return <div onClickCapture={handleClickCapture}>{children}</div>
