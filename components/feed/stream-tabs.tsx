@@ -14,7 +14,7 @@ export function StreamTabs({ activeStream }: Props) {
   return (
     <nav
       aria-label="Content stream"
-      className="flex min-h-[44px] w-full sm:inline-flex sm:w-auto sm:gap-8"
+      className="flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto"
     >
       {STREAMS.map(({ value, label, href }) => {
         const active = activeStream === value
@@ -24,10 +24,10 @@ export function StreamTabs({ activeStream }: Props) {
             href={href}
             scroll={false}
             aria-current={active ? 'page' : undefined}
-            className={`flex min-h-[44px] flex-1 items-center justify-center border-b-2 px-2 text-sm font-semibold tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:justify-start sm:px-0 sm:pb-2.5 sm:pt-2 ${
+            className={`flex min-h-[44px] flex-1 items-center justify-center rounded-md px-3 text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:px-5 ${
               active
-                ? 'border-accent text-primary'
-                : 'border-transparent text-muted hover:text-primary'
+                ? 'border border-chip-active-border bg-chip-active-bg font-semibold text-chip-active-text shadow-chip-active'
+                : 'font-medium text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text'
             }`}
           >
             {label}
