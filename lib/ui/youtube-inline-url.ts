@@ -67,7 +67,8 @@ export function parseYouTubeInlineNavigation(href: string | null | undefined): {
   if (startParam && /^\d+$/.test(startParam)) {
     startSeconds = Number.parseInt(startParam, 10)
   } else {
-    const tParam = url.searchParams.get('t')
+    const tParam =
+      url.searchParams.get('t') ?? url.searchParams.get('time_continue')
     if (tParam) {
       const parsed = parseYoutubeTValue(tParam)
       if (parsed !== null) startSeconds = parsed

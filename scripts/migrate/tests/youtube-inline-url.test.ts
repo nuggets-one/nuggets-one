@@ -45,3 +45,17 @@ test('resolveDetailYouTubeTimestampClick ignores live URL for different hero', (
     null,
   )
 })
+
+test('parseYouTubeInlineNavigation reads time_continue param', () => {
+  const nav = parseYouTubeInlineNavigation(
+    'https://www.youtube.com/watch?v=YzFIUrdyleQ&time_continue=90',
+  )
+  assert.deepEqual(nav, { videoId: 'YzFIUrdyleQ', startSeconds: 90 })
+})
+
+test('parseYouTubeInlineNavigation prefers t over time_continue', () => {
+  const nav = parseYouTubeInlineNavigation(
+    'https://www.youtube.com/watch?v=YzFIUrdyleQ&t=30&time_continue=90',
+  )
+  assert.deepEqual(nav, { videoId: 'YzFIUrdyleQ', startSeconds: 30 })
+})
