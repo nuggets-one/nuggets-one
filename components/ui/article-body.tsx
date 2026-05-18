@@ -2,6 +2,7 @@ import { createElement } from 'react'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { normalizeParenTimestampsInMarkdown } from '@/lib/markdown/normalize-youtube-timestamps'
 import type {
   AnchorHTMLAttributes,
   HTMLAttributes,
@@ -76,11 +77,17 @@ function BodyImage({
 }
 
 function BodyLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) {
-  const { className, ...rest } = props
+  const { className, href, ...rest } = props
+  const isYtTimestamp = typeof href === 'string' && /#yt=\d+/.test(href)
+  const ytClasses = isYtTimestamp
+    ? 'cursor-pointer rounded-sm transition-colors active:bg-primary/10'
+    : ''
   return (
     <a
       {...rest}
-      className={`rounded-sm bg-transparent border-none p-0 font-inherit text-body-link no-underline transition-colors hover:underline ${className ?? ''}`.trim()}
+      href={href}
+      data-yt-link={isYtTimestamp ? '' : undefined}
+      className={`rounded-sm border-none bg-transparent p-0 font-inherit text-body-link no-underline transition-colors hover:underline ${ytClasses} ${className ?? ''}`.trim()}
     />
   )
 }
@@ -159,6 +166,7 @@ export function ArticleBody({
   compact = false,
   headingIdByPosition,
 }: Props) {
+  const normalizedMarkdown = normalizeParenTimestampsInMarkdown(markdown)
   const proseClassName = compact
     ? `prose max-w-none text-xs leading-relaxed text-muted
       prose-headings:mb-1 prose-headings:mt-1.5 prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-primary prose-headings:leading-tight
@@ -225,7 +233,7 @@ export function ArticleBody({
           ),
         }}
       >
-        {markdown}
+        {normalizedMarkdown}
       </ReactMarkdown>
     </div>
   )
