@@ -87,10 +87,15 @@ export function resolveArticleHeroFields(input: {
     }
   }
 
+  const defaultImageThumb =
+    heroThumb ??
+    imageMediaUrls.find((url) => isImageUrl(url) && !extractYouTubeVideoId(url)) ??
+    null
+
   return {
     hero_video_id: null,
-    hero_media_kind: imageMediaUrls.length > 0 || heroThumb ? 'image' : null,
-    hero_thumb_url: heroThumb,
+    hero_media_kind: imageMediaUrls.length > 0 || defaultImageThumb ? 'image' : null,
+    hero_thumb_url: defaultImageThumb,
     imageMediaUrls,
   }
 }
@@ -112,10 +117,15 @@ export function describeCardCoverPreview(resolved: ResolvedArticleHero): CardCov
     }
   }
 
-  if (resolved.hero_media_kind === 'image' && resolved.hero_thumb_url) {
+  const imageCoverUrl =
+    resolved.hero_thumb_url ??
+    resolved.imageMediaUrls.find((url) => isImageUrl(url) && !extractYouTubeVideoId(url)) ??
+    null
+
+  if (resolved.hero_media_kind === 'image' && imageCoverUrl) {
     return {
       kind: 'image',
-      posterUrl: resolveCardPreviewDisplayUrl(resolved.hero_thumb_url),
+      posterUrl: resolveCardPreviewDisplayUrl(imageCoverUrl),
       videoId: null,
       summary: 'Feed card: selected image cover.',
     }

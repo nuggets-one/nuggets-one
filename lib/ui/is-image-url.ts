@@ -61,5 +61,9 @@ export function isImageUrl(url: string): boolean {
     if (/\/(media|image|photo|pic|img)\//.test(path)) return true
   }
 
+  // §7 — CMS media-library paths without file extensions (Sitecore, AEM-style)
+  if (path.includes('/-/media/')) return true
+  if (/\/media\/(images?|photos?|pics?|assets?)\//.test(path)) return true
+
   return false
 }

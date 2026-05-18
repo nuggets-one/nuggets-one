@@ -19,6 +19,8 @@ const shouldBeImage = [
   'https://d111111abcdef8.cloudfront.net/path/_images/hero',
   'https://cdn.example.com/resource?id=1&fm=webp&q=70',
   'https://example.com/media/item?format=jpg',
+  'https://www.assetmanagement.hsbc.com.hk/en/intermediary/news-and-insights/-/media/Images/uk/investment-monthly-may-2026-chart-4',
+  'https://cms.example.com/content/dam/site/media/images/hero-banner',
 ]
 
 const shouldNotBeImage = [
