@@ -4,6 +4,7 @@ import {
   normalizeHeroMediaKind,
   type ArticleDetail,
   type ContentStream,
+  type RelatedArticlePreview,
 } from '@/types/article'
 
 export type SuggestionRow = {
@@ -49,6 +50,7 @@ export async function suggestArticles({
 
 const DETAIL_SELECT = `
   id,
+  created_by,
   slug,
   title,
   excerpt,
@@ -187,4 +189,52 @@ export async function getArticleIdBySlug(
 
   const row = data as unknown as { id: string; slug: string }
   return { id: row.id, currentSlug: row.slug }
+}
+
+export async function getRelatedArticles({
+  articleId,
+  stream,
+  tagSlugs,
+  limit = 3,
+}: {
+  articleId: string
+  stream: ContentStream
+  tagSlugs: string[]
+  limit?: number
+}): Promise<RelatedArticlePreview[]> {
+  const supabase = getPublicClient()
+  const cappedLimit = Math.min(Math.max(limit, 1), 6)
+
+  const baseQuery = supabase
+    .from('articles')
+    .select('id, slug, title, excerpt, published_at, source_url')
+    .eq('status', 'published')
+    .eq('content_stream', stream)
+    .neq('id', articleId)
+    .order('published_at', { ascending: false })
+    .limit(cappedLimit)
+
+  if (tagSlugs.length === 0) {
+    const { data, error } = await baseQuery
+    if (error || !data) return []
+    return data as RelatedArticlePreview[]
+  }
+
+  const { data: tagMatched, error: tagMatchError } = await supabase
+    .from('articles')
+    .select('id, slug, title, excerpt, published_at, source_url')
+    .eq('status', 'published')
+    .eq('content_stream', stream)
+    .neq('id', articleId)
+    .overlaps('tag_slugs', tagSlugs)
+    .order('published_at', { ascending: false })
+    .limit(cappedLimit)
+
+  if (!tagMatchError && tagMatched && tagMatched.length > 0) {
+    return tagMatched as RelatedArticlePreview[]
+  }
+
+  const { data: fallbackData, error: fallbackError } = await baseQuery
+  if (fallbackError || !fallbackData) return []
+  return fallbackData as RelatedArticlePreview[]
 }
