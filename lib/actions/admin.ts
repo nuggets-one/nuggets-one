@@ -9,9 +9,11 @@ import { revalidateArticle, revalidateOfficialTags } from '@/lib/cache'
 import { generateArticleSlug, slugify } from '@shared/slug'
 import { resolveCardPreview } from '@shared/article-preview'
 import { resolveArticleHeroFields } from '@/lib/admin/resolve-article-hero'
+import { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
 import { syncArticleTags } from '@/lib/admin/sync-article-tags'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
 import { normalizePublishPayload } from '@/lib/validation/publish-article'
+import { sanitizeDeleteRedirectTo } from '@/lib/auth/can-manage-article'
 import type { ContentStream } from '@/types/article'
 import { ZodError } from 'zod'
 
@@ -50,22 +52,8 @@ function parseTagSlugs(formData: FormData): string[] {
 }
 
 function parseMediaUrls(formData: FormData): string[] {
-  const urls = formData
-    .getAll('media_urls')
-    .map(asString)
-    .flatMap((value) => value.split(/[\s,]+/))
-    .map((url) => url.trim())
-    .filter(Boolean)
-    .filter((url) => {
-      try {
-        const parsed = new URL(url)
-        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-      } catch {
-        return false
-      }
-    })
-
-  return [...new Set(urls)]
+  const blob = formData.getAll('media_urls').map(asString).join('\n')
+  return parseAdminMediaUrlList(blob)
 }
 
 async function syncManualImageMedia(
@@ -149,6 +137,27 @@ async function requireAdmin() {
   if (error || !user || user.app_metadata?.is_admin !== true) {
     redirect('/')
   }
+  return user
+}
+
+async function requireArticleOwner(articleId: string) {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    redirect('/')
+  }
+
+  const db = createAdminClient()
+  const { data } = await db
+    .from('articles')
+    .select('created_by')
+    .eq('id', articleId)
+    .maybeSingle()
+
+  if (!data || data.created_by !== user.id) {
+    redirect('/')
+  }
+
   return user
 }
 
@@ -396,18 +405,28 @@ export async function unpublishArticleAction(formData: FormData) {
 }
 
 export async function deleteArticleAction(formData: FormData) {
-  await requireAdmin()
-  const db = createAdminClient()
-
-  const id = formData.get('id') as string
+  const id = String(formData.get('id') ?? '').trim()
   if (!id) throw new Error('Missing article id')
 
+  const redirectToRaw = formData.get('redirect_to')
+  const redirectTo =
+    typeof redirectToRaw === 'string' && redirectToRaw.trim()
+      ? sanitizeDeleteRedirectTo(redirectToRaw)
+      : null
+
+  if (redirectTo) {
+    await requireArticleOwner(id)
+  } else {
+    await requireAdmin()
+  }
+
+  const db = createAdminClient()
   const { error } = await db.from('articles').delete().eq('id', id)
 
   if (error) throw new Error(error.message)
 
   revalidateArticle(id)
-  redirect('/admin/articles')
+  redirect(redirectTo ?? '/admin/articles')
 }
 
 export async function createTagAction(formData: FormData) {

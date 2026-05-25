@@ -7,11 +7,8 @@ import { hasCloudinaryCloudName } from '@/lib/ui/cloudinary-fetch'
 import { isYouTubeUrl } from '@/lib/ui/excerpt-card'
 import { isImageUrl } from '@/lib/ui/is-image-url'
 import { convertClipboardHtmlToMarkdown } from '@/lib/markdown/html-clipboard-to-markdown'
-import {
-  describeCardCoverPreview,
-  parseAdminMediaUrlList,
-  resolveArticleHeroFields,
-} from '@/lib/ui/resolve-article-hero'
+import { describeCardCoverPreview, resolveArticleHeroFields } from '@/lib/ui/resolve-article-hero'
+import { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
 
 // S1-F1: moved from new/page.tsx — page files must only export the default page
 // component plus Next.js-approved named exports (metadata, generateMetadata, etc.).
@@ -57,7 +54,7 @@ export function ArticleFormFields({
       ? [defaults.hero_thumb_url]
       : []
   const [sourceUrl, setSourceUrl] = useState(defaults?.source_url ?? '')
-  const [mediaUrlsValue, setMediaUrlsValue] = useState(initialMediaUrls.join(', '))
+  const [mediaUrlsValue, setMediaUrlsValue] = useState(initialMediaUrls.join('\n'))
   const [thumbnailUrl, setThumbnailUrl] = useState(defaults?.hero_thumb_url ?? initialMediaUrls[0] ?? '')
   const [body, setBody] = useState(defaults?.content_markdown ?? '')
   const [pasteStatus, setPasteStatus] = useState<string | null>(null)
@@ -123,7 +120,7 @@ export function ArticleFormFields({
               rows={2}
               value={mediaUrlsValue}
               onChange={(event) => setMediaUrlsValue(event.target.value)}
-              placeholder="Image URLs only — comma, space, or new line separated (not YouTube links)"
+              placeholder="Image URLs — one per line (or comma between URLs). Not YouTube links."
               className="w-full resize-y rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
             <p className="text-[11px] leading-snug text-muted">
@@ -360,7 +357,7 @@ export function ArticleFormFields({
     const target = index + delta
     if (target < 0 || target >= nextUrls.length) return
     ;[nextUrls[index], nextUrls[target]] = [nextUrls[target], nextUrls[index]]
-    setMediaUrlsValue(nextUrls.join(', '))
+    setMediaUrlsValue(nextUrls.join('\n'))
   }
 }
 
@@ -491,25 +488,13 @@ function SegmentedRadio({
 }
 
 function parseUrls(value: string): string[] {
-  const seen = new Set<string>()
-  return value
-    .split(/[\s,]+/)
-    .map((url) => url.trim())
-    .filter((url) => {
-      if (!url || seen.has(url)) return false
-      try {
-        const parsed = new URL(url)
-        if (
-          (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
-          (isImageUrl(url) || parsed.hostname === 'res.cloudinary.com')
-        ) {
-          seen.add(url)
-          return true
-        }
-      } catch {
-        return false
-      }
+  return parseAdminMediaUrlList(value).filter((url) => {
+    try {
+      const parsed = new URL(url)
+      return isImageUrl(url) || parsed.hostname === 'res.cloudinary.com'
+    } catch {
       return false
-    })
+    }
+  })
 }
 
