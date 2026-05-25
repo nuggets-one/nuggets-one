@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getArticleById } from '@/lib/queries/article'
+import { getArticleById, getRelatedArticles } from '@/lib/queries/article'
 import { getArticleGalleryMedia } from '@/lib/queries/article-media'
 import { buildCardGalleryImages } from '@/lib/ui/build-card-gallery'
 import { DetailHeroImage } from '@/components/ui/detail-hero-image'
@@ -13,6 +13,8 @@ import { ConsumerDisclaimerMarkdown } from '@/components/legal/consumer-disclaim
 import { MarkdownPageToc } from '@/components/ui/markdown-page-toc'
 import { TimestampLinkInterceptor } from '@/components/ui/timestamp-link-interceptor'
 import { YouTubeJumpToHero } from '@/components/ui/youtube-jump-to-hero'
+import { ArticleDetailUtilityRail } from '@/components/ui/article-detail-utility-rail'
+import { ArticleDetailRelated } from '@/components/ui/article-detail-related'
 import {
   NUGGET_DOC_BODY_ID,
   NUGGET_YOUTUBE_HERO_ID,
@@ -27,6 +29,8 @@ import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import { getSourceHostLabel } from '@/lib/ui/source-host-label'
 import { getConsumerDisclaimer } from '@/lib/queries/site-settings'
 import { extractMarkdownToc } from '@/lib/markdown/extract-markdown-toc'
+import { canUserManageArticle } from '@/lib/auth/can-manage-article'
+import { NuggetOpenFullPageButton } from '@/components/ui/nugget-open-full-page-button'
 
 type Props = {
   id: string
@@ -53,6 +57,16 @@ function getStreamLabel(stream: 'standard' | 'pulse'): string {
   return stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
 }
 
+function estimateReadingTimeMinutes(markdown: string | null): number {
+  if (!markdown) return 1
+  const wordCount = markdown
+    .replace(/[`*_>#\-()[\]]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length
+  return Math.max(1, Math.round(wordCount / 220))
+}
+
 /**
  * Shared server-rendered nugget detail body used by both shells of the
  * canonical /nuggets/[id]/[slug] route:
@@ -75,6 +89,8 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
   const bookmarkedIds =
     user ? await getBookmarkedArticleIdsForUser(user.id, [article.id]) : new Set<string>()
   const initialBookmarked = bookmarkedIds.has(article.id)
+  const canManage = canUserManageArticle(user?.id, article.created_by)
+  const editHref = canManage ? `/admin/articles/${article.id}` : null
 
   const isYouTubeHero = article.hero_media_kind === 'youtube'
   const trimmedHeroThumb = article.hero_thumb_url?.trim() ?? ''
@@ -114,6 +130,9 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
     : '(max-width: 768px) 100vw, 768px'
   const visibleTags = displayTags.length > 0 ? displayTags : [streamLabel]
   const bodyMarkdown = article.content_markdown?.trim() || article.excerpt?.trim() || null
+  const readingTimeMinutes = estimateReadingTimeMinutes(bodyMarkdown)
+  const readingTimeLabel = `${readingTimeMinutes} min read`
+  const primaryTopic = visibleTags[0] ?? streamLabel
 
   const tocExtraction =
     !inSheet && bodyMarkdown
@@ -126,10 +145,56 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
       ? tocExtraction.headingIdByPosition
       : undefined
 
-  const formatDate = inSheet ? formatDateShort : formatDateDetail
+  const sourceLinkClassName = inSheet
+    ? 'inline-flex w-fit items-center gap-1.5 rounded-full bg-surface-strong px-3.5 py-2 text-xs font-semibold text-surface-strong-foreground transition-colors hover:opacity-90'
+    : 'inline-flex w-fit items-center gap-1.5 rounded-md border border-border bg-transparent px-3 py-1.5 text-xs font-medium uppercase tracking-[0.12em] text-muted transition-colors hover:border-border-strong hover:text-primary'
 
-  const metaHeader = (
-    <header className={inSheet ? 'space-y-4' : 'space-y-4 sm:space-y-5'}>
+  const sourceAriaLabel = sourceHost
+    ? `Open source on ${sourceHost} (opens in new tab)`
+    : 'Open source (opens in new tab)'
+
+  const sourceLink = article.source_url ? (
+    <a
+      href={article.source_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={sourceAriaLabel}
+      className={sourceLinkClassName}
+    >
+      <svg
+        className="h-3.5 w-3.5 shrink-0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M14 5h5m0 0v5m0-5L10 14"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M5 9v10h10"
+        />
+      </svg>
+      <span>Source</span>
+    </a>
+  ) : null
+
+  const relatedArticles = !inSheet
+    ? await getRelatedArticles({
+        articleId: article.id,
+        stream: article.content_stream,
+        tagSlugs: article.tag_slugs,
+        limit: 4,
+      })
+    : []
+
+  const inSheetHeader = (
+    <header className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {visibleTags.map((tag, index) => (
           <span
@@ -144,73 +209,66 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
           </span>
         ))}
       </div>
+      <h1 className="max-w-2xl text-sm font-semibold leading-snug tracking-tight text-primary">
+        {article.title}
+      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs font-medium text-muted">
+        <time className="tabular-nums" dateTime={article.published_at}>
+          {formatDateShort(article.published_at)}
+        </time>
+        <span>{readingTimeLabel}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {sourceLink}
+        <NuggetOpenFullPageButton href={detailHref} />
+      </div>
+    </header>
+  )
 
-      <div className="space-y-3">
-        <h1
-          className={`font-semibold tracking-tight text-primary ${
-            inSheet
-              ? 'max-w-2xl text-sm leading-snug'
-              : 'max-w-3xl text-2xl leading-tight sm:text-3xl sm:leading-snug'
-          }`}
-        >
-          {article.title}
-        </h1>
-
-        <div
-          className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 font-medium text-muted ${
-            inSheet ? 'text-xs' : 'text-sm'
-          }`}
-        >
-          <time className="tabular-nums" dateTime={article.published_at}>
-            {formatDate(article.published_at)}
-          </time>
-          {!inSheet ? (
-            <ArticleDetailInlineActions
-              articleId={article.id}
-              title={article.title}
-              href={detailHref}
-              sourceUrl={article.source_url}
-              sourceHost={sourceHost}
-              isAuthenticated={isAuthenticated}
-              initialBookmarked={initialBookmarked}
-            />
-          ) : null}
-        </div>
+  const fullPageHeader = (
+    <header className="space-y-5 sm:space-y-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
+        <span>{primaryTopic}</span>
+        <span className="text-border-strong" aria-hidden="true">
+          /
+        </span>
+        <time className="tabular-nums" dateTime={article.published_at}>
+          {formatDateDetail(article.published_at)}
+        </time>
+        <span className="text-border-strong" aria-hidden="true">
+          /
+        </span>
+        <span>{readingTimeLabel}</span>
+        {sourceHost ? (
+          <>
+            <span className="text-border-strong" aria-hidden="true">
+              /
+            </span>
+            <span>{sourceHost}</span>
+          </>
+        ) : null}
       </div>
 
-      {article.source_url && (
-        <a
-          href={article.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={
-            inSheet
-              ? 'inline-flex w-fit items-center gap-1.5 rounded-full bg-surface-strong px-3.5 py-2 text-xs font-semibold text-surface-strong-foreground transition-colors hover:opacity-90'
-              : 'inline-flex w-fit items-center gap-1.5 rounded-lg border border-border bg-transparent px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-border-strong hover:bg-surface-raised hover:text-primary'
-          }
-        >
-          <svg
-            className="h-3.5 w-3.5 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.8}
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M14 5h5m0 0v5m0-5L10 14"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M5 9v10h10"
-            />
-          </svg>
-          <span>{sourceHost ? `Source: ${sourceHost}` : 'View Source'}</span>
-        </a>
-      )}
+      <h1 className="text-3xl font-semibold leading-tight tracking-tight text-primary sm:text-4xl sm:leading-tight">
+        {article.title}
+      </h1>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {sourceLink}
+        <div className="xl:hidden">
+          <ArticleDetailInlineActions
+            articleId={article.id}
+            title={article.title}
+            href={detailHref}
+            sourceUrl={article.source_url}
+            sourceHost={sourceHost}
+            isAuthenticated={isAuthenticated}
+            initialBookmarked={initialBookmarked}
+            editHref={editHref}
+            canDelete={canManage}
+          />
+        </div>
+      </div>
     </header>
   )
 
@@ -229,6 +287,7 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
           sourceUrl={article.source_url}
           sourceHost={sourceHost}
           imageSizes={heroImageSizes}
+          preferInlinePlayback={inSheet}
         />
       ) : useDetailGallery ? (
         <ThumbnailGrid
@@ -297,7 +356,7 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
       className={
         inSheet
           ? 'mt-3 border-t border-border pt-2'
-          : 'border-t border-border pt-4 text-xs italic leading-relaxed text-muted'
+          : 'text-xs italic leading-relaxed text-muted'
       }
     >
       <ConsumerDisclaimerMarkdown
@@ -316,44 +375,29 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
     </section>
   )
 
-  const topBlockClassName = inSheet
-    ? 'space-y-5 px-4 pt-5 sm:px-5 sm:pt-5'
-    : showToc
-      ? 'space-y-6 pt-6 sm:space-y-7 sm:pt-7'
-      : 'space-y-6 pt-6 sm:space-y-7 sm:pt-7'
+  const referencesSection = !inSheet && article.source_url ? (
+    <section className="border-t border-border pt-8" aria-labelledby="references-heading">
+      <h2 id="references-heading" className="text-lg font-semibold tracking-tight text-primary">
+        References
+      </h2>
+      <ol className="mt-4 space-y-2 text-sm leading-6 text-muted">
+        <li>
+          <a
+            href={article.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-body-link underline underline-offset-2 transition-opacity hover:opacity-90"
+          >
+            Original source {sourceHost ? `(${sourceHost})` : ''}
+          </a>
+        </li>
+      </ol>
+    </section>
+  ) : null
 
-  const docBlockClassName = [
-    inSheet
-      ? 'space-y-5 px-4 pb-6 sm:px-5'
-      : showToc
-        ? 'space-y-6 pb-10 sm:space-y-7'
-        : 'space-y-6 pb-10 sm:space-y-7',
-    !inSheet ? 'max-w-prose' : '',
-  ]
-    .join(' ')
-    .trim()
-
-  const mainColumnInner = (
-    <>
-      <div className={topBlockClassName}>
-        {metaHeader}
-        {heroSection}
-      </div>
-
-      <div id={
-          showToc || (isYouTubeHero && article.hero_video_id?.trim())
-            ? NUGGET_DOC_BODY_ID
-            : undefined
-        } className={docBlockClassName}>
-        {bodyBlock}
-        {disclaimerSection}
-      </div>
-    </>
-  )
-
-  const articleShell = (
-    <>
-      {inSheet ? (
+  if (inSheet) {
+    return (
+      <article className="mx-auto w-full max-w-none pb-8">
         <ArticleDetailHeader
           articleId={article.id}
           title={article.title}
@@ -363,35 +407,84 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
           sourceHost={sourceHost}
           isAuthenticated={isAuthenticated}
           initialBookmarked={initialBookmarked}
+          editHref={editHref}
+          canDelete={canManage}
         />
-      ) : null}
 
-      {showToc ? (
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:pt-1">
-            <aside className="print:hidden">
+        <div className="space-y-5 px-4 pb-6 pt-5 sm:px-5">
+          {inSheetHeader}
+          {heroSection}
+          <div
+            id={showToc || (isYouTubeHero && article.hero_video_id?.trim()) ? NUGGET_DOC_BODY_ID : undefined}
+            className="space-y-5"
+          >
+            {bodyBlock}
+            {disclaimerSection}
+          </div>
+        </div>
+
+        {isYouTubeHero && article.hero_video_id?.trim() ? (
+          <YouTubeJumpToHero articleId={article.id} />
+        ) : null}
+      </article>
+    )
+  }
+
+  return (
+    <article className="mx-auto w-full pb-12">
+      <div className="mx-auto w-full max-w-[90rem] px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+        <div
+          className={
+            showToc
+              ? 'lg:grid lg:grid-cols-[minmax(180px,220px)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[minmax(180px,220px)_minmax(0,68ch)_minmax(190px,240px)] xl:gap-12'
+              : 'xl:grid xl:grid-cols-[minmax(0,68ch)_minmax(190px,240px)] xl:gap-12'
+          }
+        >
+          {showToc ? (
+            <aside className="print:hidden lg:col-start-1 lg:row-start-1">
               <MarkdownPageToc
                 items={tocExtraction.items}
                 scrollRootId={NUGGET_DOC_BODY_ID}
                 scrollOffsetPx={120}
               />
             </aside>
-            <div className="min-w-0">{mainColumnInner}</div>
+          ) : null}
+
+          <div className={showToc ? 'min-w-0 lg:col-start-2 xl:col-start-2' : 'min-w-0 xl:col-start-1'}>
+            <div className="mx-auto w-full max-w-[70ch] space-y-8 sm:space-y-10">
+              {fullPageHeader}
+              {heroSection}
+
+              <div id={NUGGET_DOC_BODY_ID} className="space-y-8">
+                {bodyBlock}
+              </div>
+
+              {referencesSection}
+              {disclaimerSection}
+              <ArticleDetailRelated items={relatedArticles} />
+            </div>
+          </div>
+
+          <div className={showToc ? 'lg:col-start-2 xl:col-start-3' : 'xl:col-start-2'}>
+            <ArticleDetailUtilityRail
+              articleId={article.id}
+              title={article.title}
+              href={detailHref}
+              sourceUrl={article.source_url}
+              sourceHost={sourceHost}
+              isAuthenticated={isAuthenticated}
+              initialBookmarked={initialBookmarked}
+              editHref={editHref}
+              canDelete={canManage}
+              publishedLabel={formatDateDetail(article.published_at)}
+              readingTimeLabel={readingTimeLabel}
+              tocItems={tocExtraction.items}
+              scrollRootId={NUGGET_DOC_BODY_ID}
+            />
           </div>
         </div>
-      ) : inSheet ? (
-        mainColumnInner
-      ) : (
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl">{mainColumnInner}</div>
-        </div>
-      )}
-    </>
-  )
+      </div>
 
-  return (
-    <article className={`mx-auto w-full ${inSheet ? 'max-w-none pb-8' : 'pb-10'}`}>
-      {articleShell}
       {isYouTubeHero && article.hero_video_id?.trim() ? (
         <YouTubeJumpToHero articleId={article.id} />
       ) : null}

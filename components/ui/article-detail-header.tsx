@@ -15,6 +15,8 @@ type Props = {
   sourceHost: string | null
   isAuthenticated: boolean
   initialBookmarked: boolean
+  editHref?: string | null
+  canDelete?: boolean
 }
 
 export function ArticleDetailHeader({
@@ -26,6 +28,8 @@ export function ArticleDetailHeader({
   sourceHost,
   isAuthenticated,
   initialBookmarked,
+  editHref = null,
+  canDelete = false,
 }: Props) {
   const router = useRouter()
 
@@ -51,10 +55,13 @@ export function ArticleDetailHeader({
             isAuthenticated={isAuthenticated}
             variant="toolbar"
           />
-          {sourceUrl ? (
+          {(sourceUrl || editHref || canDelete) ? (
             <CardMoreButton
-              sourceUrl={sourceUrl}
+              sourceUrl={sourceUrl ?? ''}
               sourceHost={sourceHost}
+              editHref={editHref}
+              canDelete={canDelete}
+              articleId={articleId}
               menuPlacement="below"
               variant="toolbar"
             />

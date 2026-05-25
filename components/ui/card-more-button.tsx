@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import Link from 'next/link'
-import { ExternalLink, MoreVertical, Pencil } from 'lucide-react'
+import { ExternalLink, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { deleteArticleAction } from '@/lib/actions/admin'
 
 type Props = {
   sourceUrl: string
   sourceHost: string | null
   editHref?: string | null
+  canDelete?: boolean
+  articleId?: string
+  deleteRedirectTo?: string
   menuPlacement?: 'above' | 'below'
   variant?: 'default' | 'toolbar'
 }
@@ -16,6 +20,9 @@ export function CardMoreButton({
   sourceUrl,
   sourceHost,
   editHref = null,
+  canDelete = false,
+  articleId,
+  deleteRedirectTo = '/',
   menuPlacement = 'above',
   variant = 'default',
 }: Props) {
@@ -42,6 +49,8 @@ export function CardMoreButton({
   function closeMenu() {
     setOpen(false)
   }
+
+  const showDelete = canDelete && articleId
 
   return (
     <div ref={rootRef} className="relative">
@@ -95,6 +104,29 @@ export function CardMoreButton({
               <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
               <span>View Source</span>
             </a>
+          ) : null}
+          {showDelete ? (
+            <form
+              action={deleteArticleAction}
+              onSubmit={(e) => {
+                if (!confirm('Delete this nugget? This cannot be undone.')) {
+                  e.preventDefault()
+                  return
+                }
+                closeMenu()
+              }}
+            >
+              <input type="hidden" name="id" value={articleId} />
+              <input type="hidden" name="redirect_to" value={deleteRedirectTo} />
+              <button
+                type="submit"
+                role="menuitem"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-danger-fg transition-colors hover:bg-danger-soft"
+              >
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
+                <span>Delete nugget</span>
+              </button>
+            </form>
           ) : null}
         </div>
       )}

@@ -13,6 +13,8 @@ type Props = {
   sourceHost: string | null
   isAuthenticated: boolean
   initialBookmarked: boolean
+  editHref?: string | null
+  canDelete?: boolean
 }
 
 /**
@@ -27,25 +29,30 @@ export function ArticleDetailInlineActions({
   sourceHost,
   isAuthenticated,
   initialBookmarked,
+  editHref = null,
+  canDelete = false,
 }: Props) {
   return (
     <>
       <div
-        className="flex shrink-0 items-center gap-1 sm:gap-2"
+        className="flex shrink-0 items-center gap-0.5 rounded-full border border-border bg-surface px-1 py-1"
         role="group"
         aria-label="Share and save"
       >
-        <ShareButton title={title} href={href} variant="toolbar" />
+        <ShareButton title={title} href={href} variant="footer" />
         <BookmarkButton
           articleId={articleId}
           initialBookmarked={initialBookmarked}
           isAuthenticated={isAuthenticated}
-          variant="toolbar"
+          variant="footer"
         />
-        {sourceUrl ? (
+        {(sourceUrl || editHref || canDelete) ? (
           <CardMoreButton
-            sourceUrl={sourceUrl}
+            sourceUrl={sourceUrl ?? ''}
             sourceHost={sourceHost}
+            editHref={editHref}
+            canDelete={canDelete}
+            articleId={articleId}
             menuPlacement="below"
             variant="toolbar"
           />
