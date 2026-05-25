@@ -52,6 +52,25 @@ test('detail route: View Full Article opens intercepted sheet', async ({ page })
   await expect.poll(() => new URL(page.url()).pathname).toBe(href)
 })
 
+test('detail route: View full page from sheet opens canonical full-page shell in new tab', async ({
+  page,
+  context,
+}) => {
+  const { dialog, href } = await openInterceptedDetail(page)
+
+  const newPagePromise = context.waitForEvent('page')
+  await dialog.getByRole('link', { name: 'View full page for this nugget' }).click()
+  const newPage = await newPagePromise
+  await newPage.waitForLoadState('domcontentloaded')
+
+  await expect(newPage).toHaveURL(new RegExp(`^${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
+  await expect(newPage.locator('article').first()).toBeVisible()
+  await expect(newPage.getByRole('button', { name: 'Share this nugget' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Nugget detail' })).toBeVisible()
+
+  await newPage.close()
+})
+
 test('detail route: feed click opens intercepted sheet and Escape closes it', async ({ page }) => {
   const { href } = await openInterceptedDetail(page)
 
