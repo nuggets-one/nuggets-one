@@ -604,15 +604,15 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 
 **v1 had three filter UIs** (`DesktopFilterSidebar`, `MobileFilterSheet`, `FilterPopover` + chips, plus `TaxonomySidebar` and `FilterScrollRow`). v2 has **one mental model in two presentations**:
 
-- **Desktop:** sticky minimal **filter strip** under stream tabs — **All** + **More filters** only. Topic taxonomy (**Content format** \| **Subject domain** \| **Subtopic**) appears **only** inside the `<dialog>` as a **three-column** mega panel (plus **Uncategorized** chips when needed), search, staged checkboxes, **Apply** / **Cancel** / **Clear**. **No** tag pills on the landing surface.
-- **Mobile:** same strip; **More filters** opens the bottom sheet with stacked columns then mega-style sections.
+- **Desktop:** sticky **filter strip** under stream tabs — **All** + a **horizontal quick rail** of official tag pills (grouped by **format** \| **domain** \| **subtopic**, sorted by count, scroll with chevrons when overflow) + **More filters**. Pills toggle `tags` in the URL immediately via `nuqs` + `useTransition`. Full taxonomy (plus **Uncategorized**), search, staged checkboxes, **Apply** / **Cancel** / **Clear** remain inside the `<dialog>` mega panel.
+- **Mobile:** same strip (stacked layout on narrow viewports); **More filters** opens the bottom sheet with stacked columns then mega-style sections.
 
 **No left filter sidebar PMF — explicit decision.** Kills v1's `DesktopFilterSidebar` / `TaxonomySidebar`. Reasons (closed):
 
 1. Sidebar costs ~250px → loses 1 of 3 desktop columns above the fold (33% fewer cards visible on a surface that exists *to surface nuggets*). **(content-density argument — primary)**
 2. Two filter UIs (sidebar desktop + sheet mobile) violates "one mental model" (§2.3).
-3. Curated tags filtered by `is_official = true` (`BLUEPRINT` §2.a) — **no** on-page tag grid; discovery chrome stays **All** + **More filters** so the card grid leads the fold.
-4. Tag dimensions (`format` / `domain` / `subtopic`) surface **only** inside the **More filters** dialog (three-column mega layout on desktop). Official tags with `dimension IS NULL` appear in an **Uncategorized** strip in the same dialog.
+3. Curated tags filtered by `is_official = true` (`BLUEPRINT` §2.a) — a **single horizontal quick rail** (not a sidebar grid) for one-tap filters; zero-count tags hidden unless already selected. **More filters** covers the full picker.
+4. Tag dimensions (`format` / `domain` / `subtopic`) surface on the landing rail **and** inside the **More filters** dialog (three-column mega layout on desktop). Official tags with `dimension IS NULL` appear in an **Uncategorized** strip in the dialog only.
 5. **Client-island discipline.** Filter interactions stay in one primary client module (`FeedTaxonomyFilters` + dialog) with `nuqs` URL writes — no filter state in context above the grid.
 6. **Historical note (founder click-lag).** v1's filter sprawl (8+ modules feeding `FilterStateContext`) was the technical root cause of the legacy click-lag — context re-render cascade into the hydrated feed grid. v2's `nuqs` + RSC architecture eliminates that mechanism regardless of UI shape, so reintroducing a sidebar would *not* re-introduce that specific failure mode. The decision against a sidebar stands on reasons 1–5 above, **not** click-lag avoidance.
 
@@ -624,7 +624,7 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 ├──────────────────────────────────────────────────────────┤
 │ Stream tabs: [ Nuggets ]  [ Market Pulse ]               │  ← primary chrome
 ├──────────────────────────────────────────────────────────┤
-│ [ All ]                              [ More filters ▾ ]   │
+│ [ All ] · tag pills … scroll …         [ More filters ▾ ]   │
 ├──────────────────────────────────────────────────────────┤
 │ Active filters: macro ✕ · q="taiwan" ✕     Clear all    │  ← only if ≥1 filter
 ├──────────────────────────────────────────────────────────┤
@@ -646,9 +646,9 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 #### Tag taxonomy filters (sticky body chrome)
 
 - **Source:** `tags` where `is_official = true`, ordered **format → domain → subtopic → uncategorized**, then label (`listOfficialTags`).
-- **Landing surface:** **All** + **More filters** only (`FeedTaxonomyFilters`). **No** dimension pill rows on `/`.
+- **Landing surface:** **All** + scrollable **dimension pill quick rail** + **More filters** (`FeedTaxonomyFilters`). Pills: official tags with count > 0 (or already in URL), grouped **format → domain → subtopic**, dividers between groups; pill click toggles `tags` immediately.
 - **Dialog:** wide panel (`~960px` desktop cap) — **search** (filters all columns), **three columns** (**Content format** \| **Subject domain** \| **Subtopic**) with scrollable checkbox lists and **(count)** per tag; **Uncategorized** as a wrap row below when present; **Apply** / **Cancel** / **Clear** (staged selection until Apply).
-- **URL:** `tags` still via **`nuqs`** + `useTransition` on Apply and **All** (`BLUEPRINT` §5.7).
+- **URL:** `tags` via **`nuqs`** + `useTransition` on pill toggle, **Apply**, and **All** (`BLUEPRINT` §5.7).
 - **Multi-tag AND** — `tag_slugs @> $1::text[]` (`BLUEPRINT` §2.a). No OR mode toggle.
 - **No filter widget library** — native checkboxes + buttons + `nuqs`.
 

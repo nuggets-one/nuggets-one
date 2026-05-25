@@ -17,7 +17,7 @@
 | 3 | Header strip + auth island extension | ✅ **DONE 2026-05-02** | §0g — PRODUCT §3.3 / §2.B |
 | 4 | Stream tabs restyle + mobile bottom nav | ✅ **DONE 2026-05-02** | §0h · magazine tabs + **`MobileBottomNav`** |
 | 5 | Site footer | ✅ **DONE 2026-05-02** | §0i — `legal_pages` + `Footer` + `/legal/contact` |
-| 6 | YouTube state machine on detail | ✅ **DONE 2026-05-02** | §0l — facade poster + lazy iframe + `youtube-seek` event |
+| 6 | YouTube state machine on detail | ✅ **DONE 2026-05-02** (superseded playback — §0l) | §0l — poster hero + global mini-player; inline `youtube-player.tsx` removed 2026-05-18 |
 | 7 | Card source badge | ✅ **DONE 2026-05-02** | §0j — top-right pill on media; footer `Source:` link removed |
 | 8 | Share button (card + detail) | ✅ **DONE 2026-05-02** | §0k — `navigator.share` → clipboard fallback with inline label |
 | 9 | Active filters bar | ✅ **DONE 2026-05-02** | §0m — `ActiveFiltersBar` between rail + grid; removable pills + Clear all |
@@ -314,7 +314,9 @@ components/ui/sheet.tsx (new — single client island)
 
 ### 0l. Phase 6 — YouTube state machine on detail — shipped 2026-05-02
 
-**Outcome:** Detail-page hero for YouTube articles is now a facade — poster image (LCP element) with a play overlay; iframe is **not in the DOM** until first user gesture. Body timestamp links of the form `[label](#yt=N)` mount the iframe on demand and seek to the requested second; subsequent timestamp clicks `postMessage` `seekTo` to the live iframe. Outbound `Watch on YouTube ↗` link is rendered at all times.
+> **Superseded playback (2026-05-15 / 2026-05-18):** Phase 6 originally shipped inline `components/ui/youtube-player.tsx` (`youtube-seek` → hero iframe). That was replaced by poster-only `ArticleDetailYouTubeHero` + **`GlobalYouTubeMiniPlayer`** (`c83519b`). Inline player deleted in `af74113`; timestamps use `youtube-feed-play` + sheet-aware hero scroll. Canonical behavior: `docs/ARTICLE_DETAIL_DRAWER_UI_SPEC.md` §0.2 / §5.
+
+**Outcome (current):** Detail-page hero for YouTube articles is a facade — poster image (LCP element) with a play overlay; **no iframe in the hero**. Play and body timestamps open the **global bottom mini-player** (`components/ui/global-youtube-mini-player.tsx`). Outbound `Watch on YouTube ↗` link is rendered at all times.
 
 **What shipped:**
 - New `components/ui/youtube-player.tsx` (`'use client'`) — exports `YOUTUBE_SEEK_EVENT` and a `YouTubeSeekDetail` type. State machine: `poster` ↔ `embed`. Poster click mounts `<iframe src="https://www.youtube-nocookie.com/embed/{id}?enablejsapi=1&rel=0&autoplay=1">`. Cold-mount via timestamp click adds `&start=N`; warm-seek uses `iframe.contentWindow.postMessage(JSON.stringify({event:'command',func:'seekTo',args:[seconds,true]}), 'https://www.youtube-nocookie.com')`. Window-level event listener for `youtube-seek`. Container `scrollIntoView` after seek. Telemetry placeholder per plan §6.3a follow-up: `console.log('[telemetry]', { event: 'youtube_play', video_id, seconds, source })` with `source: 'poster' | 'timestamp'`.

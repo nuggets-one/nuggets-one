@@ -8,7 +8,7 @@
 >
 > Legacy Reference: `docs/article-detail-drawer-ui-spec old website.md` (non-implementable)
 >
-> Component Owners: `components/ui/sheet.tsx`, `components/ui/article-content.tsx`, `components/ui/article-body.tsx`, `components/ui/article-detail-header.tsx` (sheet), `components/ui/article-detail-inline-actions.tsx` (full page), `components/ui/article-detail-youtube-hero.tsx`, `components/ui/timestamp-link-interceptor.tsx`, `components/ui/youtube-jump-to-hero.tsx`, `components/ui/markdown-page-toc.tsx`, `components/layout/global-youtube-mini-player-host.tsx` / `components/ui/global-youtube-mini-player.tsx`
+> Component Owners: `components/ui/sheet.tsx`, `components/ui/article-content.tsx`, `components/ui/nugget-open-full-page-button.tsx` (sheet escape), `components/ui/article-body.tsx`, `components/ui/article-detail-header.tsx` (sheet), `components/ui/article-detail-inline-actions.tsx` (full page), `components/ui/article-detail-youtube-hero.tsx`, `components/ui/timestamp-link-interceptor.tsx`, `components/ui/youtube-jump-to-hero.tsx`, `components/ui/markdown-page-toc.tsx`, `components/layout/global-youtube-mini-player-host.tsx` / `components/ui/global-youtube-mini-player.tsx`
 
 This document describes the **intercepted-route nugget detail sheet**: the parallel slot `app/(main)/@modal/(.)nuggets/[id]/[slug]/page.tsx` renders `<Sheet><ArticleContent /></Sheet>`. The same `ArticleContent` appears on the full-page route `/nuggets/[id]/[slug]`; only the **outer shell** differs (sheet vs page). Treat the canonical route as the product concept and the shell as the context-specific presentation.
 
@@ -241,22 +241,23 @@ Sections below are **top to bottom**.
 
 ---
 
-## 5. YouTube player block (hero)
+## 5. YouTube hero block (poster only)
 
-**Outer:** `div` with `className="my-8"` (vertical margin 2rem).
+**Owner:** `components/ui/article-detail-youtube-hero.tsx` — anchor id `#nugget-youtube-hero` on the wrapping `<section>` in `article-content.tsx`.
 
-**Player frame:** `relative aspect-video w-full overflow-hidden rounded-xl bg-surface-raised`
+**Outer:** `relative aspect-video w-full overflow-hidden rounded-2xl bg-slate-900` (sheet may wrap in `rounded-2xl bg-surface-raised`).
 
-**Poster state (before play):**
+**Poster state (always — no in-flow iframe):**
 
-- Full-area `<button>`: `group absolute inset-0 block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60`  
-- Overlay: `pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30`  
-- **Play glyph container:** `flex h-16 w-16 items-center justify-center rounded-full bg-black/65 text-white shadow-lg ring-2 ring-white/80`  
-- **Triangle icon:** `ml-1 h-8 w-8`, `fill="currentColor"`, play path `M8 5v14l11-7z`  
+- Full-area `<button>` dispatches `youtube-feed-play` → **`GlobalYouTubeMiniPlayer`** (fixed bottom portal, `z-[100]`).  
+- Overlay: `pointer-events-none` play glyph on poster (`bg-media-control` circle).  
+- Gradient title strip with YouTube brand mark at bottom of poster.
 
-**Iframe (after play):** `absolute inset-0 h-full w-full`
+**Playback:** Deferred global mini-player only — same bus as feed cards. Hero never mounts an embed iframe (LCP stays the poster image).
 
-**External link below:** `mt-2 inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60` — text **“Watch on YouTube ↗”**
+**Body timestamps:** `[label](#yt=N)` → `TimestampLinkInterceptor` dispatches mini-player with `startSeconds`, then scrolls poster into view inside `[data-sheet-body]` when below the fold.
+
+**External link below:** `mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted …` — text **“Watch on YouTube ↗”** (opens youtube.com in new tab).
 
 ---
 
@@ -378,7 +379,7 @@ Required order inside article content surface:
 2. Tags row
 3. Title
 4. Meta row (read time/date/stream where applicable)
-5. Source (when present)
+5. Source actions row (sheet): **Source** pill when `source_url` present (visible label **Source** only; hostname in `aria-label`) plus **View full page** button (hard-nav to canonical full-page shell; always shown in sheet)
 6. Media block
 7. Content body
 8. Universal disclaimer
@@ -387,6 +388,8 @@ Required order inside article content surface:
 Placement assertions:
 
 - Source must appear in the declared top section, not duplicated at bottom.
+- Sheet header **Source** pill must not show the hostname in visible copy (e.g. no `youtu.be`); use `aria-label` for host context.
+- **View full page** is sheet-only, adjacent to Source in a `flex flex-wrap gap-2` row; uses `window.location.assign` on the canonical `/nuggets/[id]/[slug]` URL so the intercept slot clears and the full-page shell renders.
 - Bottom brand row is allowed only if explicitly required by this contract revision.
 - Save/Share may appear once only.
 
@@ -402,7 +405,8 @@ These tokens are mandatory unless a future PR updates this table and screenshots
 | Meta row | `text-xs` | Secondary informational text |
 | Title | `text-sm font-semibold` (compact) or explicitly versioned override | Must be versioned if changed |
 | Body wrapper | `text-xs` compact mode **or** `prose` mode with declared size scale | One mode per contract version |
-| Source label | `text-[11px] font-semibold` | Pill/label micro copy |
+| Source label | `text-xs font-semibold` | Visible copy **Source** only; host in `aria-label` |
+| View full page | `text-xs font-semibold` | Outlined pill beside Source; sheet only |
 | Disclaimer | `text-[10px] italic` | Universal compliance copy |
 
 PRs that change any token must:

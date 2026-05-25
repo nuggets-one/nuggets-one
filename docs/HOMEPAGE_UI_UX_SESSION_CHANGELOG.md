@@ -179,6 +179,13 @@ Use this section for **time-ordered, reviewable notes** on each batch of work (w
 
 **Follow-up:** wire real telemetry POST when the helper exists — replaces `console.log('[telemetry]', …)` in `youtube-player.tsx` (`youtube_play`) and `share-button.tsx` (`share_initiated`).
 
+**Superseded (2026-05-18, `af74113`):** Inline `youtube-player.tsx` removed; timestamps + poster use `GlobalYouTubeMiniPlayer` and sheet-aware `scrollYouTubeHeroIntoView`. See **2026-05-19** entry below.
+
+### 2026-05-19 — YouTube timestamp playback in intercepted sheet (fix)
+
+- **Problem:** Timestamp clicks scrolled the hero poster into view but playback appeared “inline” (old site) because the bottom mini-player was easy to miss or overlapped mobile chrome; Phase 6 docs still described hero iframe.
+- **Executed:** Sheet-aware hero scroll (`lib/ui/youtube-hero-scroll.ts`); play-then-scroll in `timestamp-link-interceptor.tsx`; mini-player `max-lg` bottom offset above mobile nav; `YouTubeJumpToHero` observer uses sheet scroll root; Playwright `tests/youtube-timestamp-sheet.spec.ts`; `ARTICLE_DETAIL_DRAWER_UI_SPEC.md` §5 + Phase 6 supersession notes.
+
 ### 2026-05-02 — Phase 9 (active filters bar / M3)
 - **Executed:** New `components/feed/active-filters-bar.tsx` (`'use client'`) — reads `tags` + `q` via `useQueryState({ shallow: false })`, renders one removable pill per active tag (label resolved from the official `TagSummary[]`, slug fallback) plus a `Search: "{q}" ×` pill, with a right-aligned **Clear all** that nulls both params and preserves `stream`. Each removal wraps in `startTransition` so the URL update streams the new RSC render. `app/(main)/page.tsx` mounts the bar between `<TagChipRail/>` and the result-summary line; the summary line is trimmed to `{N results} | {streamLabel}` since the bar now conveys search/tag context (no more duplicated `Search: "..."` / `{N} tag filter{s}` substring). Plan **§0m**, status table, §5 Phase 9, §10 build order; this changelog.
 
