@@ -3,6 +3,8 @@ import { extractYouTubeVideoId, isCanonicalYouTubeVideoId } from '@/lib/ui/youtu
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import { isImageUrl } from '@/lib/ui/is-image-url'
 
+export { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
+
 export type ResolvedArticleHero = {
   hero_video_id: string | null
   hero_media_kind: 'youtube' | 'image' | null
@@ -17,27 +19,6 @@ export type CardCoverPreview = {
   posterUrl: string | null
   videoId: string | null
   summary: string
-}
-
-/** Same URL splitting as admin `parseMediaUrls` — includes YouTube links. */
-export function parseAdminMediaUrlList(value: string): string[] {
-  const seen = new Set<string>()
-  return value
-    .split(/[\s,]+/)
-    .map((url) => url.trim())
-    .filter((url) => {
-      if (!url || seen.has(url)) return false
-      try {
-        const parsed = new URL(url)
-        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-          seen.add(url)
-          return true
-        }
-      } catch {
-        return false
-      }
-      return false
-    })
 }
 
 /**

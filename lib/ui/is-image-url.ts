@@ -65,5 +65,8 @@ export function isImageUrl(url: string): boolean {
   if (path.includes('/-/media/')) return true
   if (/\/media\/(images?|photos?|pics?|assets?)\//.test(path)) return true
 
+  // §8 — Cloudinary-style fetch proxy paths (Substack, res.cloudinary.com, etc.)
+  if (path.includes('/image/fetch/')) return true
+
   return false
 }

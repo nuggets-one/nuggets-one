@@ -83,6 +83,7 @@ export type FeedPageParams = {
  */
 export type ArticleDetail = {
   id: string
+  created_by: string | null
   slug: string
   title: string
   excerpt: string | null
@@ -96,6 +97,15 @@ export type ArticleDetail = {
   source_url: string | null
   tag_slugs: string[]
   tags: TagSummary[]          // joined for display on detail page
+}
+
+export type RelatedArticlePreview = {
+  id: string
+  slug: string
+  title: string
+  excerpt: string | null
+  published_at: string
+  source_url: string | null
 }
 
 // ─── Tag types ───────────────────────────────────────────────────────
