@@ -4,11 +4,13 @@ import { FeedTaxonomyFilters } from '@/components/feed/feed-taxonomy-filters'
 import { ActiveFiltersBar } from '@/components/feed/active-filters-bar'
 import type { ContentStream, TagSummary } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
+import type { StreamArticleCounts } from '@/lib/queries/stream-counts'
 
 type Props = {
   stream: ContentStream
   tags: TagSummary[]
   counts: TagCounts
+  streamCounts: StreamArticleCounts
   streamLabel: string
   shownCount: number
   totalCount: number
@@ -18,6 +20,7 @@ export function FeedTopBar({
   stream,
   tags,
   counts,
+  streamCounts,
   streamLabel,
   shownCount,
   totalCount,
@@ -25,7 +28,7 @@ export function FeedTopBar({
   return (
     <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
       <div className="flex justify-center border-b border-border bg-header px-4 py-3 backdrop-blur-sm sm:justify-start lg:px-6">
-        <StreamTabs activeStream={stream} />
+        <StreamTabs activeStream={stream} streamCounts={streamCounts} />
       </div>
 
       <section

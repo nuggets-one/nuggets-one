@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getFeedPage } from '@/lib/queries/feed'
 import { listOfficialTags } from '@/lib/queries/tags'
 import { getTagCountsForStream } from '@/lib/queries/tag-counts'
+import { getStreamArticleCounts } from '@/lib/queries/stream-counts'
 import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
@@ -64,7 +65,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
     unstable_noStore()
   }
 
-  const [feedResult, officialTags, tagCounts] = await Promise.all([
+  const [feedResult, officialTags, tagCounts, streamCounts] = await Promise.all([
     (hasFilters
       ? getFeedPage({ stream, tags, q })
       : getFeedPage({ stream, tags: [], q: '' })
@@ -82,6 +83,11 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       const message = error instanceof Error ? error.message : String(error)
       console.error(`FeedGrid getTagCountsForStream error: ${message}`)
       return {}
+    }),
+    getStreamArticleCounts().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`FeedGrid getStreamArticleCounts error: ${message}`)
+      return { standard: 0, pulse: 0 }
     }),
   ])
 
@@ -109,6 +115,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
         stream={stream}
         tags={officialTags}
         counts={tagCounts}
+        streamCounts={streamCounts}
         streamLabel={streamLabel}
         shownCount={articles.length}
         totalCount={totalCount}
@@ -157,9 +164,9 @@ export default async function HomePage({ searchParams }: Props) {
         <>
           <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
             <div className="min-h-[44px] border-b border-border bg-header px-4 pt-2 backdrop-blur-sm lg:px-6">
-              <div className="flex h-11 w-full gap-8">
-                <div className="h-4 flex-1 animate-pulse rounded bg-border/40 sm:h-4 sm:flex-none sm:w-24" />
-                <div className="h-4 flex-1 animate-pulse rounded bg-border/40 sm:h-4 sm:flex-none sm:w-36" />
+              <div className="flex h-11 w-full gap-1 sm:inline-flex sm:w-auto lg:w-[22rem]">
+                <div className="h-9 min-h-[44px] flex-1 animate-pulse rounded-md bg-border/40 sm:flex-none sm:h-9 sm:w-24 lg:flex-1 lg:basis-0 lg:min-w-0" />
+                <div className="h-9 min-h-[44px] flex-1 animate-pulse rounded-md bg-border/40 sm:flex-none sm:h-9 sm:w-36 lg:flex-1 lg:basis-0 lg:min-w-0" />
               </div>
             </div>
             <section className="sticky top-[var(--header-height)] z-40 min-h-[88px] border-b border-border bg-rail/95 backdrop-blur-sm">
