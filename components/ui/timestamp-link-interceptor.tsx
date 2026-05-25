@@ -1,10 +1,9 @@
 'use client'
 
-// TimestampLinkInterceptor — opens / seeks the deferred global YouTube mini-player
-// for `#yt=` timestamp links on nuggets with a YouTube hero.
+// TimestampLinkInterceptor — handles `#yt=` timestamp links on nuggets with
+// a YouTube hero by opening/seeking the deferred global mini-player.
 
 import { type MouseEvent, type ReactNode } from 'react'
-import { scrollYouTubeHeroIntoView } from '@/lib/ui/youtube-hero-scroll'
 import {
   parseYouTubeInlineNavigation,
   resolveDetailYouTubeTimestampClick,
@@ -57,9 +56,9 @@ export function TimestampLinkInterceptor({
       video_id: trimmedHeroId,
       seconds,
       source: 'timestamp',
+      playback_mode: 'mini_player',
       article_id: articleId,
     })
-    scrollYouTubeHeroIntoView()
   }
 
   return <div onClickCapture={handleClickCapture}>{children}</div>

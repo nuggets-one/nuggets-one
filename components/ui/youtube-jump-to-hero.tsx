@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import {
-  NUGGET_DOC_BODY_ID,
+  getYouTubeHeroScrollRoot,
   NUGGET_YOUTUBE_HERO_ID,
   scrollYouTubeHeroIntoView,
 } from '@/lib/ui/youtube-hero-scroll'
@@ -32,21 +32,18 @@ export function YouTubeJumpToHero({ articleId }: Props) {
   }, [articleId])
 
   useEffect(() => {
-    if (activeArticleId !== articleId) {
-      setHeroOffScreen(false)
-      return
-    }
+    if (activeArticleId !== articleId) return
 
     const hero = document.getElementById(NUGGET_YOUTUBE_HERO_ID)
     if (!hero) return
 
-    const root = document.getElementById(NUGGET_DOC_BODY_ID)
+    const root = getYouTubeHeroScrollRoot(hero)
     const observer = new IntersectionObserver(
       ([entry]) => {
         setHeroOffScreen(entry ? entry.intersectionRatio < 0.2 : false)
       },
       {
-        root: root ?? null,
+        root,
         threshold: [0, 0.2, 1],
       },
     )
@@ -54,14 +51,15 @@ export function YouTubeJumpToHero({ articleId }: Props) {
     return () => observer.disconnect()
   }, [activeArticleId, articleId])
 
-  if (activeArticleId !== articleId || !heroOffScreen) return null
+  const showJump = activeArticleId === articleId && heroOffScreen
+  if (!showJump) return null
 
   return (
     <button
       type="button"
       onClick={() => scrollYouTubeHeroIntoView()}
       aria-label="Jump to video"
-      className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-[90] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/95 text-primary shadow-panel backdrop-blur transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 lg:bottom-[calc(1rem+env(safe-area-inset-bottom))]"
+      className="fixed right-4 z-[90] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/95 text-primary shadow-panel backdrop-blur transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 max-lg:bottom-[calc(13rem+env(safe-area-inset-bottom))] lg:bottom-[calc(11rem+env(safe-area-inset-bottom))]"
     >
       <svg
         className="h-5 w-5"

@@ -19,6 +19,8 @@ type PanelState = {
   gen: number
 }
 
+type DockSide = 'left' | 'right' | 'center'
+
 function CloseCrossIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -39,9 +41,74 @@ function CloseCrossIcon({ className }: { className?: string }) {
   )
 }
 
+function isVisibleElement(el: HTMLElement): boolean {
+  const style = window.getComputedStyle(el)
+  if (
+    style.display === 'none' ||
+    style.visibility === 'hidden' ||
+    style.opacity === '0' ||
+    style.pointerEvents === 'none'
+  ) {
+    return false
+  }
+  const rect = el.getBoundingClientRect()
+  return rect.width > 0 && rect.height > 0
+}
+
+function overlapArea(a: DOMRect, b: DOMRect): number {
+  const left = Math.max(a.left, b.left)
+  const top = Math.max(a.top, b.top)
+  const right = Math.min(a.right, b.right)
+  const bottom = Math.min(a.bottom, b.bottom)
+  if (right <= left || bottom <= top) return 0
+  return (right - left) * (bottom - top)
+}
+
 export function GlobalYouTubeMiniPlayer() {
   const [panel, setPanel] = useState<PanelState | null>(null)
+  const [dockSide, setDockSide] = useState<DockSide>('center')
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+
+  const resolveDockSide = useCallback((): DockSide => {
+    if (typeof window === 'undefined') return 'center'
+    if (window.innerWidth < 1024) return 'center'
+
+    const dialogs = Array.from(
+      document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
+    ).filter((el) => isVisibleElement(el))
+
+    if (dialogs.length === 0) return 'right'
+
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const playerWidth = Math.min(512, Math.max(320, viewportWidth - 32))
+    const playerHeight = Math.round((playerWidth * 9) / 16)
+
+    const leftCandidate = {
+      left: 16,
+      right: 16 + playerWidth,
+      top: viewportHeight - 16 - playerHeight,
+      bottom: viewportHeight - 16,
+    } as DOMRect
+    const rightCandidate = {
+      left: viewportWidth - 16 - playerWidth,
+      right: viewportWidth - 16,
+      top: viewportHeight - 16 - playerHeight,
+      bottom: viewportHeight - 16,
+    } as DOMRect
+
+    let leftCollisionScore = 0
+    let rightCollisionScore = 0
+
+    for (const dialog of dialogs) {
+      const rect = dialog.getBoundingClientRect()
+      leftCollisionScore += overlapArea(leftCandidate, rect)
+      rightCollisionScore += overlapArea(rightCandidate, rect)
+    }
+
+    return leftCollisionScore <= rightCollisionScore ? 'left' : 'right'
+  }, [])
 
   useEffect(() => {
     function onPlay(e: Event) {
@@ -86,6 +153,33 @@ export function GlobalYouTubeMiniPlayer() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [panel, close])
 
+  useEffect(() => {
+    if (!panel) return
+
+    let rafId = 0
+    function recalculateDockSide() {
+      cancelAnimationFrame(rafId)
+      rafId = window.requestAnimationFrame(() => {
+        setDockSide(resolveDockSide())
+      })
+    }
+
+    recalculateDockSide()
+    window.addEventListener('resize', recalculateDockSide)
+
+    const observer = new MutationObserver(recalculateDockSide)
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    })
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', recalculateDockSide)
+      observer.disconnect()
+    }
+  }, [panel, resolveDockSide])
+
   if (typeof document === 'undefined' || !panel) return null
 
   const pageOrigin = typeof window !== 'undefined' ? window.location.origin : null
@@ -99,19 +193,22 @@ export function GlobalYouTubeMiniPlayer() {
     ? `Playing video: ${panel.title}`
     : 'In-app YouTube player'
 
+  const rootClassName =
+    dockSide === 'center'
+      ? 'fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-1/2 z-[100] w-[clamp(15rem,88vw,22rem)] -translate-x-1/2 pt-2 sm:w-[clamp(16rem,72vw,24rem)]'
+      : dockSide === 'left'
+        ? 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-4 z-[100] w-[min(32rem,calc(100vw-2rem))]'
+        : 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-4 z-[100] w-[min(32rem,calc(100vw-2rem))]'
+
   return createPortal(
     <div
-      className="fixed inset-x-0 bottom-0 z-[100] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:justify-end lg:px-4"
+      ref={rootRef}
+      className={rootClassName}
       role="complementary"
       aria-label={dialogLabel}
+      aria-live="polite"
     >
-      {/*
-        Keep inset-x-0 on all breakpoints so this fixed box always has a definite
-        width (full viewport). Using left/right auto at lg (inset-x-auto) made the
-        shrink-to-fit width resolve to ~0 with a w-full child — iframe played audio
-        but had no visible horizontal size.
-      */}
-      <div className="relative w-full min-w-0 max-w-lg overflow-hidden rounded-t-2xl border border-border bg-black shadow-panel ring-1 ring-elevated lg:rounded-2xl">
+      <div className="relative w-full min-w-0 overflow-hidden rounded-2xl border border-border bg-black shadow-panel ring-1 ring-elevated">
         <div className="relative aspect-video w-full min-h-0 overflow-hidden">
           <iframe
             key={panel.gen}
@@ -127,7 +224,7 @@ export function GlobalYouTubeMiniPlayer() {
             type="button"
             onClick={close}
             aria-label="Close player"
-            className="absolute right-2 top-2 z-[70] flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white shadow-md ring-1 ring-white/25 backdrop-blur-sm transition-colors hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            className="absolute right-1.5 top-1.5 z-[70] flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white shadow-md ring-1 ring-white/25 backdrop-blur-sm transition-colors hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 lg:right-2 lg:top-2 lg:h-8 lg:w-8"
           >
             <CloseCrossIcon />
           </button>

@@ -1,9 +1,11 @@
 export type YouTubePlaySource = 'poster' | 'timestamp'
+export type YouTubePlaybackMode = 'inline_hero' | 'mini_player'
 
 export type YouTubePlayPayload = {
   video_id: string
   seconds: number
   source: YouTubePlaySource
+  playback_mode?: YouTubePlaybackMode
   article_id?: string
 }
 
@@ -18,6 +20,7 @@ export function trackYouTubePlay(payload: YouTubePlayPayload): void {
     video_id: payload.video_id,
     seconds: Math.max(0, Math.floor(payload.seconds)),
     source: payload.source,
+    playback_mode: payload.playback_mode ?? 'mini_player',
     ...(payload.article_id ? { article_id: payload.article_id } : {}),
   })
 }
