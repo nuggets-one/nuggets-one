@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { resolveArticleHeroFields } from '../../../lib/ui/resolve-article-hero'
 
 function extractYouTubeVideoId(url: unknown): string | null {
   if (typeof url !== 'string' || !url.trim()) return null
@@ -21,4 +22,19 @@ test('extractYouTubeVideoId from watch URL', () => {
     extractYouTubeVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
     'dQw4w9WgXcQ'
   )
+})
+
+test('resolveArticleHeroFields ignores non-image hero_thumb and falls back to media_urls', () => {
+  const xStatus = 'https://x.com/user/status/2046338149870354574'
+  const twitterImage =
+    'https://pbs.twimg.com/media/ABC123?format=jpg&name=large'
+
+  const resolved = resolveArticleHeroFields({
+    source_url: xStatus,
+    hero_thumb_url: xStatus,
+    media_urls: [twitterImage],
+  })
+
+  assert.equal(resolved.hero_media_kind, 'image')
+  assert.equal(resolved.hero_thumb_url, twitterImage)
 })

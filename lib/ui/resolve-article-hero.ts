@@ -68,8 +68,10 @@ export function resolveArticleHeroFields(input: {
     }
   }
 
+  const validImageHeroThumb =
+    heroThumb && isImageUrl(heroThumb) && !extractYouTubeVideoId(heroThumb) ? heroThumb : null
   const defaultImageThumb =
-    heroThumb ??
+    validImageHeroThumb ??
     imageMediaUrls.find((url) => isImageUrl(url) && !extractYouTubeVideoId(url)) ??
     null
 
