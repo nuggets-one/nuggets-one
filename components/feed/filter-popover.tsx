@@ -9,7 +9,7 @@ import {
   type MouseEvent,
   useTransition,
 } from 'react'
-import { ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, SlidersHorizontal, X } from 'lucide-react'
 import { useQueryState } from 'nuqs'
 import type { TagSummary } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
@@ -24,6 +24,7 @@ import { useScrollLock } from '@/lib/ui/use-scroll-lock'
 type Props = {
   tags: TagSummary[]
   counts: TagCounts
+  committedTotalCount?: number
   /** Primary CTA when no tag filters in URL (default: More filters). */
   idleTriggerLabel?: string
   /** Compact icon+count trigger on mobile, desktop keeps label. */
@@ -182,6 +183,7 @@ function FilterAccordionSection({
 export function FilterPopover({
   tags,
   counts,
+  committedTotalCount,
   idleTriggerLabel = 'More filters',
   triggerVariant = 'default',
 }: Props) {
@@ -229,6 +231,10 @@ export function FilterPopover({
 
   const selectedSet = useMemo(() => new Set(localSelected), [localSelected])
   const committedSet = useMemo(() => new Set(committed), [committed])
+  const slugToLabel = useMemo(
+    () => new Map(tags.map((tag) => [tag.slug, tag.label] as const)),
+    [tags]
+  )
   const searchActive = query.trim().length > 0
 
   const autoExpanded = useMemo<GroupVisibility>(
@@ -313,6 +319,10 @@ export function FilterPopover({
   const dirty =
     selectedSet.size !== committedSet.size ||
     [...selectedSet].some((slug) => !committedSet.has(slug))
+  const ctaLabel =
+    typeof committedTotalCount === 'number'
+      ? `Show ${new Intl.NumberFormat('en-IN').format(committedTotalCount)} nuggets`
+      : 'Apply'
 
   return (
     <>
@@ -365,44 +375,58 @@ export function FilterPopover({
         className="m-0 w-full max-w-full bg-transparent p-0 backdrop:bg-scrim backdrop:backdrop-blur-sm"
       >
         <div
-          className="fixed inset-x-0 bottom-0 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl border border-border bg-surface text-primary shadow-panel lg:inset-auto lg:left-1/2 lg:top-1/2 lg:max-h-[min(90vh,720px)] lg:w-[min(960px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl"
+          className="fixed inset-x-0 bottom-0 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-3xl border border-border bg-surface text-primary shadow-panel lg:inset-auto lg:left-1/2 lg:top-1/2 lg:max-h-[min(90vh,720px)] lg:w-[min(960px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl"
           role="document"
         >
-          <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-2.5">
-            <h2 className="text-[15px] font-semibold tracking-tight text-primary">
-              Filter by topic{' '}
-              <span className="text-xs font-medium text-muted">{localSelected.length} selected</span>
-            </h2>
-            <button
-              type="button"
-              onClick={closeDialog}
-              aria-label="Close filters"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-surface-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            </button>
+          <div className="sticky top-0 z-20 bg-surface/95 backdrop-blur-sm">
+            <div className="border-b border-border px-4 pb-2 pt-2">
+              <div className="mx-auto mb-2 h-1 w-12 rounded-full bg-border" aria-hidden="true" />
+              <div className="flex min-h-11 items-center justify-between">
+                <div>
+                  <h2 className="text-[18px] font-semibold tracking-tight text-primary">Filters</h2>
+                  <p className="text-xs text-muted">{localSelected.length} selected</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeDialog}
+                  aria-label="Close filters"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+            {localSelected.length > 0 ? (
+              <div className="border-b border-border px-4 py-2" role="status" aria-label="Active filters">
+                <div className="flex gap-2 overflow-x-auto pb-0.5">
+                  {localSelected.map((slug) => (
+                    <button
+                      key={slug}
+                      type="button"
+                      onClick={() => toggleLocal(slug)}
+                      className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-chip-active-border bg-chip-active-bg px-3 text-[13px] font-medium text-chip-active-text transition-colors hover:bg-chip-active-bg/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
+                      aria-label={`Remove ${slugToLabel.get(slug) ?? slug} filter`}
+                    >
+                      <span>{slugToLabel.get(slug) ?? slug}</span>
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="shrink-0 border-b border-border bg-surface px-4 py-2.5">
             <label className="block">
-              <span className="sr-only">Search tags</span>
+              <span className="sr-only">Search topics</span>
               <input
                 ref={searchRef}
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search across all topics…"
+                placeholder="Search topics"
                 autoComplete="off"
-                className="h-10 w-full rounded-xl border border-border bg-bg px-3 text-sm text-primary placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-focus/60"
+                className="h-11 w-full rounded-full border border-border bg-bg px-4 text-sm text-primary placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-focus/60"
               />
             </label>
           </div>
@@ -448,25 +472,25 @@ export function FilterPopover({
           </div>
 
           <div
-            className="shrink-0 border-t border-border bg-surface px-4 pt-2.5"
+            className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-surface/95 px-4 pt-2.5 backdrop-blur-sm"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.625rem)' }}
           >
-            <div className="flex items-center justify-between gap-3 lg:justify-end">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={clearLocal}
                 disabled={isPending || localSelected.length === 0}
-                className="text-sm font-medium text-muted underline-offset-2 hover:text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
+                className="min-h-11 shrink-0 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-surface-raised hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
               >
-                Reset
+                Clear all
               </button>
               <button
                 type="button"
                 onClick={applyLocal}
                 disabled={isPending || !dirty}
-                className="h-10 min-w-28 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
+                className="min-h-11 flex-1 rounded-full bg-accent px-4 text-[14px] font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
               >
-                Apply
+                {ctaLabel}
               </button>
             </div>
           </div>

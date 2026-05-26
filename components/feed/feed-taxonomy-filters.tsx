@@ -23,6 +23,7 @@ import { FilterPopover } from '@/components/feed/filter-popover'
 type Props = {
   tags: TagSummary[]
   counts: TagCounts
+  totalCount: number
 }
 
 function RailDivider() {
@@ -47,7 +48,7 @@ const scrollArrowBtn =
  * Feed filter chrome: All + scrollable dimension quick rail (format | domain | subtopic)
  * + More filters dialog for full taxonomy.
  */
-export function FeedTaxonomyFilters({ tags, counts }: Props) {
+export function FeedTaxonomyFilters({ tags, counts, totalCount }: Props) {
   const [tagsRaw, setSelected] = useQueryState('tags', {
     defaultValue: '',
     shallow: false,
@@ -126,86 +127,85 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
   if (tags.length === 0) return null
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-h-11 min-w-0 items-center gap-2">
+      <button
+        type="button"
+        onClick={() =>
+          startTransition(() => {
+            setSelected(null)
+          })
+        }
+        aria-pressed={!hasActiveTags}
+        disabled={isPending || !hasActiveTags}
+        className={
+          !hasActiveTags
+            ? 'inline-flex min-h-[36px] shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-chip-active-border bg-chip-active-bg px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20 cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+            : 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-inactive-border bg-transparent px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+        }
+      >
+        {!hasActiveTags && <Check className="h-3 w-3 shrink-0" aria-hidden="true" />}
+        <span>All</span>
+      </button>
+
+      {dimensionBlocks.length > 0 ? <RailDivider /> : null}
+
+      {scrollState.overflow ? (
         <button
           type="button"
-          onClick={() =>
-            startTransition(() => {
-              setSelected(null)
-            })
-          }
-          aria-pressed={!hasActiveTags}
-          disabled={isPending || !hasActiveTags}
-          className={
-            !hasActiveTags
-              ? 'inline-flex min-h-[36px] shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-chip-active-border bg-chip-active-bg px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20 cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
-              : 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-inactive-border bg-transparent px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
-          }
+          className={scrollArrowBtn}
+          aria-label="Scroll tags left"
+          disabled={!scrollState.canLeft}
+          onClick={() => scrollByDir(-1)}
         >
-          {!hasActiveTags && <Check className="h-3 w-3 shrink-0" aria-hidden="true" />}
-          <span>All</span>
+          <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
         </button>
+      ) : null}
 
-        {dimensionBlocks.length > 0 ? <RailDivider /> : null}
-
-        {scrollState.overflow ? (
-          <button
-            type="button"
-            className={scrollArrowBtn}
-            aria-label="Scroll tags left"
-            disabled={!scrollState.canLeft}
-            onClick={() => scrollByDir(-1)}
-          >
-            <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
-          </button>
-        ) : null}
-
-        <div
-          ref={scrollRef}
-          className="flex min-h-[36px] min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {dimensionBlocks.map((block, idx) => (
-            <Fragment key={block.key}>
-              {idx > 0 ? <RailDivider /> : null}
-              <div className="flex shrink-0 items-center gap-2">
-                {block.tags.map((tag) => {
-                  const active = selected.includes(tag.slug)
-                  return (
-                    <button
-                      key={tag.slug}
-                      type="button"
-                      onClick={() => toggleSlug(tag.slug)}
-                      disabled={isPending}
-                      aria-pressed={active}
-                      className={tagPillClasses(active)}
-                    >
-                      {tag.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </Fragment>
-          ))}
-        </div>
-
-        {scrollState.overflow ? (
-          <button
-            type="button"
-            className={scrollArrowBtn}
-            aria-label="Scroll tags right"
-            disabled={!scrollState.canRight}
-            onClick={() => scrollByDir(1)}
-          >
-            <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
-          </button>
-        ) : null}
+      <div
+        ref={scrollRef}
+        className="flex min-h-[36px] min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {dimensionBlocks.map((block, idx) => (
+          <Fragment key={block.key}>
+            {idx > 0 ? <RailDivider /> : null}
+            <div className="flex shrink-0 items-center gap-2">
+              {block.tags.map((tag) => {
+                const active = selected.includes(tag.slug)
+                return (
+                  <button
+                    key={tag.slug}
+                    type="button"
+                    onClick={() => toggleSlug(tag.slug)}
+                    disabled={isPending}
+                    aria-pressed={active}
+                    className={tagPillClasses(active)}
+                  >
+                    {tag.label}
+                  </button>
+                )
+              })}
+            </div>
+          </Fragment>
+        ))}
       </div>
 
-      <div className="flex shrink-0 justify-end sm:justify-start">
+      {scrollState.overflow ? (
+        <button
+          type="button"
+          className={scrollArrowBtn}
+          aria-label="Scroll tags right"
+          disabled={!scrollState.canRight}
+          onClick={() => scrollByDir(1)}
+        >
+          <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+        </button>
+      ) : null}
+
+      <div className="shrink-0">
         <FilterPopover
           tags={tags}
           counts={counts}
+          committedTotalCount={totalCount}
           idleTriggerLabel="More filters"
           triggerVariant="iconCount"
         />
