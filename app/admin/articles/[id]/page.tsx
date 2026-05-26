@@ -65,6 +65,8 @@ export default async function EditArticlePage({
     db
       .from('tags')
       .select('id, slug, label, dimension, is_official')
+      .eq('is_official', true)
+      .in('dimension', ['format', 'domain', 'subtopic'])
       .order('dimension', { ascending: true, nullsFirst: false })
       .order('label', { ascending: true }),
     db
