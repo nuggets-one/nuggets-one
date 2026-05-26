@@ -8,6 +8,8 @@ type Props = {
   tags: TagSummary[]
 }
 
+const MAX_VISIBLE_CHIPS = 2
+
 export function ActiveFiltersBar({ tags }: Props) {
   const [tagsRaw, setTagsParam] = useQueryState('tags', {
     defaultValue: '',
@@ -20,12 +22,16 @@ export function ActiveFiltersBar({ tags }: Props) {
     () => (tagsRaw ? tagsRaw.split(',').filter(Boolean) : []),
     [tagsRaw]
   )
+  const labelBySlug = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const tag of tags) map.set(tag.slug, tag.label)
+    return map
+  }, [tags])
 
   const hasFilters = selectedSlugs.length > 0 || q.length > 0
   if (!hasFilters) return null
 
-  const labelFor = (slug: string) =>
-    tags.find((t) => t.slug === slug)?.label ?? slug
+  const labelFor = (slug: string) => labelBySlug.get(slug) ?? slug
 
   function removeTag(slug: string) {
     const next = selectedSlugs.filter((s) => s !== slug)
@@ -47,46 +53,68 @@ export function ActiveFiltersBar({ tags }: Props) {
     })
   }
 
+  const chips: Array<{ key: string; label: string; remove: () => void; ariaLabel: string }> = []
+  if (q) {
+    chips.push({
+      key: `q:${q}`,
+      label: `Search: "${q}"`,
+      remove: clearQuery,
+      ariaLabel: `Remove search filter ${q}`,
+    })
+  }
+  for (const slug of selectedSlugs) {
+    const name = labelFor(slug)
+    chips.push({
+      key: `tag:${slug}`,
+      label: name,
+      remove: () => removeTag(slug),
+      ariaLabel: `Remove ${name} filter`,
+    })
+  }
+
+  const visibleChips = chips.slice(0, MAX_VISIBLE_CHIPS)
+  const hiddenCount = Math.max(0, chips.length - visibleChips.length)
+
   return (
     <div
       role="region"
       aria-label="Active filters"
-      className="flex flex-wrap items-center gap-1.5"
+      className="flex min-h-11 min-w-0 items-center gap-2"
     >
-      <span className="text-[11px] uppercase tracking-wide text-muted">Filters</span>
+      <span className="hidden text-[10px] font-medium uppercase tracking-[0.11em] text-muted sm:inline">
+        Filters
+      </span>
 
-      {q && (
-        <button
-          type="button"
-          onClick={clearQuery}
-          disabled={isPending}
-          aria-label={`Remove search filter ${q}`}
-          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60"
-        >
-          <span>Search: &ldquo;{q}&rdquo;</span>
-          <span aria-hidden="true" className="text-muted">×</span>
-        </button>
-      )}
-
-      {selectedSlugs.map((slug) => (
-        <button
-          key={slug}
-          type="button"
-          onClick={() => removeTag(slug)}
-          disabled={isPending}
-          aria-label={`Remove ${labelFor(slug)} filter`}
-          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60"
-        >
-          <span>{labelFor(slug)}</span>
-          <span aria-hidden="true" className="text-muted">×</span>
-        </button>
-      ))}
+      <div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-h-9 items-center gap-1.5 whitespace-nowrap pr-1">
+          {visibleChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.remove}
+              disabled={isPending}
+              aria-label={chip.ariaLabel}
+              className="inline-flex min-h-8 items-center gap-1 rounded-full border border-border bg-surface-raised px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60"
+            >
+              <span className="truncate">{chip.label}</span>
+              <span aria-hidden="true" className="text-muted">
+                ×
+              </span>
+            </button>
+          ))}
+          {hiddenCount > 0 ? (
+            <span className="inline-flex min-h-8 items-center rounded-full border border-border bg-surface-raised px-2.5 py-1 text-xs font-medium text-muted">
+              +{hiddenCount} more
+            </span>
+          ) : null}
+        </div>
+      </div>
 
       <button
         type="button"
         onClick={clearAll}
         disabled={isPending}
-        className="rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60 sm:ml-auto"
+        className="shrink-0 rounded text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60"
       >
         Clear all
       </button>
