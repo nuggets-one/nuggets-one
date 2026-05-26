@@ -24,6 +24,8 @@ UPDATE articles SET tag_slugs = ARRAY(
   WHERE at.article_id = $1 ORDER BY t.slug
 ) WHERE id = $1
 
-## No collections CRUD
-community_collections has no admin UI in this PR sequence.
-Manage via Supabase Studio only until explicitly scoped.
+## Collections CRUD
+Routes: `/admin/collections`, `/admin/collections/new`, `/admin/collections/[id]`.
+Server actions: `lib/actions/collections.ts` (service role).
+After any collection or entry change, call `revalidateCollection(id)` from `lib/cache.ts`.
+Only **published** articles may be added to a collection.

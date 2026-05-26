@@ -17,6 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <span className="font-semibold text-sm text-primary">Admin</span>
         <Link href="/admin/articles" className="text-sm text-muted hover:text-primary transition-colors">Articles</Link>
         <Link href="/admin/tags" className="text-sm text-muted hover:text-primary transition-colors">Tags</Link>
+        <Link href="/admin/collections" className="text-sm text-muted hover:text-primary transition-colors">Collections</Link>
         <Link href="/admin/legal-pages" className="text-sm text-muted hover:text-primary transition-colors">Legal pages</Link>
         <Link href="/admin/site-copy" className="text-sm text-muted hover:text-primary transition-colors">Site copy</Link>
         <Link
