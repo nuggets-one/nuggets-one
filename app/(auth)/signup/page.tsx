@@ -12,6 +12,10 @@ export default async function SignupPage({ searchParams }: Props) {
   const nextPath = next ?? '/'
   const nextQuery = nextPath !== '/' ? `?next=${encodeURIComponent(nextPath)}` : ''
   const googleHref = nextPath !== '/' ? `/auth/google?next=${encodeURIComponent(nextPath)}` : '/auth/google'
+  const googleChooseAccountHref =
+    nextPath !== '/'
+      ? `/auth/google?next=${encodeURIComponent(nextPath)}&prompt=select_account`
+      : '/auth/google?prompt=select_account'
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg px-4">
@@ -87,6 +91,13 @@ export default async function SignupPage({ searchParams }: Props) {
           <GoogleIcon />
           Continue with Google
         </Link>
+
+        <p className="text-center text-xs text-muted">
+          Not you?{' '}
+          <Link href={googleChooseAccountHref} className="text-primary font-medium hover:underline">
+            Use another Google account
+          </Link>
+        </p>
 
         <p className="text-center text-sm text-muted">
           Already have an account?{' '}
