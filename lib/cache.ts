@@ -54,3 +54,9 @@ export function revalidateLegalDocuments(): void {
 export function revalidateSiteSettings(): void {
   revalidateTag(CACHE_TAGS.siteSettings, HARD_BUST)
 }
+
+/** Call after any admin change to `community_collections` or its entries. */
+export function revalidateCollection(id: string): void {
+  revalidateTag(CACHE_TAGS.collection(id), HARD_BUST)
+  revalidateTag(CACHE_TAGS.collectionsList, HARD_BUST)
+}
