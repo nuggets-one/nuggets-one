@@ -60,7 +60,7 @@ test('card preview preserves legacy html blockquotes from excerpt fallback', () 
 
   assert.equal(
     preview,
-    '> "If you have a take a lick of the lollipop of mediocrity you will suck forever." - **Sally Kornbluth (quoting a Duke colleague)** [00:04:28]\n\nTrailing context still appears after the quote.'
+    '> "If you have a take a lick of the lollipop of mediocrity you will suck forever." - **Sally Kornbluth (quoting a Duke colleague)** [00:04:28](#yt=268)\n\nTrailing context still appears after the quote.'
   )
 })
 
@@ -85,6 +85,16 @@ test('card preview preserves list when header is separated by blank line', () =>
   assert.equal(
     preview,
     '**Episode** [00:00:00]\n\n- **Podcast:** The Markets\n- **Host:** Chris'
+  )
+})
+
+test('card preview turns bracket YouTube timestamps into #yt links', () => {
+  const preview = buildCardPreviewFromMarkdown(
+    '> "Design is a response" - Foster [00:04:10]',
+  )
+  assert.equal(
+    preview,
+    '> "Design is a response" - Foster [00:04:10](#yt=250)',
   )
 })
 

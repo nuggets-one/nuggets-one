@@ -21,3 +21,23 @@ test('normalizeParenTimestampsInMarkdown leaves existing #yt links', () => {
   const input = 'Use [2:34](#yt=154) as canonical.'
   assert.equal(normalizeParenTimestampsInMarkdown(input), input)
 })
+
+test('normalizeParenTimestampsInMarkdown converts bracket H:MM:SS', () => {
+  const out = normalizeParenTimestampsInMarkdown('Quote [00:04:10] here.')
+  assert.equal(out, 'Quote [00:04:10](#yt=250) here.')
+})
+
+test('normalizeParenTimestampsInMarkdown converts bracket MM:SS', () => {
+  const out = normalizeParenTimestampsInMarkdown('At [04:10] he says.')
+  assert.equal(out, 'At [04:10](#yt=250) he says.')
+})
+
+test('normalizeParenTimestampsInMarkdown leaves [00:00:00] placeholders (zero offset)', () => {
+  const input = '**Episode** [00:00:00]\n\n- **Podcast:** show'
+  assert.equal(normalizeParenTimestampsInMarkdown(input), input)
+})
+
+test('normalizeParenTimestampsInMarkdown does not alter [00:04:10](#yt=…)', () => {
+  const input = 'x [00:04:10](#yt=250) y'
+  assert.equal(normalizeParenTimestampsInMarkdown(input), input)
+})

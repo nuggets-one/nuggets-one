@@ -78,7 +78,7 @@ function BodyImage({
 
 function BodyLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) {
   const { className, href, ...rest } = props
-  const isYtTimestamp = typeof href === 'string' && /#yt=\d+/.test(href)
+  const isYtTimestamp = typeof href === 'string' && /#yt=/.test(href)
   const ytClasses = isYtTimestamp
     ? 'cursor-pointer rounded-sm transition-colors active:bg-primary/10'
     : ''

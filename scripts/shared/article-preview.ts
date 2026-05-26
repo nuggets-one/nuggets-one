@@ -1,3 +1,5 @@
+import { normalizeParenTimestampsInMarkdown } from '../../lib/markdown/normalize-youtube-timestamps'
+
 const EXCERPT_MAX_LEN = 240
 const CARD_PREVIEW_MAX_LEN = 420
 const MAX_CARD_PREVIEW_BLOCKS = 3
@@ -181,7 +183,10 @@ export function buildCardPreviewFromMarkdown(markdown: string): string {
     .slice(0, MAX_CARD_PREVIEW_BLOCKS)
 
   if (blocks.length === 0) return ''
-  return truncateAtWordBoundary(blocks.join('\n\n'), CARD_PREVIEW_MAX_LEN)
+
+  const assembled = blocks.join('\n\n')
+  const withYt = normalizeParenTimestampsInMarkdown(assembled)
+  return truncateAtWordBoundary(withYt, CARD_PREVIEW_MAX_LEN)
 }
 
 export function resolveCardPreview(input: {

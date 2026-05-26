@@ -1,4 +1,5 @@
 import 'server-only'
+import { normalizeParenTimestampsInMarkdown } from '@/lib/markdown/normalize-youtube-timestamps'
 import { createHash } from 'node:crypto'
 import { unstable_cache } from 'next/cache'
 import { unified } from 'unified'
@@ -49,9 +50,11 @@ export async function renderCardPreviewMarkdown(markdown: string | null | undefi
   const trimmed = truncateAtWordBoundary(markdown.trim(), MAX_INPUT_CHARS)
   if (!trimmed) return ''
 
-  const key = hashKey(trimmed)
+  const normalized = normalizeParenTimestampsInMarkdown(trimmed)
+
+  const key = hashKey(normalized)
   const cached = unstable_cache(
-    async () => compile(trimmed),
+    async () => compile(normalized),
     ['card-preview-html', key],
     { revalidate: 86400 }
   )

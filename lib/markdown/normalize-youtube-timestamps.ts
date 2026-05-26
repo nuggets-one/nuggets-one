@@ -1,6 +1,7 @@
 /**
- * Convert legacy parenthetical timestamps in markdown to canonical `#yt=` links.
- * Mirrors Project Phoenix MarkdownRenderer rules; safe to run at render time or in ETL.
+ * Convert legacy timestamp syntax in markdown to canonical `[label](#yt=seconds)` links.
+ * Supports bare `[H:MM:SS]` / `[MM:SS]` (common in editorial copy) and `(H:MM:SS)` / `(MM:SS)`.
+ * Safe to run at render time or in ETL.
  */
 
 function hmsToSeconds(h: string, m: string, s: string): number {
@@ -13,6 +14,33 @@ function hmsToSeconds(h: string, m: string, s: string): number {
 
 function msToSeconds(m: string, s: string): number {
   return Number.parseInt(m, 10) * 60 + Number.parseInt(s, 10)
+}
+
+/**
+ * Bare bracket timestamps `[H:MM:SS]` / `[MM:SS]` → canonical `#yt=` links.
+ * `(?!\()` skips markdown link destinations: `[00:04:10](#yt=250)` is left alone.
+ */
+const BRACKET_HMS = /\[(\d{1,2}):(\d{2}):(\d{2})\](?!\()/g
+const BRACKET_MS = /\[(\d{2}):(\d{2})\](?!\()/g
+
+function replaceBracketHms(
+  match: string,
+  h: string,
+  m: string,
+  s: string,
+): string {
+  const seconds = hmsToSeconds(h, m, s)
+  // Skip `[00:00:00]`-style placeholders (episode badges) — seek links would change card preview/copy.
+  if (seconds === 0) return match
+  const label = `${h}:${m}:${s}`
+  return `[${label}](#yt=${seconds})`
+}
+
+function replaceBracketMs(match: string, m: string, s: string): string {
+  const seconds = msToSeconds(m, s)
+  if (seconds === 0) return match
+  const label = `${m}:${s}`
+  return `[${label}](#yt=${seconds})`
 }
 
 /** Prefix is `^` (line start) or whitespace not immediately after `[`. */
@@ -40,10 +68,13 @@ function replaceMs(_match: string, prefix: string, m: string, s: string): string
 }
 
 /**
- * Rewrites `(H:MM:SS)` and `(MM:SS)` outside markdown link labels and URL query strings.
+ * Rewrites `[H:MM:SS]`, `[MM:SS]`, `(H:MM:SS)`, `(MM:SS)` to `[label](#yt=seconds)`,
+ * skipping patterns already tied to link destinations `( ... )`.
  */
 export function normalizeParenTimestampsInMarkdown(markdown: string): string {
   return markdown
+    .replace(BRACKET_HMS, replaceBracketHms)
+    .replace(BRACKET_MS, replaceBracketMs)
     .replace(PAREN_PREFIX, replaceHms)
     .replace(PAREN_PREFIX_MS, replaceMs)
 }
