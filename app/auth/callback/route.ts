@@ -6,6 +6,14 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = sanitizeNext(searchParams.get('next'))
+  const oauthError = searchParams.get('error')
+  const oauthErrorDescription = searchParams.get('error_description')
+
+  if (oauthError) {
+    const msg = encodeURIComponent(oauthErrorDescription ?? oauthError)
+    const nextParam = next !== '/' ? `&next=${encodeURIComponent(next)}` : ''
+    return NextResponse.redirect(`${origin}/login?error=${msg}${nextParam}`)
+  }
 
   if (code) {
     const supabase = await createClient()
@@ -13,7 +21,11 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    const msg = encodeURIComponent(error.message)
+    const nextParam = next !== '/' ? `&next=${encodeURIComponent(next)}` : ''
+    return NextResponse.redirect(`${origin}/login?error=${msg}${nextParam}`)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  const nextParam = next !== '/' ? `&next=${encodeURIComponent(next)}` : ''
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed${nextParam}`)
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { loginAction, googleSignInAction } from '@/lib/actions/auth'
+import { loginAction } from '@/lib/actions/auth'
 
 interface Props {
   searchParams: Promise<{ error?: string; message?: string; next?: string }>
@@ -11,6 +11,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const { error, message, next } = await searchParams
   const nextPath = next ?? '/'
   const nextQuery = nextPath !== '/' ? `?next=${encodeURIComponent(nextPath)}` : ''
+  const googleHref = nextPath !== '/' ? `/auth/google?next=${encodeURIComponent(nextPath)}` : '/auth/google'
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg px-4">
@@ -96,16 +97,13 @@ export default async function LoginPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <form action={googleSignInAction}>
-          <input type="hidden" name="next" value={nextPath} />
-          <button
-            type="submit"
-            className="w-full flex items-center justify-center gap-2.5 rounded-lg border border-border bg-surface-raised px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </button>
-        </form>
+        <Link
+          href={googleHref}
+          className="w-full flex items-center justify-center gap-2.5 rounded-lg border border-border bg-surface-raised px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+        >
+          <GoogleIcon />
+          Continue with Google
+        </Link>
 
         <p className="text-center text-sm text-muted">
           Don&apos;t have an account?{' '}
