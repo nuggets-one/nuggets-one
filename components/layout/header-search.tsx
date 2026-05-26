@@ -9,6 +9,11 @@ import type { SuggestionRow } from '@/lib/queries/article'
 import { readResponseJson } from '@/lib/http/parse-json-response'
 
 const DEBOUNCE_MS = 180
+const SUGGESTION_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -17,6 +22,13 @@ function useDebounce<T>(value: T, delay: number): T {
     return () => clearTimeout(t)
   }, [value, delay])
   return debounced
+}
+
+function formatSuggestionDate(value: string | null): string | null {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return SUGGESTION_DATE_FORMATTER.format(date)
 }
 
 export function HeaderSearch() {
@@ -40,6 +52,8 @@ export function HeaderSearch() {
 
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const suggestAbortRef = useRef<AbortController | null>(null)
+  const lastSuggestQueryRef = useRef('')
 
   const debouncedInput = useDebounce(inputValue, DEBOUNCE_MS)
 
@@ -48,29 +62,57 @@ export function HeaderSearch() {
   const suggestPanelOpen = isFocused && trimmed.length >= 2
 
   useEffect(() => {
-    const qTrim = debouncedInput.trim()
-
-    /** Clear asynchronously to satisfy react-hooks rules (avoid sync setState in effect body path). */
-    if (qTrim.length < 2) {
+    if (!isFocused) {
       let cancelled = false
       queueMicrotask(() => {
-        if (cancelled) return
-        setSuggestionsPending(false)
-        setSuggestions([])
-        setActiveIndex(-1)
+        if (!cancelled) {
+          setInputValue(committedQ)
+        }
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+  }, [committedQ, isFocused])
+
+  useEffect(() => {
+    const qTrim = debouncedInput.trim()
+    const queryKey = `${stream}:${qTrim.toLowerCase()}`
+
+    if (qTrim.length < 2) {
+      suggestAbortRef.current?.abort()
+      suggestAbortRef.current = null
+      lastSuggestQueryRef.current = ''
+      let cancelled = false
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setSuggestionsPending(false)
+          setSuggestions([])
+          setActiveIndex(-1)
+        }
       })
       return () => {
         cancelled = true
       }
     }
 
+    if (queryKey === lastSuggestQueryRef.current) {
+      return
+    }
+
+    lastSuggestQueryRef.current = queryKey
+    suggestAbortRef.current?.abort()
+    const controller = new AbortController()
+    suggestAbortRef.current = controller
     let cancelled = false
     queueMicrotask(() => {
-      if (!cancelled) setSuggestionsPending(true)
+      if (!cancelled) {
+        setSuggestionsPending(true)
+      }
     })
 
     const params = new URLSearchParams({ q: qTrim, stream })
-    fetch(`/api/search/suggest?${params}`)
+    fetch(`/api/search/suggest?${params}`, { signal: controller.signal })
       .then(async (r) => {
         if (cancelled) return
         if (!r.ok) {
@@ -88,7 +130,7 @@ export function HeaderSearch() {
         setActiveIndex(-1)
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!cancelled && !controller.signal.aborted) {
           setSuggestions([])
           setActiveIndex(-1)
         }
@@ -99,6 +141,7 @@ export function HeaderSearch() {
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [debouncedInput, stream])
 
@@ -114,8 +157,13 @@ export function HeaderSearch() {
 
   const commitSearch = useCallback((value: string) => {
     const trimmed = value.trim()
+    suggestAbortRef.current?.abort()
+    suggestAbortRef.current = null
     setCommittedQ(trimmed || null)
     setInputValue(trimmed)
+    setSuggestions([])
+    setSuggestionsPending(false)
+    setActiveIndex(-1)
     setIsFocused(false)
   }, [setCommittedQ])
 
@@ -193,6 +241,8 @@ export function HeaderSearch() {
         {inputValue && (
           <button
             onClick={() => {
+              suggestAbortRef.current?.abort()
+              suggestAbortRef.current = null
               setInputValue('')
               setCommittedQ(null)
               setSuggestions([])
@@ -235,29 +285,34 @@ export function HeaderSearch() {
           )}
           {!suggestionsPending &&
             trimmed.length >= 2 &&
-            suggestions.map((s, i) => (
-              <li
-                key={s.id}
-                id={`suggestion-${i}`}
-                role="option"
-                aria-selected={i === activeIndex}
-              >
-                <Link
-                  href={`/nuggets/${s.id}/${s.slug}`}
-                  onClick={() => setIsFocused(false)}
-                  className={`flex min-h-[44px] flex-col justify-center gap-0.5 px-4 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
-                    i === activeIndex
-                      ? 'bg-surface-raised text-primary'
-                      : 'text-primary hover:bg-surface-raised'
-                  }`}
+            suggestions.map((s, i) => {
+              const streamLabel = s.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+              const publishedAtLabel = formatSuggestionDate(s.published_at)
+              return (
+                <li
+                  key={s.id}
+                  id={`suggestion-${i}`}
+                  role="option"
+                  aria-selected={i === activeIndex}
                 >
-                  <span className="line-clamp-1 font-medium">{s.title}</span>
-                  <span className="text-xs text-muted">
-                    {s.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'}
-                  </span>
-                </Link>
-              </li>
-            ))}
+                  <Link
+                    href={`/nuggets/${s.id}/${s.slug}`}
+                    onClick={() => setIsFocused(false)}
+                    className={`flex min-h-[44px] flex-col justify-center gap-0.5 px-4 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
+                      i === activeIndex
+                        ? 'bg-surface-raised text-primary'
+                        : 'text-primary hover:bg-surface-raised'
+                    }`}
+                  >
+                    <span className="line-clamp-2 font-medium leading-snug">{s.title}</span>
+                    <span className="text-xs text-muted">
+                      {streamLabel}
+                      {publishedAtLabel ? ` · ${publishedAtLabel}` : ''}
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
         </ul>
       )}
     </div>
