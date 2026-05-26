@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import type { MarkdownTocItem } from '@/lib/markdown/extract-markdown-toc'
+import { MarkdownTocAnchor } from '@/components/ui/markdown-toc-anchor'
 import { MobileTocTrigger } from '@/components/ui/mobile-toc-trigger'
 import { useActiveHeading } from '@/lib/ui/use-active-heading'
 
@@ -24,7 +24,7 @@ export function MarkdownPageToc({
 
   return (
     <>
-      <MobileTocTrigger items={items} activeId={activeId} />
+      <MobileTocTrigger items={items} activeId={activeId} scrollOffsetPx={scrollOffsetPx} />
 
       <nav aria-label="Table of contents" className="hidden lg:block lg:sticky lg:top-24">
         <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">On this page</p>
@@ -33,8 +33,9 @@ export function MarkdownPageToc({
             const active = activeId === item.id
             return (
               <li key={item.id}>
-                <Link
-                  href={`#${item.id}`}
+                <MarkdownTocAnchor
+                  headingId={item.id}
+                  scrollOffsetPx={scrollOffsetPx}
                   aria-current={active ? 'true' : undefined}
                   className={[
                     '-ml-px block border-l py-1.5 pl-4 pr-2 text-[13px] leading-snug transition-colors',
@@ -44,7 +45,7 @@ export function MarkdownPageToc({
                   ].join(' ')}
                 >
                   {item.text}
-                </Link>
+                </MarkdownTocAnchor>
               </li>
             )
           })}

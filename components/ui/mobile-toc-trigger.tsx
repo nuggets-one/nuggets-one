@@ -1,14 +1,15 @@
 'use client'
 
-import Link from 'next/link'
 import type { MarkdownTocItem } from '@/lib/markdown/extract-markdown-toc'
+import { MarkdownTocAnchor } from '@/components/ui/markdown-toc-anchor'
 
 type Props = {
   items: MarkdownTocItem[]
   activeId: string | null
+  scrollOffsetPx: number
 }
 
-export function MobileTocTrigger({ items, activeId }: Props) {
+export function MobileTocTrigger({ items, activeId, scrollOffsetPx }: Props) {
   if (items.length === 0) return null
 
   const activeItem = items.find((item) => item.id === activeId) ?? items[0]
@@ -40,8 +41,9 @@ export function MobileTocTrigger({ items, activeId }: Props) {
             const isActive = item.id === activeId
             return (
               <li key={item.id}>
-                <Link
-                  href={`#${item.id}`}
+                <MarkdownTocAnchor
+                  headingId={item.id}
+                  scrollOffsetPx={scrollOffsetPx}
                   aria-current={isActive ? 'true' : undefined}
                   className={[
                     'block rounded-md px-2.5 py-1.5 text-sm leading-snug transition-colors',
@@ -51,7 +53,7 @@ export function MobileTocTrigger({ items, activeId }: Props) {
                   ].join(' ')}
                 >
                   {item.text}
-                </Link>
+                </MarkdownTocAnchor>
               </li>
             )
           })}

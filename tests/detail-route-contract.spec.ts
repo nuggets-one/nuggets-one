@@ -99,6 +99,37 @@ test('detail route: browser back and backdrop dismiss close the intercepted shee
   await expect.poll(() => new URL(page.url()).pathname).toBe('/')
 })
 
+test('detail route: full-page TOC scrolls in place without opening intercepted sheet', async ({
+  page,
+}) => {
+  const href = await getFirstDetailHref(page)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto(href, { waitUntil: 'domcontentloaded' })
+
+  const tocNav = page.getByRole('navigation', { name: 'Table of contents' })
+  await expect(tocNav).toBeVisible()
+
+  const tocLink = tocNav.getByRole('link').first()
+  await expect(tocLink).toBeVisible()
+  const targetHash = await tocLink.getAttribute('href')
+  expect(targetHash).toMatch(/^#/)
+
+  await tocLink.click()
+
+  await expect(page.getByRole('dialog', { name: 'Nugget detail' })).toHaveCount(0)
+  await expect.poll(() => new URL(page.url()).hash).toBe(targetHash)
+  await expect
+    .poll(() =>
+      page.evaluate((id) => {
+        const el = document.getElementById(id)
+        if (!el) return false
+        const top = el.getBoundingClientRect().top
+        return top >= 0 && top <= 160
+      }, targetHash!.slice(1))
+    )
+    .toBe(true)
+})
+
 test('detail route: direct hits render the full page and stale slugs redirect canonically', async ({
   page,
 }) => {
