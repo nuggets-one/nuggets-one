@@ -477,6 +477,7 @@ Use this **numeric order** so LLMs don’t argue circular “this doc wins” cl
 
 - Lighthouse mobile **≥** agreed threshold for **`/`** and **`/nuggets/...`**.
 - **RSC payload** size sanity after PR-06 (**no** fat props).
+- Search route budgets/checks remain green after search changes (`check:bundle-budget` + transfer budgets).
 
 ### SEO checks
 
@@ -489,6 +490,10 @@ Use this **numeric order** so LLMs don’t argue circular “this doc wins” cl
 ### Data integrity checks
 
 - Bookmark uniqueness; **`legacy_mongo_id`** unique; FK **`article_tags`**.
+- For RPC-backed search builds: preflight-call required RPCs in target env before release:
+  - `public.search_articles_ranked(...)`
+  - `public.search_suggestions_ranked(...)`
+- Deploy order rule for RPC-backed features: **Supabase migration rollout first, app rollout second**.
 
 ---
 
@@ -534,6 +539,8 @@ Explicit **non-build** per blueprint + migration plan:
 - [x] **Repo layout (`BLUEPRINT` §2.a):** Next.js at **repository root** — `app/`, `components/`, `lib/`, root `package.json`. Greenfield-only; **`web/` paths in docs = repo root**. No legacy stack to preserve alongside the Next app in this repo.
 - [ ] **`content_stream`:** **`§12.2`** — **`both`** → **`standard`**; **Phase 1 ETL** includes **articles + tags + collections** (**migration plan** founder scope).
 - [ ] **Supabase** staging project + anon/service keys in CI secrets pattern — **decided**.
+- [ ] If search uses new RPCs, migration is applied + schema cache refreshed in target environment.
+- [ ] If search uses new RPCs, RPC preflight check passes in CI/CD before deployment.
 - [ ] **Public profile scope** — **defer PMF**; **`/profile/*`**, **`/myspace`** → **`301`** **`/`** (or keep legacy handler stub) per migration **`§12`** until product ships profiles.
 - [ ] **Branch strategy:** **`next-v2`** long-lived vs **trunk** — **decided**.
 - [ ] **First PR owner** assigned — **Person/tool**.

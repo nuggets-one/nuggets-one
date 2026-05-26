@@ -394,6 +394,8 @@ Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 - **Phrase and typo tolerance:** optional **`pg_trgm`** / **`similarity`** on **`title`** as fast-follow if FTS alone feels brittle — **plan indexes** so adding trigram doesn’t require a rewrite.
 - **API:** **`GET`** **`/api/search/suggest?q=&stream=`** + **`GET`** **`/api/search?q=&stream=&cursor=`** — **`stream` required** (default **`standard`** at handler if missing); **no** `POST` bodies PMF — **no** fat payloads; pagination cursor-compatible.
 - **Timings (frozen — §2.a):** suggestion **debounce 180ms**, **min query length 2 chars**, **suggestion result cap 8**, suggest endpoint LRU sliding window **30 req / 30s** per anon-IP / `user.sub`. Committed search has no min length beyond non-empty after trim.
+- **RPC rollout contract (frozen):** if search ranking/pagination depends on new DB RPCs, rollout order is **migration deploy first, app deploy second**. App code must include either (a) a temporary functional fallback when RPC is missing from schema cache, or (b) a hard release gate that blocks deploy until RPC preflight passes.
+- **Required release preflight (RPC-backed search):** verify callable `public.search_articles_ranked(...)` and `public.search_suggestions_ranked(...)` with runtime credentials before promoting the build.
 
 **Collections:** browse **`/collections`** separately — **not** mixed into search.
 
