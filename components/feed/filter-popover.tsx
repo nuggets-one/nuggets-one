@@ -24,7 +24,6 @@ import { useScrollLock } from '@/lib/ui/use-scroll-lock'
 type Props = {
   tags: TagSummary[]
   counts: TagCounts
-  committedTotalCount?: number
   /** Primary CTA when no tag filters in URL (default: More filters). */
   idleTriggerLabel?: string
   /** Compact icon+count trigger on mobile, desktop keeps label. */
@@ -183,7 +182,6 @@ function FilterAccordionSection({
 export function FilterPopover({
   tags,
   counts,
-  committedTotalCount,
   idleTriggerLabel = 'More filters',
   triggerVariant = 'default',
 }: Props) {
@@ -319,11 +317,6 @@ export function FilterPopover({
   const dirty =
     selectedSet.size !== committedSet.size ||
     [...selectedSet].some((slug) => !committedSet.has(slug))
-  const ctaLabel =
-    typeof committedTotalCount === 'number'
-      ? `Show ${new Intl.NumberFormat('en-IN').format(committedTotalCount)} nuggets`
-      : 'Apply'
-
   return (
     <>
       <button
@@ -475,7 +468,7 @@ export function FilterPopover({
             className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-surface/95 px-4 pt-2.5 backdrop-blur-sm"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.625rem)' }}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 lg:justify-between">
               <button
                 type="button"
                 onClick={clearLocal}
@@ -488,9 +481,9 @@ export function FilterPopover({
                 type="button"
                 onClick={applyLocal}
                 disabled={isPending || !dirty}
-                className="min-h-11 flex-1 rounded-full bg-accent px-4 text-[14px] font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
+                className="min-h-11 min-w-[7.5rem] flex-1 rounded-full bg-accent px-6 text-[14px] font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 lg:flex-none"
               >
-                {ctaLabel}
+                Apply
               </button>
             </div>
           </div>

@@ -18,7 +18,7 @@ type Props = {
   stream: ContentStream
   streamLabel: string
   shownCount: number
-  totalCount: number
+  totalCount?: number
 }
 
 const numberFmt = new Intl.NumberFormat(undefined, {
@@ -28,7 +28,8 @@ const numberFmt = new Intl.NumberFormat(undefined, {
 export function FeedIntro({ stream, streamLabel, shownCount, totalCount }: Props) {
   const { title, tagline } = INTRO_COPY[stream]
   const shown = numberFmt.format(shownCount)
-  const total = numberFmt.format(totalCount)
+  const hasExactTotal = typeof totalCount === 'number'
+  const total = hasExactTotal ? numberFmt.format(totalCount) : null
 
   return (
     <section
@@ -46,7 +47,11 @@ export function FeedIntro({ stream, streamLabel, shownCount, totalCount }: Props
         <span className="mx-1 text-muted/80" aria-hidden="true">
           {'\u2009\u00b7\u2009'}
         </span>
-        <span>Showing {shown} of {total}</span>
+        {hasExactTotal ? (
+          <span>Showing {shown} of {total}</span>
+        ) : (
+          <span>Showing {shown} results</span>
+        )}
       </p>
     </section>
   )

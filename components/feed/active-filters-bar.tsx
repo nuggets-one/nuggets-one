@@ -27,6 +27,7 @@ export function ActiveFiltersBar() {
   }
 
   const totalFilters = selectedSlugs.length + (q.length > 0 ? 1 : 0)
+  const hasSearchQuery = q.trim().length > 0
 
   return (
     <div
@@ -34,9 +35,24 @@ export function ActiveFiltersBar() {
       aria-label="Active filters"
       className="flex min-h-9 items-center justify-between gap-3"
     >
-      <p className="truncate text-xs text-muted">
-        <span className="font-semibold text-primary">{totalFilters}</span> filters applied
-      </p>
+      <div className="flex min-w-0 items-center gap-2">
+        <p className="truncate text-xs text-muted">
+          <span className="font-semibold text-primary">{totalFilters}</span> filters applied
+        </p>
+        {hasSearchQuery && (
+          <button
+            type="button"
+            onClick={() => setQ(null)}
+            disabled={isPending}
+            className="inline-flex max-w-[16rem] items-center gap-1 rounded-full border border-border bg-surface-raised px-2 py-1 text-[11px] text-primary transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60"
+            aria-label={`Remove search query ${q}`}
+            title={q}
+          >
+            <span className="truncate">q: {q}</span>
+            <span aria-hidden="true">×</span>
+          </button>
+        )}
+      </div>
 
       <button
         type="button"

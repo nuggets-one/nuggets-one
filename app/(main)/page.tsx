@@ -52,11 +52,20 @@ type Props = {
   searchParams: Promise<SearchParams>
 }
 
+const MAX_TAGS = 5
+const MAX_Q_LENGTH = 200
+
 async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const stream = (searchParams.stream === 'pulse' ? 'pulse' : DEFAULT_STREAM) as ContentStream
   const tagsRaw = searchParams.tags ?? ''
-  const tags = tagsRaw ? tagsRaw.split(',').filter(Boolean) : []
-  const q = searchParams.q ?? ''
+  const tags = tagsRaw
+    ? tagsRaw
+      .split(',')
+      .map((tag) => tag.trim().toLowerCase())
+      .filter((tag) => tag.length > 0 && tag.length <= 80)
+      .slice(0, MAX_TAGS)
+    : []
+  const q = (searchParams.q ?? '').trim().slice(0, MAX_Q_LENGTH)
 
   // Filtered or search URLs must never be served from stale ISR cache.
   // BLUEPRINT §11: "Filtered / search URLs → expect dynamic behavior."
@@ -92,7 +101,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   ])
 
   const { articles, nextCursor } = feedResult
-  const totalCount = typeof feedResult.totalCount === 'number' ? feedResult.totalCount : articles.length
+  const totalCount = typeof feedResult.totalCount === 'number' ? feedResult.totalCount : undefined
   const streamLabel = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
 
   const supabase = await createClient()

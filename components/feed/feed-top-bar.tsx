@@ -13,7 +13,7 @@ type Props = {
   streamCounts: StreamArticleCounts
   streamLabel: string
   shownCount: number
-  totalCount: number
+  totalCount?: number
 }
 
 export function FeedTopBar({
@@ -36,7 +36,7 @@ export function FeedTopBar({
         aria-label="Feed filters"
       >
         <div className="space-y-2 px-4 py-2.5 lg:px-6">
-          <FeedTaxonomyFilters tags={tags} counts={counts} totalCount={totalCount} />
+          <FeedTaxonomyFilters tags={tags} counts={counts} />
           <ActiveFiltersBar />
         </div>
       </section>

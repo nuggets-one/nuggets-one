@@ -23,7 +23,6 @@ import { FilterPopover } from '@/components/feed/filter-popover'
 type Props = {
   tags: TagSummary[]
   counts: TagCounts
-  totalCount: number
 }
 
 function RailDivider() {
@@ -48,7 +47,7 @@ const scrollArrowBtn =
  * Feed filter chrome: All + scrollable dimension quick rail (format | domain | subtopic)
  * + More filters dialog for full taxonomy.
  */
-export function FeedTaxonomyFilters({ tags, counts, totalCount }: Props) {
+export function FeedTaxonomyFilters({ tags, counts }: Props) {
   const [tagsRaw, setSelected] = useQueryState('tags', {
     defaultValue: '',
     shallow: false,
@@ -205,7 +204,6 @@ export function FeedTaxonomyFilters({ tags, counts, totalCount }: Props) {
         <FilterPopover
           tags={tags}
           counts={counts}
-          committedTotalCount={totalCount}
           idleTriggerLabel="More filters"
           triggerVariant="iconCount"
         />
