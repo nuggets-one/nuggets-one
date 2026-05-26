@@ -50,6 +50,7 @@ export default async function BookmarksPage() {
               isAuthenticated={!!user}
               initialBookmarked={true}
               adminEditHref={isAdmin ? `/admin/articles/${article.id}` : null}
+              deleteRedirectTo="/bookmarks"
             />
           ))}
         </div>

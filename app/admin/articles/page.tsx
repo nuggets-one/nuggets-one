@@ -2,6 +2,7 @@ import 'server-only'
 
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { DeleteArticleButton } from '@/app/admin/articles/_components/DeleteArticleButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,12 +62,15 @@ export default async function AdminArticlesPage() {
                     : '—'}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/admin/articles/${a.id as string}`}
-                    className="text-sm text-primary underline underline-offset-2"
-                  >
-                    Edit
-                  </Link>
+                  <div className="flex items-center justify-end gap-3">
+                    <Link
+                      href={`/admin/articles/${a.id as string}`}
+                      className="text-sm text-primary underline underline-offset-2"
+                    >
+                      Edit
+                    </Link>
+                    <DeleteArticleButton id={a.id as string} variant="compact" />
+                  </div>
                 </td>
               </tr>
             ))}

@@ -140,11 +140,15 @@ async function requireAdmin() {
   return user
 }
 
-async function requireArticleOwner(articleId: string) {
+async function requireArticleManager(articleId: string) {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) {
     redirect('/')
+  }
+
+  if (user.app_metadata?.is_admin === true) {
+    return user
   }
 
   const db = createAdminClient()
@@ -408,17 +412,13 @@ export async function deleteArticleAction(formData: FormData) {
   const id = String(formData.get('id') ?? '').trim()
   if (!id) throw new Error('Missing article id')
 
+  await requireArticleManager(id)
+
   const redirectToRaw = formData.get('redirect_to')
   const redirectTo =
     typeof redirectToRaw === 'string' && redirectToRaw.trim()
       ? sanitizeDeleteRedirectTo(redirectToRaw)
-      : null
-
-  if (redirectTo) {
-    await requireArticleOwner(id)
-  } else {
-    await requireAdmin()
-  }
+      : '/admin/articles'
 
   const db = createAdminClient()
   const { error } = await db.from('articles').delete().eq('id', id)
@@ -426,7 +426,7 @@ export async function deleteArticleAction(formData: FormData) {
   if (error) throw new Error(error.message)
 
   revalidateArticle(id)
-  redirect(redirectTo ?? '/admin/articles')
+  redirect(redirectTo)
 }
 
 export async function createTagAction(formData: FormData) {

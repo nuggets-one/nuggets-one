@@ -29,7 +29,7 @@ import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import { getSourceHostLabel } from '@/lib/ui/source-host-label'
 import { getConsumerDisclaimer } from '@/lib/queries/site-settings'
 import { extractMarkdownToc } from '@/lib/markdown/extract-markdown-toc'
-import { canUserManageArticle } from '@/lib/auth/can-manage-article'
+import { canManageArticle } from '@/lib/auth/can-manage-article'
 import { NuggetOpenFullPageButton } from '@/components/ui/nugget-open-full-page-button'
 
 type Props = {
@@ -89,7 +89,8 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
   const bookmarkedIds =
     user ? await getBookmarkedArticleIdsForUser(user.id, [article.id]) : new Set<string>()
   const initialBookmarked = bookmarkedIds.has(article.id)
-  const canManage = canUserManageArticle(user?.id, article.created_by)
+  const isAdmin = user?.app_metadata?.is_admin === true
+  const canManage = canManageArticle(user?.id, article.created_by, isAdmin)
   const editHref = canManage ? `/admin/articles/${article.id}` : null
 
   const isYouTubeHero = article.hero_media_kind === 'youtube'

@@ -20,6 +20,8 @@ type Props = {
   initialBookmarked?: boolean
   /** When set (admin session), 3-dot menu includes Edit nugget. */
   adminEditHref?: string | null
+  /** Post-delete redirect when admin deletes from card overflow menu. */
+  deleteRedirectTo?: string
 }
 
 export function ArticleCard({
@@ -28,6 +30,7 @@ export function ArticleCard({
   isAuthenticated = false,
   initialBookmarked = false,
   adminEditHref = null,
+  deleteRedirectTo = '/',
 }: Props) {
   const {
     id,
@@ -203,6 +206,7 @@ export function ArticleCard({
         initialBookmarked={initialBookmarked}
         curatorDisplayName={article.curator_display_name}
         adminEditHref={adminEditHref}
+        deleteRedirectTo={deleteRedirectTo}
       />
     </article>
   )

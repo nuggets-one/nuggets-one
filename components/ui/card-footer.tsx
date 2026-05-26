@@ -25,6 +25,7 @@ type Props = {
   initialBookmarked: boolean
   curatorDisplayName: string | null
   adminEditHref?: string | null
+  deleteRedirectTo?: string
 }
 
 export function CardFooter({
@@ -38,7 +39,9 @@ export function CardFooter({
   initialBookmarked,
   curatorDisplayName,
   adminEditHref = null,
+  deleteRedirectTo = '/',
 }: Props) {
+  const canDelete = !!adminEditHref
   const compactDate = formatCompactDate(published_at)
   const authorBadgeLabel = curatorChipFromDisplayName(curatorDisplayName)
   const chipTitle = curatorDisplayName?.trim()
@@ -75,12 +78,15 @@ export function CardFooter({
               variant="footer"
             />
           </div>
-          {(source_url || adminEditHref) && (
+          {(source_url || adminEditHref || canDelete) && (
             <div className="shrink-0">
               <CardMoreButton
                 sourceUrl={source_url ?? ''}
                 sourceHost={sourceHost}
                 editHref={adminEditHref}
+                canDelete={canDelete}
+                articleId={canDelete ? articleId : undefined}
+                deleteRedirectTo={deleteRedirectTo}
               />
             </div>
           )}
