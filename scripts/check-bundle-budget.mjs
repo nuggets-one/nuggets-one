@@ -6,6 +6,8 @@ import vm from 'node:vm'
 const BUDGETS = {
   homeJsGzip: 85 * 1024,
   detailJsGzip: 60 * 1024,
+  homeTransferGzip: 256 * 1024,
+  detailTransferGzip: 192 * 1024,
 }
 
 function fail(message) {
@@ -18,6 +20,10 @@ if (process.env.BUNDLE_BUDGET_WAIVER?.startsWith('BUNDLE-BUDGET-WAIVER:')) {
   process.exit(0)
 }
 
+const transferBudgetWaived = process.env.TRANSFER_BUDGET_WAIVER?.startsWith(
+  'TRANSFER-BUDGET-WAIVER:'
+)
+
 function gzipBytesForFiles(files) {
   let total = 0
   for (const file of files) {
@@ -29,7 +35,7 @@ function gzipBytesForFiles(files) {
   return total
 }
 
-function entryJsFilesForAppRoute(routeKey, appPath) {
+function entryAssetsForAppRoute(routeKey, appPath) {
   const manifestPath = join(
     process.cwd(),
     '.next',
@@ -46,28 +52,63 @@ function entryJsFilesForAppRoute(routeKey, appPath) {
   const context = { globalThis: {} }
   vm.runInNewContext(readFileSync(manifestPath, 'utf8'), context)
   const manifest = context.globalThis.__RSC_MANIFEST?.[routeKey]
-  const files = manifest?.entryJSFiles?.[`[project]/app/${appPath}/page`]
+  const entryKey = `[project]/app/${appPath}/page`
+  const jsFiles = manifest?.entryJSFiles?.[entryKey]
+  const cssEntries = manifest?.entryCSSFiles?.[entryKey]
+  const cssFiles = Array.isArray(cssEntries)
+    ? cssEntries
+      .map((entry) => {
+        if (typeof entry === 'string') return entry
+        if (entry && typeof entry.path === 'string') return entry.path
+        return null
+      })
+      .filter(Boolean)
+    : []
 
-  if (!Array.isArray(files) || files.length === 0) {
+  if (!Array.isArray(jsFiles) || jsFiles.length === 0) {
     fail(`Could not resolve client JS files for ${routeKey}.`)
   }
 
-  return files.filter((file) => file.endsWith('.js'))
+  return {
+    js: [...new Set(jsFiles.filter((file) => file.endsWith('.js')))],
+    css: [...new Set(cssFiles.filter((file) => file.endsWith('.css')))],
+  }
 }
 
-const homeSize = gzipBytesForFiles(
-  entryJsFilesForAppRoute('/(main)/page', '(main)')
+const homeAssets = entryAssetsForAppRoute('/(main)/page', '(main)')
+const detailAssets = entryAssetsForAppRoute(
+  '/(main)/nuggets/[id]/[slug]/page',
+  '(main)/nuggets/[id]/[slug]'
 )
-const detailSize = gzipBytesForFiles(
-  entryJsFilesForAppRoute('/(main)/nuggets/[id]/[slug]/page', '(main)/nuggets/[id]/[slug]')
+const homeJsSize = gzipBytesForFiles(homeAssets.js)
+const detailJsSize = gzipBytesForFiles(detailAssets.js)
+const homeTransferSize = gzipBytesForFiles([...homeAssets.js, ...homeAssets.css])
+const detailTransferSize = gzipBytesForFiles([...detailAssets.js, ...detailAssets.css])
+
+if (homeJsSize > BUDGETS.homeJsGzip) {
+  fail(`Home route JS gzip ${homeJsSize} exceeds ${BUDGETS.homeJsGzip} bytes`)
+}
+
+if (detailJsSize > BUDGETS.detailJsGzip) {
+  fail(`Detail route JS gzip ${detailJsSize} exceeds ${BUDGETS.detailJsGzip} bytes`)
+}
+
+if (!transferBudgetWaived) {
+  if (homeTransferSize > BUDGETS.homeTransferGzip) {
+    fail(
+      `Home route transfer gzip ${homeTransferSize} exceeds ${BUDGETS.homeTransferGzip} bytes`
+    )
+  }
+  if (detailTransferSize > BUDGETS.detailTransferGzip) {
+    fail(
+      `Detail route transfer gzip ${detailTransferSize} exceeds ${BUDGETS.detailTransferGzip} bytes`
+    )
+  }
+} else {
+  console.log('Transfer budget waived by TRANSFER_BUDGET_WAIVER token.')
+}
+
+console.log(
+  `Bundle budgets passed. HomeJS=${homeJsSize}B DetailJS=${detailJsSize}B ` +
+  `HomeTransfer=${homeTransferSize}B DetailTransfer=${detailTransferSize}B`
 )
-
-if (homeSize > BUDGETS.homeJsGzip) {
-  fail(`Home route JS gzip ${homeSize} exceeds ${BUDGETS.homeJsGzip} bytes`)
-}
-
-if (detailSize > BUDGETS.detailJsGzip) {
-  fail(`Detail route JS gzip ${detailSize} exceeds ${BUDGETS.detailJsGzip} bytes`)
-}
-
-console.log(`Bundle budgets passed. Home=${homeSize}B Detail=${detailSize}B`)
