@@ -35,9 +35,9 @@ export function FeedTopBar({
         className="sticky top-[var(--header-height)] z-40 border-b border-border bg-rail/95 backdrop-blur-sm"
         aria-label="Feed filters"
       >
-        <div className="space-y-3 px-4 py-3 lg:px-6">
+        <div className="space-y-2 px-4 py-2.5 lg:px-6">
           <FeedTaxonomyFilters tags={tags} counts={counts} />
-          <ActiveFiltersBar tags={tags} />
+          <ActiveFiltersBar />
         </div>
       </section>
 
