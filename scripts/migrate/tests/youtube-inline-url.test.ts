@@ -56,6 +56,23 @@ test('resolveDetailYouTubeTimestampClick ignores live URL for different hero', (
   )
 })
 
+test('parseYouTubeInlineNavigation fixes youtu.be/ID&t typo (ampersand vs ?)', () => {
+  const nav = parseYouTubeInlineNavigation(
+    'https://youtu.be/ZfJRd2MJhyU&t=0h4m10s',
+  )
+  assert.deepEqual(nav, { videoId: 'ZfJRd2MJhyU', startSeconds: 250 })
+
+  const nav2 = parseYouTubeInlineNavigation(
+    'https://youtu.be/ZfJRd2MJhyU&t=0h5m57s',
+  )
+  assert.deepEqual(nav2, { videoId: 'ZfJRd2MJhyU', startSeconds: 357 })
+})
+
+test('parseYouTubeInlineNavigation leaves correct youtu.be?t= unchanged', () => {
+  const nav = parseYouTubeInlineNavigation('https://youtu.be/ZfJRd2MJhyU?t=0h4m10s')
+  assert.deepEqual(nav, { videoId: 'ZfJRd2MJhyU', startSeconds: 250 })
+})
+
 test('parseYouTubeInlineNavigation reads time_continue param', () => {
   const nav = parseYouTubeInlineNavigation(
     'https://www.youtube.com/watch?v=YzFIUrdyleQ&time_continue=90',

@@ -6,6 +6,35 @@
 import { parseYtHashSecondsFromHref } from '@/lib/ui/youtube-timestamp-href'
 import { extractYouTubeVideoId, isCanonicalYouTubeVideoId } from '@/lib/ui/youtube-video-id'
 
+/**
+ * Fix `https://youtu.be/VIDEO&t=…` (ampersand instead of `?`) — URL puts `&t=` in the path,
+ * so searchParams never see `t` and start time becomes 0.
+ */
+function normalizeMalformedYouTuBeHref(href: string): string {
+  const trimmed = href.trim()
+  if (!trimmed) return href
+
+  let url: URL
+  try {
+    url = new URL(trimmed.startsWith('//') ? `https:${trimmed}` : trimmed, 'https://www.youtube.com')
+  } catch {
+    return href
+  }
+
+  if (url.hostname.toLowerCase() !== 'youtu.be') return href
+  if (url.search && url.search !== '') return href
+
+  const pathTail = url.pathname.replace(/^\/+/, '')
+  if (!pathTail.includes('&')) return href
+
+  const amp = pathTail.indexOf('&')
+  const possibleId = pathTail.slice(0, amp)
+  const queryString = pathTail.slice(amp + 1)
+  if (!queryString || !isCanonicalYouTubeVideoId(possibleId)) return href
+
+  return `${url.origin}/${possibleId}?${queryString}${url.hash}`
+}
+
 function isYouTubeHost(host: string): boolean {
   const h = host.toLowerCase()
   return h === 'youtu.be' || h.includes('youtube.com') || h.endsWith('youtube-nocookie.com')
@@ -48,7 +77,8 @@ export function parseYouTubeInlineNavigation(href: string | null | undefined): {
   if (href == null || href.trim() === '') return null
 
   const trimmed = href.trim()
-  const normalized = trimmed.startsWith('//') ? `https:${trimmed}` : trimmed
+  const withScheme = trimmed.startsWith('//') ? `https:${trimmed}` : trimmed
+  const normalized = normalizeMalformedYouTuBeHref(withScheme)
 
   let url: URL
   try {
