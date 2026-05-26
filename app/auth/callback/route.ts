@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { sanitizeNext } from '@/lib/auth/sanitize-next'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -16,10 +16,32 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    const supabase = await createClient()
+    let response = NextResponse.next({ request })
+    const supabase = createServerClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+            response = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set({ name, value, ...options })
+            )
+          },
+        },
+      }
+    )
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      const successResponse = NextResponse.redirect(`${origin}${next}`)
+      for (const cookie of response.cookies.getAll()) {
+        successResponse.cookies.set(cookie)
+      }
+      return successResponse
     }
     const msg = encodeURIComponent(error.message)
     const nextParam = next !== '/' ? `&next=${encodeURIComponent(next)}` : ''
