@@ -9,7 +9,7 @@ import {
   type MouseEvent,
   useTransition,
 } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useQueryState } from 'nuqs'
 import type { TagSummary } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
@@ -26,6 +26,8 @@ type Props = {
   counts: TagCounts
   /** Primary CTA when no tag filters in URL (default: More filters). */
   idleTriggerLabel?: string
+  /** Compact icon+count trigger on mobile, desktop keeps label. */
+  triggerVariant?: 'default' | 'iconCount'
 }
 
 type GroupKey = (typeof FEED_DIMENSION_KEYS)[number] | 'uncategorized'
@@ -181,6 +183,7 @@ export function FilterPopover({
   tags,
   counts,
   idleTriggerLabel = 'More filters',
+  triggerVariant = 'default',
 }: Props) {
   const [tagsRaw, setTagsParam] = useQueryState('tags', {
     defaultValue: '',
@@ -304,6 +307,7 @@ export function FilterPopover({
   const activeCount = committed.length
   const triggerLabel =
     activeCount > 0 ? `${idleTriggerLabel} (${activeCount})` : idleTriggerLabel
+  const compactTrigger = triggerVariant === 'iconCount'
   const dirty =
     selectedSet.size !== committedSet.size ||
     [...selectedSet].some((slug) => !committedSet.has(slug))
@@ -317,18 +321,40 @@ export function FilterPopover({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label="Open filters"
-        className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
+        className={`inline-flex shrink-0 items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
+          compactTrigger
+            ? 'min-h-11 gap-2 px-3 py-2 text-sm font-semibold sm:min-h-10 sm:gap-1.5 sm:px-3 sm:py-2 sm:font-medium'
+            : 'min-h-10 gap-1.5 px-3 py-2 text-sm font-medium'
+        } ${
           activeCount > 0
             ? 'border-chip-active-border bg-chip-active-bg text-chip-active-text shadow-chip-active hover:bg-chip-active-bg'
             : 'border-border bg-surface-raised text-primary shadow-sm hover:bg-surface-raised/80 hover:text-primary'
         }`}
       >
-        <span>{triggerLabel}</span>
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 ${activeCount > 0 ? 'opacity-70' : 'text-primary/80'}`}
-          strokeWidth={2}
-          aria-hidden="true"
-        />
+        {compactTrigger ? (
+          <>
+            <SlidersHorizontal
+              className={`h-4 w-4 shrink-0 ${activeCount > 0 ? 'opacity-90' : 'text-primary/85'}`}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+            {activeCount > 0 ? (
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[11px] font-semibold leading-none text-accent-foreground">
+                {activeCount}
+              </span>
+            ) : null}
+            <span className="hidden sm:inline">{triggerLabel}</span>
+          </>
+        ) : (
+          <>
+            <span>{triggerLabel}</span>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 ${activeCount > 0 ? 'opacity-70' : 'text-primary/80'}`}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+          </>
+        )}
       </button>
 
       <dialog

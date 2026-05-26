@@ -27,7 +27,7 @@ export function FeedTopBar({
 }: Props) {
   return (
     <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
-      <div className="flex justify-center border-b border-border bg-header px-4 py-3 backdrop-blur-sm sm:justify-start lg:px-6">
+      <div className="hidden justify-center border-b border-border bg-header px-4 py-3 backdrop-blur-sm sm:flex sm:justify-start lg:px-6">
         <StreamTabs activeStream={stream} streamCounts={streamCounts} />
       </div>
 

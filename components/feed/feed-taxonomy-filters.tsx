@@ -126,7 +126,7 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
   if (tags.length === 0) return null
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+    <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <button
           type="button"
@@ -203,7 +203,12 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
       </div>
 
       <div className="flex shrink-0 justify-end sm:justify-start">
-        <FilterPopover tags={tags} counts={counts} idleTriggerLabel="More filters" />
+        <FilterPopover
+          tags={tags}
+          counts={counts}
+          idleTriggerLabel="More filters"
+          triggerVariant="iconCount"
+        />
       </div>
     </div>
   )
