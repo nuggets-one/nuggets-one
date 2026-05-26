@@ -4,8 +4,15 @@ import { sanitizeNext } from '@/lib/auth/sanitize-next'
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3010').replace(/\/+$/, '')
 
+function sanitizePrompt(raw: string | null): 'select_account' | undefined {
+  if (!raw) return undefined
+  if (raw === 'select_account') return 'select_account'
+  return undefined
+}
+
 export async function GET(request: NextRequest) {
   const next = sanitizeNext(request.nextUrl.searchParams.get('next'))
+  const prompt = sanitizePrompt(request.nextUrl.searchParams.get('prompt'))
 
   let response = NextResponse.next({ request })
   const supabase = createServerClient(
@@ -31,6 +38,7 @@ export async function GET(request: NextRequest) {
     provider: 'google',
     options: {
       redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`,
+      queryParams: prompt ? { prompt } : undefined,
     },
   })
 
