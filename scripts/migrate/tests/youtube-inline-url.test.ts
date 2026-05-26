@@ -26,6 +26,16 @@ test('resolveCardPreviewYouTubeClick still handles #yt= hash', () => {
   assert.deepEqual(resolved, { videoId: 'YzFIUrdyleQ', startSeconds: 90 })
 })
 
+test('resolveCardPreviewYouTubeClick parses legacy #yt=MM:SS', () => {
+  const resolved = resolveCardPreviewYouTubeClick('#yt=00:04:28', 'YzFIUrdyleQ')
+  assert.deepEqual(resolved, { videoId: 'YzFIUrdyleQ', startSeconds: 268 })
+})
+
+test('resolveCardPreviewYouTubeClick parses legacy #yt=HH:MM:SS', () => {
+  const resolved = resolveCardPreviewYouTubeClick('#yt=01:02:03', 'YzFIUrdyleQ')
+  assert.deepEqual(resolved, { videoId: 'YzFIUrdyleQ', startSeconds: 3723 })
+})
+
 test('resolveDetailYouTubeTimestampClick matches live URL to hero id', () => {
   assert.equal(
     resolveDetailYouTubeTimestampClick(
