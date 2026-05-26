@@ -20,7 +20,7 @@ export default async function MainLayout({
   return (
     <NuqsAdapter>
       <Header legalLinks={legalLinks} />
-      <div className="pb-20 lg:pb-6">
+      <div className="pb-20 lg:pb-0">
         <main className="mx-auto max-w-[90rem] px-4 pt-6 lg:px-6">
           {children}
         </main>

@@ -6,15 +6,15 @@ export async function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer role="contentinfo" className="border-t border-border bg-surface pb-10 pt-10">
-      <div className="mx-auto max-w-[1800px] px-4 lg:px-6">
+    <footer role="contentinfo" className="mt-10 border-t border-border bg-surface py-6 sm:py-7">
+      <div className="mx-auto max-w-[90rem] px-4 lg:px-6">
         <nav aria-label="Legal and contact">
-          <ul className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-medium">
+          <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
             {links.map((item) => (
               <li key={item.slug}>
                 <Link
                   href={`/legal/${item.slug}`}
-                  className="text-primary underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 min-h-[44px] inline-flex items-center rounded-sm px-1"
+                  className="inline-flex items-center rounded-sm px-1 py-1 text-muted underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
                 >
                   {item.label}
                 </Link>
@@ -23,7 +23,7 @@ export async function Footer() {
           </ul>
         </nav>
 
-        <p className="mt-8 text-xs text-muted">© {year} Nuggets</p>
+        <p className="mt-5 text-xs text-muted">© {year} Nuggets</p>
       </div>
     </footer>
   )
