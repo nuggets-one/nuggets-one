@@ -3,7 +3,11 @@ import test from 'node:test'
 import nextConfig from '../../../next.config'
 import cloudinaryLoader from '../../../lib/cloudinary-loader'
 import { resolveCardPreviewDisplayUrl } from '../../../lib/ui/card-preview-display-url'
-import { canRenderWithNextImage, resolveCardImageUrl } from '../../../lib/ui/card-image-host'
+import {
+  canRenderWithNextImage,
+  resolveCardImageUrl,
+  shouldOptimizeImage,
+} from '../../../lib/ui/card-image-host'
 import { IMAGE_REMOTE_HOSTS } from '../../../lib/ui/image-host-policy'
 import {
   describeCardCoverPreview,
@@ -18,6 +22,33 @@ test('next image remotePatterns stay aligned with image host policy', () => {
     .sort()
 
   assert.deepEqual(hosts, [...IMAGE_REMOTE_HOSTS].sort())
+})
+
+test('shouldOptimizeImage is true only for Cloudinary and YouTube poster CDN', () => {
+  assert.equal(shouldOptimizeImage('res.cloudinary.com'), true)
+  assert.equal(shouldOptimizeImage('i.ytimg.com'), true)
+  assert.equal(shouldOptimizeImage('pbs.twimg.com'), false)
+  assert.equal(shouldOptimizeImage('images.ctfassets.net'), false)
+  assert.equal(shouldOptimizeImage('www.apolloacademy.com'), false)
+})
+
+test('Tier-1 hosts use unoptimized next/image so loader does not mutate CDN URLs', () => {
+  const twitter =
+    'https://pbs.twimg.com/media/ABC123?format=jpg&name=large'
+  assert.equal(shouldOptimizeImage('pbs.twimg.com'), false)
+  // If the loader ran on passthrough hosts it would break hotlinks (see cloudinaryLoader).
+  assert.notEqual(cloudinaryLoader({ src: twitter, width: 640, quality: 75 }), twitter)
+})
+
+test('cloudinaryLoader applies sizing to i.ytimg and leaves image/fetch URLs intact', () => {
+  const yt = 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+  const ytLoaded = cloudinaryLoader({ src: yt, width: 640, quality: 75 })
+  assert.match(ytLoaded, /[?&]w=640/)
+  assert.match(ytLoaded, /[?&]q=75/)
+
+  const fetchSrc =
+    'https://res.cloudinary.com/clubstorage/image/fetch/f_auto,q_auto,w_768,c_fill,g_auto/https%3A%2F%2Fexample.com%2Fa.png'
+  assert.equal(cloudinaryLoader({ src: fetchSrc, width: 640, quality: 75 }), fetchSrc)
 })
 
 test('canRenderWithNextImage allows only configured render hosts', () => {

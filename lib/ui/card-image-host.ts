@@ -20,8 +20,16 @@ import { IMAGE_REMOTE_HOSTS } from '@/lib/ui/image-host-policy'
 
 const ALLOWED_IMAGE_HOSTS = new Set<string>(IMAGE_REMOTE_HOSTS)
 
+/** Hosts safe for the global Cloudinary `next/image` loader (transforms / sizing). */
+const OPTIMIZED_IMAGE_HOSTS = new Set<string>(['res.cloudinary.com', 'i.ytimg.com'])
+
+/**
+ * Tier-1 allowlisted hosts (Twitter, Reddit, …) must use `unoptimized={true}` so
+ * `src` is requested exactly as stored — the custom loader must not append
+ * `?w=&q=` to third-party CDN URLs.
+ */
 export function shouldOptimizeImage(host: string): boolean {
-  return ALLOWED_IMAGE_HOSTS.has(host.toLowerCase())
+  return OPTIMIZED_IMAGE_HOSTS.has(host.toLowerCase())
 }
 
 export function canRenderWithNextImage(url: string | null): boolean {
