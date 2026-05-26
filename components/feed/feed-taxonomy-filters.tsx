@@ -36,8 +36,8 @@ function RailDivider() {
 
 function tagPillClasses(active: boolean) {
   return active
-    ? 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-active-border bg-chip-active-bg px-3 py-1.5 text-xs font-semibold tracking-wide text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
-    : 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-inactive-border bg-transparent px-3 py-1.5 text-xs font-semibold tracking-wide text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+    ? 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-active-border bg-chip-active-bg px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+    : 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-inactive-border bg-transparent px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
 }
 
 const scrollArrowBtn =
@@ -126,8 +126,8 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
   if (tags.length === 0) return null
 
   return (
-    <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2">
         <button
           type="button"
           onClick={() =>
@@ -139,8 +139,8 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
           disabled={isPending || !hasActiveTags}
           className={
             !hasActiveTags
-              ? 'inline-flex min-h-[36px] shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-chip-active-border bg-chip-active-bg px-4 py-1.5 text-xs font-semibold tracking-wide text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20 cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
-              : 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-inactive-border bg-transparent px-4 py-1.5 text-xs font-semibold tracking-wide text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+              ? 'inline-flex min-h-[36px] shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-chip-active-border bg-chip-active-bg px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20 cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+              : 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-inactive-border bg-transparent px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
           }
         >
           {!hasActiveTags && <Check className="h-3 w-3 shrink-0" aria-hidden="true" />}

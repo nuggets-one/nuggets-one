@@ -307,6 +307,8 @@ export function FilterPopover({
   const activeCount = committed.length
   const triggerLabel =
     activeCount > 0 ? `${idleTriggerLabel} (${activeCount})` : idleTriggerLabel
+  const triggerAriaLabel =
+    activeCount > 0 ? `Open filters, ${activeCount} selected` : 'Open filters'
   const compactTrigger = triggerVariant === 'iconCount'
   const dirty =
     selectedSet.size !== committedSet.size ||
@@ -320,10 +322,10 @@ export function FilterPopover({
         onClick={openDialog}
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="Open filters"
+        aria-label={triggerAriaLabel}
         className={`inline-flex shrink-0 items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 ${
           compactTrigger
-            ? 'min-h-11 gap-2 px-3 py-2 text-sm font-semibold sm:min-h-10 sm:gap-1.5 sm:px-3 sm:py-2 sm:font-medium'
+            ? 'min-h-[36px] gap-1.5 px-3.5 py-1.5 text-xs font-semibold tracking-[0.01em]'
             : 'min-h-10 gap-1.5 px-3 py-2 text-sm font-medium'
         } ${
           activeCount > 0
@@ -334,16 +336,15 @@ export function FilterPopover({
         {compactTrigger ? (
           <>
             <SlidersHorizontal
-              className={`h-4 w-4 shrink-0 ${activeCount > 0 ? 'opacity-90' : 'text-primary/85'}`}
+              className={`h-3.5 w-3.5 shrink-0 ${activeCount > 0 ? 'opacity-90' : 'text-primary/85'}`}
               strokeWidth={2}
               aria-hidden="true"
             />
             {activeCount > 0 ? (
-              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[11px] font-semibold leading-none text-accent-foreground">
+              <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold leading-none text-accent-foreground">
                 {activeCount}
               </span>
             ) : null}
-            <span className="hidden sm:inline">{triggerLabel}</span>
           </>
         ) : (
           <>
