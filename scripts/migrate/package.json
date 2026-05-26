@@ -5,6 +5,8 @@
     "etl:tags": "tsx migrate-tags.ts",
     "etl:articles": "tsx migrate-articles.ts",
     "etl:collections": "tsx migrate-collections.ts",
+    "sync:collection-entries": "tsx sync-collection-entries.ts",
+    "backfill:collection-hierarchy": "tsx backfill-collection-hierarchy.ts",
     "backfill:card-preview": "tsx backfill-card-preview.ts",
     "backfill:legacy-media": "tsx backfill-legacy-media-heroes.ts",
     "backfill:cloudinary-heroes": "tsx backfill-external-heroes-to-cloudinary.ts",

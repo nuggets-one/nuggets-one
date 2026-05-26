@@ -6,7 +6,7 @@
 //   rawName / canonicalName / title → title (prefer rawName as display name)
 //   description → description
 //   curatorName (or curator derived) → curator_name
-//   isPublic=true filter (only public collections migrate)
+//   type='public' filter (legacy community lists; not user bookmark folders)
 //   entries[].articleId OR articles[] (ObjectIds) → community_collection_entries rows
 //   legacy_mongo_id stored for traceability
 //
@@ -85,29 +85,67 @@ async function main() {
 
   await connectMongo()
 
-  const mongoCols = await MongoCollection.find({ isPublic: true }).lean()
-  console.log(`Found ${mongoCols.length} public collections in Mongo`)
+  // Legacy Mongo uses `type: 'public' | 'private'` — not `isPublic`.
+  // `private` rows are user bookmark folders; only `public` are community collections.
+  const mongoCols = await MongoCollection.find({ type: 'public' }).lean()
+  console.log(`Found ${mongoCols.length} community collections (type=public) in Mongo`)
 
-  // Build legacy_mongo_id → postgres article id map
-  const { data: articleRows, error: articleFetchErr } = await db
-    .from('articles')
-    .select('id, legacy_mongo_id')
-  if (articleFetchErr) throw new Error(`Failed to fetch articles: ${articleFetchErr.message}`)
-
-  const legacyIdMap = new Map<string, string>(
-    (articleRows ?? [])
-      .filter((r) => r.legacy_mongo_id)
-      .map((r) => [r.legacy_mongo_id as string, r.id as string])
-  )
+  // Build legacy_mongo_id → postgres article id map (paginate — Supabase caps ~1000 rows/request)
+  const legacyIdMap = new Map<string, string>()
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1
+    const { data: articleRows, error: articleFetchErr } = await db
+      .from('articles')
+      .select('id, legacy_mongo_id')
+      .not('legacy_mongo_id', 'is', null)
+      .range(from, to)
+    if (articleFetchErr) throw new Error(`Failed to fetch articles: ${articleFetchErr.message}`)
+    const rows = articleRows ?? []
+    for (const r of rows) {
+      const legacy = r.legacy_mongo_id as string | null
+      if (legacy) legacyIdMap.set(legacy, r.id as string)
+    }
+    if (rows.length < pageSize) break
+  }
   console.log(`Loaded ${legacyIdMap.size} article ID mappings from Postgres\n`)
 
+  const existingLegacyIds = new Set<string>()
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1
+    const { data: existingRows, error: existingErr } = await db
+      .from('community_collections')
+      .select('legacy_mongo_id')
+      .not('legacy_mongo_id', 'is', null)
+      .range(from, to)
+    if (existingErr) throw new Error(`Failed to fetch existing collections: ${existingErr.message}`)
+    const rows = existingRows ?? []
+    for (const r of rows) {
+      const id = r.legacy_mongo_id as string | null
+      if (id) existingLegacyIds.add(id)
+    }
+    if (rows.length < pageSize) break
+  }
+
   let inserted = 0
+  let skipped = 0
   let errors = 0
 
   for (const col of mongoCols as LegacyCollectionDoc[]) {
     const title = resolveTitle(col)
     if (!title) {
       console.warn(`  ⚠ Collection ${col._id} has no title — skipping`)
+      continue
+    }
+
+    const legacyMongoId = String(col._id)
+    if (existingLegacyIds.has(legacyMongoId)) {
+      skipped++
+      if (isDryRun) {
+        console.log(`  [dry] skip existing "${title}" (${legacyMongoId})`)
+      } else {
+        console.log(`  ↷ skip existing "${title}"`)
+      }
       continue
     }
 
@@ -139,7 +177,7 @@ async function main() {
       description: (col.description as string) || null,
       curator_name: (col.curatorName as string) || 'Nuggets',
       status: 'published',
-      legacy_mongo_id: String(col._id),
+      legacy_mongo_id: legacyMongoId,
     })
 
     if (colErr) {
@@ -168,7 +206,7 @@ async function main() {
     inserted++
   }
 
-  console.log(`\nDone. inserted=${inserted} errors=${errors}`)
+  console.log(`\nDone. inserted=${inserted} skipped=${skipped} errors=${errors}`)
   await disconnectMongo()
 }
 

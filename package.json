@@ -10,6 +10,8 @@
     "etl:tags": "npm --prefix scripts/migrate run etl:tags",
     "etl:articles": "npm --prefix scripts/migrate run etl:articles",
     "etl:collections": "npm --prefix scripts/migrate run etl:collections",
+    "sync:collection-entries": "npm --prefix scripts/migrate run sync:collection-entries",
+    "backfill:collection-hierarchy": "npm --prefix scripts/migrate run backfill:collection-hierarchy",
     "backfill:card-preview": "npm --prefix scripts/migrate run backfill:card-preview",
     "backfill:legacy-media": "npm --prefix scripts/migrate run backfill:legacy-media",
     "backfill:legacy-galleries": "npm --prefix scripts/migrate run backfill:legacy-media",
