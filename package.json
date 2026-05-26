@@ -21,12 +21,14 @@
     "validate:og": "node scripts/validate-og.mjs",
     "check:banned-imports": "node scripts/check-banned-imports.mjs",
     "check:bundle-budget": "node scripts/check-bundle-budget.mjs",
+    "benchmark:search": "node scripts/benchmark-search-rpc.mjs",
     "test:handoff": "npm --prefix scripts/migrate run test:handoff",
     "curator:check": "node scripts/check-curator-feed-data.mjs",
     "audit:card-preview": "node scripts/audit-card-preview.mjs",
     "test:feed-pagination": "playwright test tests/feed-pagination-invariant.spec.ts",
     "test:detail-visual": "playwright test tests/detail-visual.spec.ts",
     "test:detail-visual:update": "playwright test tests/detail-visual.spec.ts --update-snapshots",
+    "verify:google-oauth": "node scripts/verify-google-oauth.mjs",
     "release:check": "npm run lint && npm run check:banned-imports && npm run build && npm run check:bundle-budget && npm run test:handoff"
   },
   "dependencies": {

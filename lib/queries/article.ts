@@ -12,6 +12,49 @@ export type SuggestionRow = {
   slug: string
   title: string
   content_stream: ContentStream
+  published_at: string | null
+}
+
+async function withSuggestionPublishedAt(
+  supabase: ReturnType<typeof getPublicClient>,
+  rows: SuggestionRow[]
+): Promise<SuggestionRow[]> {
+  const missingDateIds = rows
+    .filter((row) => row.published_at == null)
+    .map((row) => row.id)
+
+  if (missingDateIds.length === 0) return rows
+
+  const { data, error } = await supabase
+    .from('articles')
+    .select('id, published_at')
+    .in('id', missingDateIds)
+    .eq('status', 'published')
+
+  if (error || !data) return rows
+
+  const publishedAtById = new Map<string, string | null>(
+    data.map((row) => [row.id as string, row.published_at as string | null])
+  )
+
+  return rows.map((row) => ({
+    ...row,
+    published_at: row.published_at ?? publishedAtById.get(row.id) ?? null,
+  }))
+}
+
+type RpcClient = {
+  rpc: (
+    fn: string,
+    params?: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { message: string } | null }>
+}
+
+function isMissingSuggestRpcFunctionError(message: string): boolean {
+  return (
+    /could not find the function/i.test(message) &&
+    /search_suggestions_ranked/i.test(message)
+  )
 }
 
 /** PMF cap — `docs/NUGGETS_V2_BLUEPRINT.md` §6.2a · `docs/NUGGETS_V2_PRODUCT_BEHAVIOR_AND_UI.md` §11 */
@@ -29,23 +72,46 @@ export async function suggestArticles({
   if (!q || q.trim().length < 2) return []
 
   const supabase = getPublicClient()
+  const rpcClient = supabase as unknown as RpcClient
 
-  const { data, error } = await supabase
-    .from('articles')
-    .select('id, slug, title, content_stream')
-    .eq('status', 'published')
-    .eq('content_stream', stream)
-    .textSearch('search_vector', `${q.trim()}:*`, {
-      type: 'plain',
-      config: 'english',
-    })
-    .limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))
+  const { data, error } = await rpcClient.rpc('search_suggestions_ranked', {
+    p_stream: stream,
+    p_q: q.trim(),
+    p_limit: Math.min(limit, SEARCH_SUGGEST_ROW_CAP),
+  })
 
-  if (error || !data) {
-    console.error('suggestArticles error:', error?.message)
+  if (error) {
+    if (isMissingSuggestRpcFunctionError(error.message)) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('articles')
+        .select('id, slug, title, content_stream, published_at')
+        .eq('status', 'published')
+        .eq('content_stream', stream)
+        .textSearch('search_vector', q.trim(), {
+          type: 'websearch',
+          config: 'english',
+        })
+        .order('published_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))
+
+      if (fallbackError || !fallbackData) {
+        console.error('suggestArticles fallback error:', fallbackError?.message)
+        return []
+      }
+
+      return withSuggestionPublishedAt(supabase, fallbackData as SuggestionRow[])
+    }
+    console.error('suggestArticles error:', error.message)
     return []
   }
-  return data as SuggestionRow[]
+
+  if (!data) {
+    console.error('suggestArticles error: empty RPC response data')
+    return []
+  }
+
+  return withSuggestionPublishedAt(supabase, data as SuggestionRow[])
 }
 
 const DETAIL_SELECT = `

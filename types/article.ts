@@ -52,6 +52,8 @@ export type CardImage = {
 export type FeedCursor = {
   published_at: string        // ISO string
   id: string                  // UUID
+  /** Present on full-text search pagination cursors to preserve rank order. */
+  rank?: number
 }
 
 /**

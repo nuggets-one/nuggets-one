@@ -48,6 +48,9 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated, isA
       if (cursor) {
         params.set('cursor_pub', cursor.published_at)
         params.set('cursor_id', cursor.id)
+        if (typeof cursor.rank === 'number') {
+          params.set('cursor_rank', String(cursor.rank))
+        }
       }
 
       const res = await fetch(`/api/feed?${params.toString()}`, {

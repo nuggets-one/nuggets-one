@@ -17,7 +17,14 @@ import {
 type ArticleRowWithLabels = Omit<ArticleCardProps, 'cardPreviewHtml'>
 type ArticleRowWithoutLabels = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels'>
 type RawArticleRow = Omit<ArticleRowWithoutLabels, 'images'>
+type SearchRpcRow = RawArticleRow & { search_rank: number }
 type TaggableRow = Record<string, unknown> & { tag_slugs: string[] }
+type RpcClient = {
+  rpc: (
+    fn: string,
+    params?: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { message: string } | null }>
+}
 
 // Phase 14: cap at 4 images per card (2x2 grid + "+N" overlay if more exist).
 const MAX_IMAGES_PER_CARD = 4
@@ -96,6 +103,13 @@ function isMissingCuratorDisplayNameColumnError(message: string): boolean {
   return /curator_display_name/i.test(message) && /does not exist/i.test(message)
 }
 
+function isMissingSearchRpcFunctionError(message: string): boolean {
+  return (
+    /could not find the function/i.test(message) &&
+    /search_articles_ranked/i.test(message)
+  )
+}
+
 type FeedArticleSelectResult = {
   data: unknown
   error: { message: string } | null
@@ -129,17 +143,16 @@ export async function getFeedPage({
   limit = 24,
 }: FeedPageParams): Promise<FeedPage> {
   const supabase = getPublicClient()
-  const totalCountPromise = getFeedTotalCount({ supabase, stream, tags, q })
 
   // Branch: full-text search vs cursor pagination
-  // Search uses textSearch on search_vector — no cursor support PMF
-  // Cursor pagination uses keyset on (published_at DESC, id DESC)
+  // Search uses ranked RPC pagination (rank DESC, published_at DESC, id DESC).
+  // Non-search feed uses keyset on (published_at DESC, id DESC).
 
   if (q.trim()) {
-    const page = await getFeedPageBySearch({ supabase, stream, tags, q, limit })
-    return { ...page, totalCount: await totalCountPromise }
+    return getFeedPageBySearch({ supabase, stream, tags, q, cursor, limit })
   }
 
+  const totalCountPromise = getFeedTotalCount({ supabase, stream, tags, q: '' })
   const page = await getFeedPageByCursor({ supabase, stream, tags, cursor, limit })
   return { ...page, totalCount: await totalCountPromise }
 }
@@ -248,12 +261,82 @@ async function getFeedPageBySearch({
   stream,
   tags,
   q,
+  cursor,
   limit,
 }: {
   supabase: ReturnType<typeof getPublicClient>
   stream: ContentStream
   tags: string[]
   q: string
+  cursor?: FeedCursor
+  limit: number
+}): Promise<FeedPage> {
+  const safeCursorRank = typeof cursor?.rank === 'number' ? cursor.rank : null
+  const safeCursorPublishedAt = cursor?.published_at ?? null
+  const safeCursorId = cursor?.id ?? null
+  const rpcClient = supabase as unknown as RpcClient
+
+  const { data, error } = await rpcClient.rpc('search_articles_ranked', {
+    p_stream: stream,
+    p_tags: tags,
+    p_q: q,
+    p_limit: limit,
+    p_cursor_rank: safeCursorRank,
+    p_cursor_published_at: safeCursorPublishedAt,
+    p_cursor_id: safeCursorId,
+  })
+
+  if (error) {
+    if (isMissingSearchRpcFunctionError(error.message)) {
+      console.warn(
+        'search_articles_ranked RPC missing in schema cache; using legacy search fallback.'
+      )
+      return getFeedPageBySearchLegacy({ supabase, stream, tags, q, cursor, limit })
+    }
+    throw new Error(`getFeedPageBySearch error: ${error.message}`)
+  }
+
+  const rpcRows = (data ?? []) as unknown as SearchRpcRow[]
+  const strippedRows = rpcRows.map((row) => {
+    const next = { ...row } as RawArticleRow & { search_rank?: number }
+    delete next.search_rank
+    return next
+  })
+  const rawRows = normalizeCuratorOnRows(strippedRows as unknown as Record<string, unknown>[])
+  const rowsWithImages = await attachImagesToRows(supabase, rawRows)
+  const rows = await attachTagLabelsToRows(
+    supabase as unknown as SupabaseLike,
+    rowsWithImages as unknown as TaggableRow[]
+  ) as ArticleRowWithLabels[]
+  const articles = await attachCardPreviewHtml(rows)
+  const lastRow = rpcRows[rpcRows.length - 1]
+
+  return {
+    articles,
+    nextCursor: rpcRows.length === limit && lastRow
+      ? {
+          published_at: lastRow.published_at,
+          id: lastRow.id,
+          rank: Number(lastRow.search_rank),
+        }
+      : null,
+    stream,
+  }
+}
+
+async function getFeedPageBySearchLegacy({
+  supabase,
+  stream,
+  tags,
+  q,
+  cursor,
+  limit,
+}: {
+  supabase: ReturnType<typeof getPublicClient>
+  stream: ContentStream
+  tags: string[]
+  q: string
+  cursor?: FeedCursor
   limit: number
 }): Promise<FeedPage> {
   async function runQuery(selectClause: string) {
@@ -274,17 +357,22 @@ async function getFeedPageBySearch({
       query = query.contains('tag_slugs', tags)
     }
 
+    if (cursor?.published_at && cursor?.id) {
+      query = query.or(
+        `published_at.lt.${cursor.published_at},` +
+        `and(published_at.eq.${cursor.published_at},id.lt.${cursor.id})`
+      )
+    }
+
     return query
   }
 
   const { data, error } = await runFeedArticleSelectChain(runQuery)
 
   if (error) {
-    throw new Error(`getFeedPageBySearch error: ${error.message}`)
+    throw new Error(`getFeedPageBySearchLegacy error: ${error.message}`)
   }
 
-  // Search results have no stable cursor — return null
-  // PR-09 can add pagination for search results if needed post-PMF
   const rawRows = normalizeCuratorOnRows((data ?? []) as unknown as Record<string, unknown>[])
   const rowsWithImages = await attachImagesToRows(supabase, rawRows)
   const rows = await attachTagLabelsToRows(
@@ -292,9 +380,16 @@ async function getFeedPageBySearch({
     rowsWithImages as unknown as TaggableRow[]
   ) as ArticleRowWithLabels[]
   const articles = await attachCardPreviewHtml(rows)
+  const lastRow = articles[articles.length - 1]
+
   return {
     articles,
-    nextCursor: null,
+    nextCursor: articles.length === limit && lastRow
+      ? {
+          published_at: lastRow.published_at,
+          id: lastRow.id,
+        }
+      : null,
     stream,
   }
 }

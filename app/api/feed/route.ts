@@ -36,13 +36,16 @@ function parseQ(raw: string | null): string {
 
 function parseCursor(
   pubRaw: string | null,
-  idRaw: string | null
+  idRaw: string | null,
+  rankRaw: string | null
 ): FeedCursor | undefined {
   if (!pubRaw || !idRaw) return undefined
   const ts = Date.parse(pubRaw)
   if (isNaN(ts)) return undefined
   if (idRaw.length !== 36 || idRaw.split('-').length !== 5) return undefined
-  return { published_at: pubRaw, id: idRaw }
+  const rankValue = rankRaw != null ? Number.parseFloat(rankRaw) : Number.NaN
+  const rank = Number.isFinite(rankValue) ? rankValue : undefined
+  return { published_at: pubRaw, id: idRaw, rank }
 }
 
 function getCacheControl(
@@ -63,7 +66,8 @@ export async function GET(req: NextRequest) {
   const q = parseQ(searchParams.get('q'))
   const cursor = parseCursor(
     searchParams.get('cursor_pub'),
-    searchParams.get('cursor_id')
+    searchParams.get('cursor_id'),
+    searchParams.get('cursor_rank')
   )
 
   const hasCursor = cursor !== undefined
