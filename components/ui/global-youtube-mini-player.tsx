@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { usePathname } from 'next/navigation'
 import {
   buildYouTubeNoCookieEmbedSrc,
   postYouTubeIframeCommand,
@@ -20,6 +21,11 @@ type PanelState = {
 }
 
 type DockSide = 'left' | 'right' | 'center'
+
+function isArticleDetailPath(pathname: string | null): boolean {
+  if (!pathname) return false
+  return /^\/nuggets\/[^/]+\/[^/]+$/.test(pathname)
+}
 
 function CloseCrossIcon({ className }: { className?: string }) {
   return (
@@ -65,14 +71,17 @@ function overlapArea(a: DOMRect, b: DOMRect): number {
 }
 
 export function GlobalYouTubeMiniPlayer() {
+  const pathname = usePathname()
   const [panel, setPanel] = useState<PanelState | null>(null)
   const [dockSide, setDockSide] = useState<DockSide>('center')
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const isDetailPage = isArticleDetailPath(pathname)
 
   const resolveDockSide = useCallback((): DockSide => {
     if (typeof window === 'undefined') return 'center'
     if (window.innerWidth < 1024) return 'center'
+    if (isDetailPage && window.innerWidth >= 1280) return 'right'
 
     const dialogs = Array.from(
       document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
@@ -108,7 +117,7 @@ export function GlobalYouTubeMiniPlayer() {
     }
 
     return leftCollisionScore <= rightCollisionScore ? 'left' : 'right'
-  }, [])
+  }, [isDetailPage])
 
   useEffect(() => {
     function onPlay(e: Event) {
@@ -178,7 +187,7 @@ export function GlobalYouTubeMiniPlayer() {
       window.removeEventListener('resize', recalculateDockSide)
       observer.disconnect()
     }
-  }, [panel, resolveDockSide])
+  }, [panel, resolveDockSide, isDetailPage])
 
   if (typeof document === 'undefined' || !panel) return null
 
@@ -196,6 +205,8 @@ export function GlobalYouTubeMiniPlayer() {
   const rootClassName =
     dockSide === 'center'
       ? 'fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-1/2 z-[100] w-[clamp(15rem,88vw,22rem)] -translate-x-1/2 pt-2 sm:w-[clamp(16rem,72vw,24rem)]'
+      : isDetailPage
+        ? 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-4 z-[100] w-[min(20rem,calc(100vw-2rem))] xl:right-[max(1rem,calc((100vw-90rem)/2+1rem))] xl:w-[min(17rem,calc(100vw-2rem))]'
       : dockSide === 'left'
         ? 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-4 z-[100] w-[min(32rem,calc(100vw-2rem))]'
         : 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-4 z-[100] w-[min(32rem,calc(100vw-2rem))]'
