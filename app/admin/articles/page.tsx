@@ -210,10 +210,18 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
                 {articleRows.map((a) => {
                   const articleId = a.id
                   const alreadyIn = membershipByArticleId.get(articleId) ?? new Set<string>()
+                  const hasAnyCollection = alreadyIn.size > 0
+                  const orderedCollections = [
+                    ...publishedCollectionRows.filter((c) => alreadyIn.has(c.id as string)),
+                    ...publishedCollectionRows.filter((c) => !alreadyIn.has(c.id as string)),
+                  ]
                   const firstAvailableCollectionId =
                     a.status === 'published'
                       ? publishedCollectionRows.find((c) => !alreadyIn.has(c.id as string))?.id
                       : undefined
+                  const defaultCollectionId = hasAnyCollection
+                    ? (firstAvailableCollectionId ?? '')
+                    : ''
                   const canAdd =
                     a.status === 'published' && typeof firstAvailableCollectionId === 'string'
 
@@ -255,19 +263,21 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
 
                           <select
                             name="collection_id"
-                            defaultValue={firstAvailableCollectionId ?? ''}
+                            defaultValue={defaultCollectionId}
                             disabled={!canAdd}
                             className="rounded-lg border border-border bg-bg px-2 py-1 text-xs text-primary max-w-[180px]"
                           >
                             <option value="" disabled>
                               Select…
                             </option>
-                            {publishedCollectionRows.map((c) => {
+                            {orderedCollections.map((c) => {
                               const collectionId = c.id as string
                               const disabled = alreadyIn.has(collectionId)
                               return (
                                 <option key={collectionId} value={collectionId} disabled={disabled}>
-                                  {c.title as string}
+                                  {disabled
+                                    ? `${c.title as string} (already added)`
+                                    : (c.title as string)}
                                 </option>
                               )
                             })}
