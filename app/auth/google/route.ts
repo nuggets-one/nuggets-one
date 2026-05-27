@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { sanitizeNext } from '@/lib/auth/sanitize-next'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/config'
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3010').replace(/\/+$/, '')
 
@@ -16,8 +17,8 @@ export async function GET(request: NextRequest) {
 
   let response = NextResponse.next({ request })
   const supabase = createServerClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabaseAnonKey(),
     {
       cookies: {
         getAll() {

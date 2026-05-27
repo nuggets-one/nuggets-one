@@ -1,9 +1,10 @@
 import 'server-only'
 
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseUrl } from '@/lib/supabase/config'
 
 export function createAdminClient() {
-  const url = process.env.SUPABASE_URL
+  const url = getSupabaseUrl()
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing Supabase admin env vars')
   return createClient(url, key, {

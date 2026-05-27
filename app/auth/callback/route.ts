@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { sanitizeNext } from '@/lib/auth/sanitize-next'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/config'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -18,8 +19,8 @@ export async function GET(request: NextRequest) {
   if (code) {
     let response = NextResponse.next({ request })
     const supabase = createServerClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_ANON_KEY!,
+      getSupabaseUrl(),
+      getSupabaseAnonKey(),
       {
         cookies: {
           getAll() {
