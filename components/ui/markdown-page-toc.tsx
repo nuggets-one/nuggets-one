@@ -26,9 +26,9 @@ export function MarkdownPageToc({
     <>
       <MobileTocTrigger items={items} activeId={activeId} scrollOffsetPx={scrollOffsetPx} />
 
-      <nav aria-label="Table of contents" className="hidden lg:block lg:sticky lg:top-24">
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">On this page</p>
-        <ul className="space-y-0.5 border-l border-border">
+      <nav aria-label="Table of contents" className="hidden lg:block lg:sticky lg:top-24 lg:pt-1">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">On this page</p>
+        <ul className="space-y-0.5 border-l border-border pr-3">
           {items.map((item) => {
             const active = activeId === item.id
             return (
@@ -38,7 +38,7 @@ export function MarkdownPageToc({
                   scrollOffsetPx={scrollOffsetPx}
                   aria-current={active ? 'true' : undefined}
                   className={[
-                    '-ml-px block border-l py-1.5 pl-4 pr-2 text-[13px] leading-snug transition-colors',
+                    '-ml-px block border-l py-1.5 pl-4 pr-2 text-[12.5px] leading-snug transition-colors',
                     active
                       ? 'border-l-primary font-medium text-primary'
                       : 'border-transparent text-muted hover:border-border-strong hover:text-primary',

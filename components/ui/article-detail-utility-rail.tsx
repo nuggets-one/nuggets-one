@@ -57,15 +57,14 @@ export function ArticleDetailUtilityRail({
   }, [activeId, tocItems])
 
   useEffect(() => {
+    const headerOffset = 112
     const handleScroll = () => {
       const root = document.getElementById(scrollRootId)
       if (!root) return
       const rect = root.getBoundingClientRect()
-      const viewportHeight = window.innerHeight || 1
-      const totalScrollable = rect.height + viewportHeight
-      if (totalScrollable <= 0) return
-      const viewed = viewportHeight - rect.top
-      const nextProgress = clampProgress((viewed / totalScrollable) * 100)
+      const rootTop = window.scrollY + rect.top
+      const travelled = window.scrollY + headerOffset - rootTop
+      const nextProgress = clampProgress((travelled / Math.max(rect.height, 1)) * 100)
       setProgress(nextProgress)
     }
 
@@ -126,7 +125,7 @@ export function ArticleDetailUtilityRail({
             <div className="h-1 rounded-full bg-rail">
               <div
                 className="h-full rounded-full bg-primary/80 transition-[width] duration-200"
-                style={{ width: `${Math.max(progress, 2)}%` }}
+                style={{ width: `${progress}%` }}
                 aria-hidden="true"
               />
             </div>

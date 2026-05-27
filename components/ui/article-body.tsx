@@ -183,22 +183,22 @@ export function ArticleBody({
       prose-pre:my-5 prose-pre:overflow-x-auto prose-pre:rounded-2xl prose-pre:border prose-pre:border-border prose-pre:bg-surface-raised prose-pre:p-4 prose-pre:text-sm prose-pre:text-primary
       [&_blockquote_p:first-of-type]:before:content-none [&_blockquote_p:last-of-type]:after:content-none
       [&_blockquote_p]:mb-1.5 [&_li]:pl-0.5`
-    : `prose max-w-none text-[15px] leading-8 text-muted
-      prose-headings:mb-3 prose-headings:mt-10 prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-primary
-      prose-h2:text-[1.45rem] prose-h2:leading-tight prose-h3:text-[1.18rem] prose-h3:leading-snug prose-h4:text-base
-      prose-p:my-0 prose-p:mb-6 prose-p:text-[15px] prose-p:leading-8 prose-p:text-muted
-      prose-li:text-[15px] prose-li:leading-8 prose-li:text-muted prose-li:marker:text-muted
-      prose-ul:my-6 prose-ol:my-6
+    : `prose max-w-none text-[15px] leading-7 text-muted
+      prose-headings:mb-3 prose-headings:mt-9 prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-primary
+      prose-h2:text-[1.34rem] prose-h2:leading-tight prose-h3:text-[1.14rem] prose-h3:leading-snug prose-h4:text-[0.98rem]
+      prose-p:my-0 prose-p:mb-5 prose-p:text-[15px] prose-p:leading-7 prose-p:text-muted
+      prose-li:text-[15px] prose-li:leading-7 prose-li:text-muted prose-li:marker:text-muted
+      prose-ul:my-5 prose-ol:my-5
       prose-strong:font-semibold prose-strong:text-primary prose-em:text-muted
       prose-a:no-underline prose-a:underline-offset-2
-      prose-hr:my-10 prose-hr:border-border
-      prose-img:my-8 prose-img:rounded-xl
-      prose-blockquote:my-8 prose-blockquote:border-l-2 prose-blockquote:border-border prose-blockquote:pl-5 prose-blockquote:text-[15px] prose-blockquote:italic prose-blockquote:font-normal prose-blockquote:text-muted
+      prose-hr:my-8 prose-hr:border-border
+      prose-img:my-7 prose-img:rounded-xl
+      prose-blockquote:my-7 prose-blockquote:border-l-2 prose-blockquote:border-border prose-blockquote:pl-5 prose-blockquote:text-[15px] prose-blockquote:italic prose-blockquote:font-normal prose-blockquote:text-muted
       prose-code:rounded prose-code:bg-surface-raised prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.85em] prose-code:text-primary
-      prose-pre:my-8 prose-pre:overflow-x-auto prose-pre:rounded-2xl prose-pre:border prose-pre:border-border prose-pre:bg-surface-raised prose-pre:p-4 prose-pre:text-sm prose-pre:text-primary
+      prose-pre:my-7 prose-pre:overflow-x-auto prose-pre:rounded-2xl prose-pre:border prose-pre:border-border prose-pre:bg-surface-raised prose-pre:p-4 prose-pre:text-sm prose-pre:text-primary
       [&_blockquote_p:first-of-type]:before:content-none [&_blockquote_p:last-of-type]:after:content-none
       [&_h1]:scroll-mt-28 [&_h2]:scroll-mt-28 [&_h3]:scroll-mt-28 [&_h4]:scroll-mt-28 [&_h5]:scroll-mt-28 [&_h6]:scroll-mt-28
-      sm:text-base sm:prose-p:text-base sm:prose-li:text-base sm:prose-blockquote:text-base`
+      sm:text-[15.5px] sm:prose-p:text-[15.5px] sm:prose-li:text-[15.5px] sm:prose-blockquote:text-[15.5px]`
 
   const headingComponents = buildHeadingComponents(headingIdByPosition)
 

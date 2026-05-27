@@ -227,8 +227,8 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
   )
 
   const fullPageHeader = (
-    <header className="space-y-5 sm:space-y-6">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
+    <header className="space-y-4 sm:space-y-5">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
         <span>{primaryTopic}</span>
         <span className="text-border-strong" aria-hidden="true">
           /
@@ -250,11 +250,11 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
         ) : null}
       </div>
 
-      <h1 className="text-3xl font-semibold leading-tight tracking-tight text-primary sm:text-4xl sm:leading-tight">
+      <h1 className="max-w-[24ch] text-2xl font-semibold leading-[1.2] tracking-tight text-primary sm:text-3xl lg:text-[2rem]">
         {article.title}
       </h1>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
         {sourceLink}
         <div className="xl:hidden">
           <ArticleDetailInlineActions
@@ -452,7 +452,7 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
           ) : null}
 
           <div className={showToc ? 'min-w-0 lg:col-start-2 xl:col-start-2' : 'min-w-0 xl:col-start-1'}>
-            <div className="mx-auto w-full max-w-[70ch] space-y-8 sm:space-y-10">
+            <div className="mx-auto w-full max-w-[70ch] space-y-8 sm:space-y-9">
               {fullPageHeader}
               {heroSection}
 
