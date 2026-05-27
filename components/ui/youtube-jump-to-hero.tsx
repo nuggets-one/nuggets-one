@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
 import {
   getYouTubeHeroScrollRoot,
   NUGGET_YOUTUBE_HERO_ID,
@@ -16,14 +15,7 @@ type Props = {
   articleId: string
 }
 
-function isArticleDetailPath(pathname: string | null): boolean {
-  if (!pathname) return false
-  return /^\/nuggets\/[^/]+\/[^/]+$/.test(pathname)
-}
-
 export function YouTubeJumpToHero({ articleId }: Props) {
-  const pathname = usePathname()
-  const isDetailPage = isArticleDetailPath(pathname)
   const [activeArticleId, setActiveArticleId] = useState<string | null>(null)
   const [heroOffScreen, setHeroOffScreen] = useState(false)
 
@@ -67,12 +59,7 @@ export function YouTubeJumpToHero({ articleId }: Props) {
       type="button"
       onClick={() => scrollYouTubeHeroIntoView()}
       aria-label="Jump to video"
-      className={[
-        'fixed right-4 z-[90] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/95 text-primary shadow-panel backdrop-blur transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60',
-        isDetailPage
-          ? 'max-lg:bottom-[calc(13rem+env(safe-area-inset-bottom))] lg:bottom-[var(--yt-mini-player-bottom)] lg:right-[calc(var(--yt-mini-player-detail-right)+var(--yt-mini-player-width-desktop)+var(--yt-mini-player-jump-gap))]'
-          : 'max-lg:bottom-[calc(13rem+env(safe-area-inset-bottom))] lg:bottom-[calc(11rem+env(safe-area-inset-bottom))]',
-      ].join(' ')}
+      className="fixed right-4 z-[90] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/95 text-primary shadow-panel backdrop-blur transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 max-lg:bottom-[calc(13rem+env(safe-area-inset-bottom))] lg:bottom-[calc(11rem+env(safe-area-inset-bottom))]"
     >
       <svg
         className="h-5 w-5"
