@@ -5,6 +5,10 @@
 :root {
   /* Layout */
   --header-height: 56px; /* matches h-14 */
+  --yt-mini-player-width-desktop: min(32rem, calc(100vw - 2rem));
+  --yt-mini-player-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  --yt-mini-player-detail-right: max(0.5rem, env(safe-area-inset-right));
+  --yt-mini-player-jump-gap: 0.75rem;
 
   /* Background */
   --color-bg: theme('colors.slate.50');
