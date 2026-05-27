@@ -501,7 +501,14 @@ export async function listCollections(): Promise<CollectionSummary[]> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.error(`listCollections cached path failed: ${message}`)
-    return listCollectionsUncached()
+    try {
+      return await listCollectionsUncached()
+    } catch (uncachedError) {
+      const uncachedMessage =
+        uncachedError instanceof Error ? uncachedError.message : String(uncachedError)
+      console.error(`listCollections uncached fallback failed: ${uncachedMessage}`)
+      return []
+    }
   }
 }
 

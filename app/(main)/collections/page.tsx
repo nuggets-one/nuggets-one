@@ -96,16 +96,27 @@ async function CollectionsExperience({ searchParams }: Props) {
     }
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const isAuthenticated = !!user
-  const isAdmin = user?.app_metadata?.is_admin === true
+  let userId: string | null = null
+  let isAdmin = false
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser()
+    if (authUser) {
+      userId = authUser.id
+      isAdmin = authUser.app_metadata?.is_admin === true
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`collections auth fallback: ${message}`)
+  }
+
+  const isAuthenticated = userId !== null
   const selectedArticleIds = selectedCollection?.articles.map((article) => article.id) ?? []
   const bookmarkedIds =
-    user && selectedArticleIds.length > 0
-      ? await getBookmarkedArticleIdsForUser(user.id, selectedArticleIds)
+    userId && selectedArticleIds.length > 0
+      ? await getBookmarkedArticleIdsForUser(userId, selectedArticleIds)
       : new Set<string>()
 
   if (browse.groups.length === 0) {

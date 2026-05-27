@@ -8,6 +8,12 @@ import { Header } from '@/components/layout/header'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
 import { listAccountMenuLegalLinks } from '@/lib/queries/legal-pages'
 
+const FALLBACK_LEGAL_LINKS = [
+  { slug: 'terms', label: 'Terms of use' },
+  { slug: 'privacy', label: 'Privacy policy' },
+  { slug: 'contact', label: 'Contact' },
+]
+
 export default async function MainLayout({
   children,
   modal,
@@ -15,7 +21,13 @@ export default async function MainLayout({
   children: React.ReactNode
   modal: React.ReactNode
 }) {
-  const legalLinks = await listAccountMenuLegalLinks()
+  let legalLinks = FALLBACK_LEGAL_LINKS
+  try {
+    legalLinks = await listAccountMenuLegalLinks()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`MainLayout legal links fallback: ${message}`)
+  }
 
   return (
     <NuqsAdapter>

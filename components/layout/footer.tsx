@@ -1,8 +1,20 @@
 import Link from 'next/link'
 import { listLegalFooterLinks } from '@/lib/queries/legal-pages'
 
+const FALLBACK_LEGAL_LINKS = [
+  { slug: 'terms', label: 'Terms of use' },
+  { slug: 'privacy', label: 'Privacy policy' },
+  { slug: 'contact', label: 'Contact' },
+]
+
 export async function Footer() {
-  const links = await listLegalFooterLinks()
+  let links = FALLBACK_LEGAL_LINKS
+  try {
+    links = await listLegalFooterLinks()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`Footer legal links fallback: ${message}`)
+  }
   const year = new Date().getFullYear()
 
   return (
