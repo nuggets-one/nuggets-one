@@ -340,6 +340,15 @@ function LightboxSlide({
 }) {
   const resolvedUrl = resolveLightboxImageUrl(url)
   const [loaded, setLoaded] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  useEffect(() => {
+    setLoaded(false)
+    const img = imgRef.current
+    if (img?.complete && img.naturalWidth > 0) {
+      setLoaded(true)
+    }
+  }, [resolvedUrl])
 
   if (!resolvedUrl) {
     return (
@@ -370,13 +379,16 @@ function LightboxSlide({
       ) : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        ref={imgRef}
         src={resolvedUrl}
         alt={alt}
         decoding="async"
         className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-200 ${
           loaded ? 'opacity-100' : 'opacity-0'
         }`}
-        onLoad={() => setLoaded(true)}
+        onLoad={() => {
+          requestAnimationFrame(() => setLoaded(true))
+        }}
       />
     </div>
   )
