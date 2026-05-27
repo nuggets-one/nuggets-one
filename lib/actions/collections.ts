@@ -9,6 +9,7 @@ import { revalidateCollection } from '@/lib/cache'
 import {
   collectionAddEntrySchema,
   collectionCreateSchema,
+  collectionAddEntriesFromArticlesSchema,
   collectionRemoveEntrySchema,
   collectionReorderEntrySchema,
   collectionUpdateSchema,
@@ -205,6 +206,15 @@ export async function addCollectionEntryAction(formData: FormData): Promise<void
   if (!parsed.success) return
 
   const { collection_id, article_id } = parsed.data
+  const returnTo = String(formData.get('return_to') ?? '').trim()
+  const returnErrorTo = String(formData.get('return_error_to') ?? '').trim()
+  const isReturningToArticles = returnTo.length > 0
+
+  const redirectWithQuery = (base: string, params: Record<string, string>): string => {
+    const url = base.includes('?') ? `${base}&` : `${base}?`
+    const sp = new URLSearchParams(params)
+    return `${url}${sp.toString()}`
+  }
   const db = getAdminClient()
 
   const { data: article, error: artErr } = await db
@@ -214,7 +224,18 @@ export async function addCollectionEntryAction(formData: FormData): Promise<void
     .maybeSingle()
 
   if (artErr || !article) return
-  if (article.status !== 'published') return
+  if (article.status !== 'published') {
+    if (isReturningToArticles) {
+      redirect(
+        redirectWithQuery(returnErrorTo || returnTo, {
+          error: 'not_published',
+          collection_id,
+          article_id,
+        }),
+      )
+    }
+    return
+  }
 
   const { data: maxRow } = await db
     .from('community_collection_entries')
@@ -235,14 +256,139 @@ export async function addCollectionEntryAction(formData: FormData): Promise<void
 
   if (error) {
     if (error.code === '23505') {
-      redirect(`/admin/collections/${collection_id}?error=already_in_collection`)
+      if (isReturningToArticles) {
+        redirect(
+          redirectWithQuery(returnErrorTo || returnTo, {
+            error: 'already_in_collection',
+            collection_id,
+            article_id,
+          }),
+        )
+      } else {
+        redirect(`/admin/collections/${collection_id}?error=already_in_collection`)
+      }
     }
     console.error('addCollectionEntryAction:', error.message)
     return
   }
 
   revalidateCollection(collection_id)
+  if (isReturningToArticles) {
+    redirect(
+      redirectWithQuery(returnTo, {
+        success: 'added_to_collection',
+        collection_id,
+        article_id,
+      }),
+    )
+  }
   redirect(`/admin/collections/${collection_id}`)
+}
+
+export async function addCollectionEntriesFromArticlesAction(
+  formData: FormData
+): Promise<void> {
+  const gate = await requireAdmin()
+  if (!gate.ok) return
+
+  const collection_id = String(formData.get('collection_id') ?? '').trim()
+  const article_ids = formData
+    .getAll('article_id')
+    .map((v) => String(v ?? '').trim())
+    .filter((v) => v.length > 0)
+
+  const parsed = collectionAddEntriesFromArticlesSchema.safeParse({
+    collection_id,
+    article_ids,
+  })
+  if (!parsed.success) return
+
+  const uniqueSelectedIds = Array.from(new Set(parsed.data.article_ids))
+  const db = getAdminClient()
+
+  const { data: articleRows, error: artErr } = await db
+    .from('articles')
+    .select('id, status')
+    .in('id', uniqueSelectedIds)
+
+  if (artErr) {
+    console.error('addCollectionEntriesFromArticlesAction:', artErr.message)
+    redirect('/admin/articles?bulk_added=1&added=0&skipped=0&error=bulk_lookup_failed')
+  }
+
+  const publishedSet = new Set(
+    (articleRows ?? [])
+      .filter((r) => r.status === 'published')
+      .map((r) => r.id as string),
+  )
+
+  const publishedIds = Array.from(publishedSet)
+
+  const existingSet = new Set<string>()
+  if (publishedIds.length > 0) {
+    const { data: existingRows, error: existingErr } = await db
+      .from('community_collection_entries')
+      .select('article_id')
+      .eq('collection_id', collection_id)
+      .in('article_id', publishedIds)
+
+    if (existingErr) {
+      console.error(
+        'addCollectionEntriesFromArticlesAction existing:',
+        existingErr.message,
+      )
+    } else {
+      for (const row of existingRows ?? []) {
+        existingSet.add(row.article_id as string)
+      }
+    }
+  }
+
+  const toInsertIds = publishedIds.filter((id) => !existingSet.has(id))
+
+  const totalSelected = uniqueSelectedIds.length
+  const addedCount = toInsertIds.length
+  const skippedCount = totalSelected - addedCount
+
+  if (toInsertIds.length === 0) {
+    revalidateCollection(collection_id)
+    redirect(
+      `/admin/articles?bulk_added=1&collection_id=${collection_id}&added=${addedCount}&skipped=${skippedCount}`,
+    )
+  }
+
+  const { data: maxRow } = await db
+    .from('community_collection_entries')
+    .select('position')
+    .eq('collection_id', collection_id)
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const startPosition =
+    typeof maxRow?.position === 'number' ? maxRow.position + 1 : 0
+
+  const entries = toInsertIds.map((article_id, idx) => ({
+    collection_id,
+    article_id,
+    position: startPosition + idx,
+  }))
+
+  const { error: insertErr } = await db
+    .from('community_collection_entries')
+    .insert(entries)
+
+  if (insertErr) {
+    console.error('addCollectionEntriesFromArticlesAction insert:', insertErr.message)
+    redirect(
+      `/admin/articles?bulk_added=1&collection_id=${collection_id}&added=0&skipped=${skippedCount}&error=bulk_insert_failed`,
+    )
+  }
+
+  revalidateCollection(collection_id)
+  redirect(
+    `/admin/articles?bulk_added=1&collection_id=${collection_id}&added=${addedCount}&skipped=${skippedCount}`,
+  )
 }
 
 export async function removeCollectionEntryAction(formData: FormData): Promise<void> {
