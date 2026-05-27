@@ -51,4 +51,9 @@ export const collectionReorderEntrySchema = z.object({
   direction: z.enum(['up', 'down']),
 })
 
+export const collectionAddEntriesFromArticlesSchema = z.object({
+  collection_id: uuidSchema,
+  article_ids: z.array(uuidSchema).min(1),
+})
+
 export type CollectionMetadataInput = z.infer<typeof collectionMetadataSchema>
