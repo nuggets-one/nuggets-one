@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3010 --webpack",
-    "build": "next build",
+    "build": "npm run validate:env && next build",
     "start": "next start",
     "lint": "eslint .",
+    "validate:env": "npx tsx scripts/validate/env-verify.ts --mode=build",
     "etl:tags": "npm --prefix scripts/migrate run etl:tags",
     "etl:articles": "npm --prefix scripts/migrate run etl:articles",
     "etl:collections": "npm --prefix scripts/migrate run etl:collections",

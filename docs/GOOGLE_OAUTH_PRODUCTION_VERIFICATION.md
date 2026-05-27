@@ -38,9 +38,23 @@ PLAYWRIGHT_BASE_URL=https://www.nuggets.one npx playwright test tests/google-oau
 Confirm in dashboard (not readable from repo):
 
 - `NEXT_PUBLIC_SITE_URL` = `https://nuggets.one` (no trailing slash)
-- `NEXT_PUBLIC_SUPABASE_URL` / keys match project `npvlfkhpkwciucvhrphk`
+- `NEXT_PUBLIC_SUPABASE_URL` matches project `npvlfkhpkwciucvhrphk`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` matches the same project
+- Set the two Supabase `NEXT_PUBLIC_*` vars in `Production` and `Preview` environments (and `Development` when using Vercel-hosted dev/test deployments)
 
 Local `.env.local` uses `http://localhost:3010` for `NEXT_PUBLIC_SITE_URL`; that does not affect production deploy env.
+
+## Env verification command
+
+Use this check before CI/build runs to fail fast on missing Supabase public vars:
+
+```bash
+npm run validate:env
+```
+
+Expected behavior:
+- exits `0` when `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are present and valid
+- exits non-zero with a clear report when either value is missing/invalid
 
 ## Notes
 

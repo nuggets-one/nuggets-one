@@ -5,7 +5,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -46,8 +45,38 @@ const BANNED_PACKAGES = [
 ] as const;
 
 function loadEnv(): void {
-  dotenv.config({ path: path.join(ROOT, ".env.local"), override: false });
-  dotenv.config({ path: path.join(ROOT, ".env") });
+  loadEnvFile(path.join(ROOT, ".env.local"));
+  loadEnvFile(path.join(ROOT, ".env"));
+}
+
+function stripOuterQuotes(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
+function loadEnvFile(filePath: string): void {
+  if (!fs.existsSync(filePath)) return;
+  const content = fs.readFileSync(filePath, "utf8");
+  const lines = content.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const idx = line.indexOf("=");
+    if (idx <= 0) continue;
+    const key = line.slice(0, idx).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+
+    const value = stripOuterQuotes(line.slice(idx + 1).trim());
+    if (process.env[key] == null) {
+      process.env[key] = value;
+    }
+  }
 }
 
 function parseSemverParts(v: string): number[] {
@@ -111,10 +140,18 @@ function findNextConfigText(): string | null {
 }
 
 type EnvEntry = { present: boolean; formatValid: boolean };
+type ValidationMode = "strict" | "build";
 
-function validateEnvVars(): {
+function parseMode(argv: string[]): ValidationMode {
+  const modeArg = argv.find((arg) => arg.startsWith("--mode="));
+  const raw = modeArg?.split("=")[1]?.trim().toLowerCase();
+  return raw === "build" ? "build" : "strict";
+}
+
+function validateEnvVarsForMode(mode: ValidationMode): {
   entries: Record<string, EnvEntry>;
   allOk: boolean;
+  requiredKeys: string[];
 } {
   const supabaseUrl = process.env.SUPABASE_URL ?? "";
   const anon = process.env.SUPABASE_ANON_KEY ?? "";
@@ -149,16 +186,24 @@ function validateEnvVars(): {
     },
     NEXT_PUBLIC_SUPABASE_URL: {
       present: !!pubUrl,
-      formatValid: pubUrl === supabaseUrl && urlOk(pubUrl),
+      formatValid: urlOk(pubUrl) && (!supabaseUrl || pubUrl === supabaseUrl),
     },
     NEXT_PUBLIC_SUPABASE_ANON_KEY: {
       present: !!pubAnon,
-      formatValid: pubAnon === anon && jwtShape(pubAnon),
+      formatValid: jwtShape(pubAnon) && (!anon || pubAnon === anon),
     },
   };
 
-  const allOk = Object.values(entries).every((e) => e.present && e.formatValid);
-  return { entries, allOk };
+  const requiredKeys: string[] =
+    mode === "build"
+      ? ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]
+      : Object.keys(entries);
+
+  const allOk = requiredKeys.every((key) => {
+    const entry = entries[key];
+    return entry != null && entry.present && entry.formatValid;
+  });
+  return { entries, allOk, requiredKeys };
 }
 
 async function supabaseSmoke(
@@ -232,12 +277,17 @@ function writeReport(report: unknown): void {
 
 async function main(): Promise<number> {
   loadEnv();
+  const mode = parseMode(process.argv.slice(2));
 
   const nodeRaw = process.version;
   const nodeNum = nodeRaw.replace(/^v/, "");
   const nodeOk = gteVersion(nodeNum, "20.0.0");
 
-  const { entries: envVars, allOk: envOk } = validateEnvVars();
+  const {
+    entries: envVars,
+    allOk: envOk,
+    requiredKeys,
+  } = validateEnvVarsForMode(mode);
 
   const nextVer = readInstalledPackageVersion("next");
   const nextOk =
@@ -263,8 +313,8 @@ async function main(): Promise<number> {
     cfg != null && cfg.includes("i.ytimg.com");
   const remoteOk = cloudinary && ytimg;
 
-  const supabaseUrl = process.env.SUPABASE_URL ?? "";
-  const anonKey = process.env.SUPABASE_ANON_KEY ?? "";
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
   let supabaseConnection: {
     statusCode: number | null;
     passed: boolean;
@@ -274,18 +324,27 @@ async function main(): Promise<number> {
     passed: false,
     detail: "Skipped (missing SUPABASE_URL or SUPABASE_ANON_KEY)",
   };
-  if (supabaseUrl && anonKey) {
+  if (mode === "strict" && supabaseUrl && anonKey) {
     supabaseConnection = await supabaseSmoke(supabaseUrl, anonKey);
+  } else if (mode === "build") {
+    supabaseConnection = {
+      statusCode: null,
+      passed: true,
+      detail: "Skipped in build mode (fast env contract check only)",
+    };
   }
 
   const bannedPackages = collectBanned();
 
-  const fatalsOk =
-    nodeOk &&
-    envOk &&
-    remoteOk &&
-    supabaseConnection.passed &&
-    bannedPackages.passed;
+  const fatalsOk = (
+    mode === "build"
+      ? nodeOk && envOk
+      : nodeOk &&
+        envOk &&
+        remoteOk &&
+        supabaseConnection.passed &&
+        bannedPackages.passed
+  );
 
   const allPassed =
     fatalsOk &&
@@ -313,37 +372,51 @@ async function main(): Promise<number> {
   writeReport(report);
 
   console.log("\n--- Build environment validation ---");
+  console.log(`Mode: ${mode}`);
   console.log(
     `Node ${nodeRaw}: ${nodeOk ? "PASS" : "FAIL"} (need >= 20.0.0)`
   );
-  console.log(`Env vars: ${envOk ? "PASS" : "FAIL"}`);
+  console.log(`Env vars: ${envOk ? "PASS" : "FAIL"} (required: ${requiredKeys.join(", ")})`);
   for (const [name, e] of Object.entries(envVars)) {
-    if (!e.present || !e.formatValid) {
+    const required = requiredKeys.includes(name);
+    if (required && (!e.present || !e.formatValid)) {
       console.log(
-        `  ${name}: present=${e.present} formatValid=${e.formatValid}`
+        `  ${name}: present=${e.present} formatValid=${e.formatValid} (required)`
+      );
+    } else if (!required && (!e.present || !e.formatValid)) {
+      console.log(
+        `  ${name}: present=${e.present} formatValid=${e.formatValid} (optional in ${mode} mode)`
       );
     }
   }
   console.log(`Next.js: ${nextOk ? "PASS" : "WARN — " + nextDetail}`);
   console.log(`nuqs: ${nuqsOk ? "PASS" : "WARN — " + nuqsDetail}`);
-  console.log(
-    `remotePatterns (Cloudinary + ytimg): ${remoteOk ? "PASS" : "FAIL"}`
-  );
-  if (!remoteOk) {
+  if (mode === "strict") {
     console.log(
-      "  CRITICAL: next.config must contain res.cloudinary.com and i.ytimg.com"
+      `remotePatterns (Cloudinary + ytimg): ${remoteOk ? "PASS" : "FAIL"}`
     );
+    if (!remoteOk) {
+      console.log(
+        "  CRITICAL: next.config must contain res.cloudinary.com and i.ytimg.com"
+      );
+    }
+  } else {
+    console.log("remotePatterns (Cloudinary + ytimg): SKIP in build mode");
   }
   console.log(
     `Supabase REST: ${supabaseConnection.passed ? "PASS" : "FAIL"} — ${supabaseConnection.detail}`
   );
-  console.log(
-    `Banned packages: ${bannedPackages.passed ? "PASS" : "CRITICAL FAIL"}`
-  );
-  if (!bannedPackages.passed) {
-    console.log(`  Found: ${bannedPackages.found.join(", ")}`);
+  if (mode === "strict") {
+    console.log(
+      `Banned packages: ${bannedPackages.passed ? "PASS" : "CRITICAL FAIL"}`
+    );
+    if (!bannedPackages.passed) {
+      console.log(`  Found: ${bannedPackages.found.join(", ")}`);
+    }
+  } else {
+    console.log("Banned packages: SKIP in build mode");
   }
-  console.log(`Overall (strict): ${allPassed ? "ALL PASS" : "ISSUES"}`);
+  console.log(`Overall (${mode}): ${allPassed ? "ALL PASS" : "ISSUES"}`);
   console.log(`Fatals (exit): ${fatalsOk ? "PASS" : "FAIL"}`);
   console.log(`Report: ${REPORT_PATH}\n`);
 
