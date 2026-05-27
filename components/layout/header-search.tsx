@@ -63,15 +63,7 @@ export function HeaderSearch() {
 
   useEffect(() => {
     if (!isFocused) {
-      let cancelled = false
-      queueMicrotask(() => {
-        if (!cancelled) {
-          setInputValue(committedQ)
-        }
-      })
-      return () => {
-        cancelled = true
-      }
+      setInputValue(committedQ)
     }
   }, [committedQ, isFocused])
 
@@ -83,17 +75,10 @@ export function HeaderSearch() {
       suggestAbortRef.current?.abort()
       suggestAbortRef.current = null
       lastSuggestQueryRef.current = ''
-      let cancelled = false
-      queueMicrotask(() => {
-        if (!cancelled) {
-          setSuggestionsPending(false)
-          setSuggestions([])
-          setActiveIndex(-1)
-        }
-      })
-      return () => {
-        cancelled = true
-      }
+      setSuggestionsPending(false)
+      setSuggestions([])
+      setActiveIndex(-1)
+      return
     }
 
     if (queryKey === lastSuggestQueryRef.current) {
@@ -105,11 +90,7 @@ export function HeaderSearch() {
     const controller = new AbortController()
     suggestAbortRef.current = controller
     let cancelled = false
-    queueMicrotask(() => {
-      if (!cancelled) {
-        setSuggestionsPending(true)
-      }
-    })
+    setSuggestionsPending(true)
 
     const params = new URLSearchParams({ q: qTrim, stream })
     fetch(`/api/search/suggest?${params}`, { signal: controller.signal })
