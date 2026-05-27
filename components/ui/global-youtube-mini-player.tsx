@@ -81,7 +81,7 @@ export function GlobalYouTubeMiniPlayer() {
   const resolveDockSide = useCallback((): DockSide => {
     if (typeof window === 'undefined') return 'center'
     if (window.innerWidth < 1024) return 'center'
-    if (isDetailPage && window.innerWidth >= 1280) return 'right'
+    if (isDetailPage) return 'right'
 
     const dialogs = Array.from(
       document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
@@ -206,10 +206,10 @@ export function GlobalYouTubeMiniPlayer() {
     dockSide === 'center'
       ? 'fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-1/2 z-[100] w-[clamp(15rem,88vw,22rem)] -translate-x-1/2 pt-2 sm:w-[clamp(16rem,72vw,24rem)]'
       : isDetailPage
-        ? 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-4 z-[100] w-[min(20rem,calc(100vw-2rem))] xl:right-[max(1rem,calc((100vw-90rem)/2+1rem))] xl:w-[min(17rem,calc(100vw-2rem))]'
+        ? 'fixed bottom-[var(--yt-mini-player-bottom)] right-[var(--yt-mini-player-detail-right)] z-[100] w-[var(--yt-mini-player-width-desktop)]'
       : dockSide === 'left'
-        ? 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-4 z-[100] w-[min(32rem,calc(100vw-2rem))]'
-        : 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-4 z-[100] w-[min(32rem,calc(100vw-2rem))]'
+        ? 'fixed bottom-[var(--yt-mini-player-bottom)] left-4 z-[100] w-[var(--yt-mini-player-width-desktop)]'
+        : 'fixed bottom-[var(--yt-mini-player-bottom)] right-4 z-[100] w-[var(--yt-mini-player-width-desktop)]'
 
   return createPortal(
     <div
