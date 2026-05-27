@@ -71,7 +71,8 @@ jobs:
         run: |
           if git grep -n "article-detail-drawer-ui-spec old website.md" -- \
             ':!docs/article-detail-drawer-ui-spec old website.md' \
-            ':!docs/ARTICLE_DETAIL_DRAWER_UI_SPEC.md'
+            ':!docs/ARTICLE_DETAIL_DRAWER_UI_SPEC.md' \
+            ':!.github/workflows/spec-guards.yml'
           then
             echo "Legacy detail spec was referenced outside approved docs."
             exit 1

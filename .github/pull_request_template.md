@@ -5,7 +5,7 @@
 ## Detail UI Contract (required when touching detail drawer/sheet)
 
 - [ ] I followed `docs/ARTICLE_DETAIL_DRAWER_UI_SPEC.md` as the only implementation source.
-- [ ] I did not implement from `docs/article-detail-drawer-ui-spec old website.md`.
+- [ ] I did not implement from the legacy detail spec (non-implementable reference described in canonical spec section 0.1).
 - [ ] I changed only owner files for touched zones (see ownership matrix in canonical spec).
 - [ ] I verified no duplicated zone rendering (actions/source/brand rows appear only once).
 - [ ] Hierarchy contract passes (top controls -> tags -> title -> meta -> source -> media -> body -> disclaimer -> footer, per canonical spec version).
