@@ -37,6 +37,9 @@ type Props = {
   inSheet?: boolean
 }
 
+const NUGGET_READING_PROGRESS_ID = 'nugget-reading-progress'
+const DETAIL_SCROLL_OFFSET_PX = 120
+
 function formatDateShort(iso: string): string {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
@@ -446,27 +449,31 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
               <MarkdownPageToc
                 items={tocExtraction.items}
                 scrollRootId={NUGGET_DOC_BODY_ID}
-                scrollOffsetPx={120}
+                scrollOffsetPx={DETAIL_SCROLL_OFFSET_PX}
               />
             </aside>
           ) : null}
 
           <div className={showToc ? 'min-w-0 lg:col-start-2 xl:col-start-2' : 'min-w-0 xl:col-start-1'}>
             <div className="mx-auto w-full max-w-[70ch] space-y-8 sm:space-y-9">
-              {fullPageHeader}
-              {heroSection}
+              <section id={NUGGET_READING_PROGRESS_ID} className="space-y-8 sm:space-y-9">
+                {fullPageHeader}
+                {heroSection}
 
-              <div id={NUGGET_DOC_BODY_ID} className="space-y-8">
-                {bodyBlock}
-              </div>
+                <div id={NUGGET_DOC_BODY_ID} className="space-y-8">
+                  {bodyBlock}
+                </div>
 
-              {referencesSection}
-              {disclaimerSection}
+                {referencesSection}
+                {disclaimerSection}
+              </section>
               <ArticleDetailRelated items={relatedArticles} />
             </div>
           </div>
 
-          <div className={showToc ? 'lg:col-start-2 xl:col-start-3' : 'xl:col-start-2'}>
+          <aside
+            className={showToc ? 'hidden xl:col-start-3 xl:row-start-1 xl:block' : 'hidden xl:col-start-2 xl:row-start-1 xl:block'}
+          >
             <ArticleDetailUtilityRail
               articleId={article.id}
               title={article.title}
@@ -481,8 +488,10 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
               readingTimeLabel={readingTimeLabel}
               tocItems={tocExtraction.items}
               scrollRootId={NUGGET_DOC_BODY_ID}
+              progressRootId={NUGGET_READING_PROGRESS_ID}
+              scrollOffsetPx={DETAIL_SCROLL_OFFSET_PX}
             />
-          </div>
+          </aside>
         </div>
       </div>
 

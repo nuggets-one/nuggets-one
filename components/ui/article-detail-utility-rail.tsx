@@ -22,6 +22,8 @@ type Props = {
   readingTimeLabel: string
   tocItems: MarkdownTocItem[]
   scrollRootId: string
+  progressRootId: string
+  scrollOffsetPx: number
 }
 
 function clampProgress(value: number): number {
@@ -42,13 +44,15 @@ export function ArticleDetailUtilityRail({
   readingTimeLabel,
   tocItems,
   scrollRootId,
+  progressRootId,
+  scrollOffsetPx,
 }: Props) {
   const [progress, setProgress] = useState(0)
 
   const activeId = useActiveHeading({
     items: tocItems,
     scrollRootId,
-    scrollOffsetPx: 140,
+    scrollOffsetPx,
   })
 
   const activeLabel = useMemo(() => {
@@ -57,14 +61,15 @@ export function ArticleDetailUtilityRail({
   }, [activeId, tocItems])
 
   useEffect(() => {
-    const headerOffset = 112
     const handleScroll = () => {
-      const root = document.getElementById(scrollRootId)
+      const root = document.getElementById(progressRootId)
       if (!root) return
       const rect = root.getBoundingClientRect()
       const rootTop = window.scrollY + rect.top
-      const travelled = window.scrollY + headerOffset - rootTop
-      const nextProgress = clampProgress((travelled / Math.max(rect.height, 1)) * 100)
+      const start = rootTop - scrollOffsetPx
+      const end = rootTop + rect.height - scrollOffsetPx
+      const span = Math.max(end - start, 1)
+      const nextProgress = clampProgress(((window.scrollY - start) / span) * 100)
       setProgress(nextProgress)
     }
 
@@ -75,10 +80,10 @@ export function ArticleDetailUtilityRail({
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
     }
-  }, [scrollRootId])
+  }, [progressRootId, scrollOffsetPx])
 
   return (
-    <aside className="hidden xl:block">
+    <div className="h-full">
       <div className="sticky top-24 space-y-5">
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">Actions</p>
@@ -134,6 +139,6 @@ export function ArticleDetailUtilityRail({
         </section>
       </div>
       <BookmarkBatchHydrator articleIds={[articleId]} />
-    </aside>
+    </div>
   )
 }
