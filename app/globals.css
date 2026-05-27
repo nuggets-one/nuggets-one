@@ -7,15 +7,15 @@
   --header-height: 56px; /* matches h-14 */
 
   /* Background */
-  --color-bg: theme('colors.slate.100');
-  --color-bg-page: theme('colors.slate.100');
+  --color-bg: theme('colors.slate.50');
+  --color-bg-page: color-mix(in srgb, theme('colors.slate.50') 88%, theme('colors.white'));
 
   /* Surface / card */
-  --color-surface: theme('colors.white');
+  --color-surface: color-mix(in srgb, theme('colors.white') 94%, theme('colors.slate.50'));
   --color-surface-raised: theme('colors.white');
   --color-surface-strong: theme('colors.slate.900');
   --color-surface-strong-foreground: theme('colors.white');
-  --color-header: color-mix(in srgb, theme('colors.white') 80%, transparent);
+  --color-header: color-mix(in srgb, theme('colors.white') 92%, transparent);
   --color-rail: theme('colors.slate.100');
 
   /* Border */
@@ -89,15 +89,15 @@
 
 .dark {
   /* Background */
-  --color-bg: theme('colors.slate.950');
-  --color-bg-page: theme('colors.slate.950');
+  --color-bg: theme('colors.slate.900');
+  --color-bg-page: theme('colors.slate.900');
 
   /* Surface / card */
-  --color-surface: color-mix(in srgb, theme('colors.slate.900') 80%, transparent);
-  --color-surface-raised: color-mix(in srgb, theme('colors.slate.800') 80%, transparent);
+  --color-surface: color-mix(in srgb, theme('colors.slate.900') 90%, theme('colors.slate.800'));
+  --color-surface-raised: color-mix(in srgb, theme('colors.slate.800') 86%, theme('colors.slate.700'));
   --color-surface-strong: theme('colors.slate.100');
   --color-surface-strong-foreground: theme('colors.slate.950');
-  --color-header: color-mix(in srgb, theme('colors.slate.900') 80%, transparent);
+  --color-header: color-mix(in srgb, theme('colors.slate.900') 88%, transparent);
   --color-rail: theme('colors.slate.950');
 
   /* Border */
