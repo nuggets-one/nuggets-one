@@ -70,7 +70,7 @@ function DisclaimerParagraph({ className, children }: HTMLAttributes<HTMLParagra
 
 /**
  * Renders site consumer disclaimer as a small subset of Markdown (links, emphasis).
- * No `rehype-raw` — internal paths use `<a target="_blank">` so links from the detail sheet do not
+ * No raw-HTML markdown plugins — internal paths use `<a target="_blank">` so links from the detail sheet do not
  * soft-navigate the page behind the overlay; external http(s) also open in a new tab.
  */
 export function ConsumerDisclaimerMarkdown({
