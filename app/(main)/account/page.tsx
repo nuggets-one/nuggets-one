@@ -6,6 +6,9 @@ import { AccountPrefsIsland } from './_components/AccountPrefsIsland'
 
 export const metadata = { title: 'Account' }
 
+// Account is session-specific — never statically prerendered at build time
+export const dynamic = 'force-dynamic'
+
 type Props = {
   searchParams: Promise<{ message?: string; error?: string }>
 }
