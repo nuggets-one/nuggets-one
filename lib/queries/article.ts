@@ -25,16 +25,20 @@ async function withSuggestionPublishedAt(
 
   if (missingDateIds.length === 0) return rows
 
+  // Non-empty tuple required — `.in('id', string[])` infers `never` rows when length is not narrowed.
+  const ids = missingDateIds as [string, ...string[]]
+
   const { data, error } = await supabase
     .from('articles')
     .select('id, published_at')
-    .in('id', missingDateIds)
+    .in('id', ids)
     .eq('status', 'published')
 
   if (error || !data) return rows
 
+  const dateRows = data as { id: string; published_at: string | null }[]
   const publishedAtById = new Map<string, string | null>(
-    data.map((row) => [row.id as string, row.published_at as string | null])
+    dateRows.map((row) => [row.id, row.published_at])
   )
 
   return rows.map((row) => ({
