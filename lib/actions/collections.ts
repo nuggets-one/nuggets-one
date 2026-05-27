@@ -493,14 +493,3 @@ export async function updateCollectionFromFormAction(formData: FormData): Promis
   redirect(`/admin/collections/${id}?saved=1`)
 }
 
-export async function createCollectionFormStateAction(
-  _prev: CollectionActionResult | null,
-  formData: FormData
-): Promise<CollectionActionResult> {
-  const raw = parseMetadataFromForm(formData)
-  const result = await createCollectionAction(raw)
-  if (result.ok && result.id) {
-    redirect(`/admin/collections/${result.id}`)
-  }
-  return result
-}
