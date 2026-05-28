@@ -16,6 +16,9 @@ jobs:
   detail-visual-regression:
     if: ${{ vars.DETAIL_VISUAL_GUARD == 'true' && vars.DETAIL_VISUAL_YOUTUBE_URL != '' && vars.DETAIL_VISUAL_IMAGE_URL != '' && vars.DETAIL_VISUAL_FALLBACK_URL != '' && vars.DETAIL_VISUAL_LONG_URL != '' }}
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
