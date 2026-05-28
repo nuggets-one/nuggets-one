@@ -376,21 +376,23 @@ export async function publishArticleAction(formData: FormData) {
   revalidateArticle(id)
 
   if (publishPayload.content_stream && publishPayload.title) {
+    let fanResult: Awaited<ReturnType<typeof fanOutOnPublish>>
     try {
-      const fanResult = await fanOutOnPublish({
+      fanResult = await fanOutOnPublish({
         articleId: id,
         stream: publishPayload.content_stream as 'standard' | 'pulse',
         title: publishPayload.title,
       })
-      const suffix = fanResult.mode === 'queued' ? '?notice=fanout_queued' : ''
-      redirect(`/admin/articles/${id}${suffix}`)
     } catch (fanOutError) {
       console.error('[publishArticleAction] fan-out error:', fanOutError)
-      redirect(`/admin/articles/${id}?warning=fanout_failed`)
+      return redirect(`/admin/articles/${id}?warning=fanout_failed`)
     }
+
+    const suffix = fanResult.mode === 'queued' ? '?notice=fanout_queued' : ''
+    return redirect(`/admin/articles/${id}${suffix}`)
   }
 
-  redirect(`/admin/articles/${id}`)
+  return redirect(`/admin/articles/${id}`)
 }
 
 export async function unpublishArticleAction(formData: FormData) {

@@ -35,6 +35,31 @@ function isMissingNotificationRpc(error: { code?: string; message?: string }): b
   return error.code === 'PGRST202' || /get_notification_recipients/i.test(error.message ?? '')
 }
 
+async function insertChunkRows(
+  chunk: Array<{
+    user_id: string
+    article_id: string
+    kind: 'single'
+    content_stream: 'standard' | 'pulse'
+    title: string
+    batch_key: null
+    is_read: boolean
+  }>
+): Promise<number> {
+  const adminClient = getAdminClient()
+  let inserted = 0
+
+  for (const row of chunk) {
+    const { error: insertError } = await adminClient.from('user_notifications').insert(row)
+    if (insertError && insertError.code !== '23505') {
+      throw new Error(`upsertNotifications insert error: ${insertError.message}`)
+    }
+    if (!insertError) inserted += 1
+  }
+
+  return inserted
+}
+
 async function getRecipientsFallback(stream: 'standard' | 'pulse'): Promise<string[]> {
   const adminClient = getAdminClient()
   const streamField = stream === 'pulse' ? 'stream_pulse' : 'stream_standard'
@@ -88,7 +113,13 @@ export async function getRecipients(
     return getRecipientsFallback(stream)
   }
 
-  throw new Error(`getRecipients error: ${error.message}`)
+  // Prefer graceful degradation over publish-time failure when the RPC exists
+  // but is temporarily unhealthy (permissions, schema cache drift, etc.).
+  console.warn('[getRecipients] rpc failed, falling back to listUsers path:', {
+    code: error.code,
+    message: error.message,
+  })
+  return getRecipientsFallback(stream)
 }
 
 /**
@@ -127,17 +158,20 @@ export async function upsertNotifications({
 
     if (error?.code === '42P10') {
       // Partial unique index only — insert rows and ignore duplicate pairs.
-      for (const row of chunk) {
-        const { error: insertError } = await adminClient.from('user_notifications').insert(row)
-        if (insertError && insertError.code !== '23505') {
-          throw new Error(`upsertNotifications insert error: ${insertError.message}`)
-        }
-      }
-      inserted += chunk.length
+      inserted += await insertChunkRows(chunk)
       continue
     }
 
-    if (error) throw new Error(`upsertNotifications error: ${error.message}`)
+    if (error) {
+      // Retry with row inserts to recover from ON CONFLICT inference or
+      // transient PostgREST upsert issues.
+      console.warn('[upsertNotifications] upsert failed, falling back to row inserts:', {
+        code: error.code,
+        message: error.message,
+      })
+      inserted += await insertChunkRows(chunk)
+      continue
+    }
     inserted += count ?? 0
   }
 
