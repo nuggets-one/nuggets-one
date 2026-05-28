@@ -158,7 +158,7 @@ export function Sheet({ children, ariaLabel }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel ?? 'Nugget detail'}
-      className="fixed inset-0 z-50 flex items-end justify-end overscroll-none lg:items-stretch"
+      className="fixed inset-0 z-[80] flex items-end justify-end overscroll-none lg:items-stretch"
     >
       <button
         type="button"
@@ -184,7 +184,7 @@ export function Sheet({ children, ariaLabel }: Props) {
         <div
           ref={bodyRef}
           data-sheet-body
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] [-webkit-overflow-scrolling:touch] lg:pb-0"
           style={{ touchAction: 'pan-y' }}
         >
           {children}

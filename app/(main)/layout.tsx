@@ -56,7 +56,7 @@ export default async function MainLayout({
           </FooterRouteGate>
         </Suspense>
       </div>
-      <Suspense fallback={<div aria-hidden className="lg:hidden pb-[calc(3rem+env(safe-area-inset-bottom))]" />}>
+      <Suspense fallback={<div aria-hidden className="lg:hidden pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]" />}>
         <MobileBottomNav />
       </Suspense>
       <GlobalYouTubeMiniPlayerHost />
