@@ -44,7 +44,7 @@ export function CardSourceBadge({ href, label }: Props) {
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
       aria-label={ariaLabel}
-      className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-xs font-bold tracking-wide text-white backdrop-blur-sm transition-all hover:scale-105 hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/70"
+      className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-xs font-bold tracking-wide text-white backdrop-blur-sm transition-all hover:scale-105 hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/70"
     >
       <SourceExternalLinkIcon />
       <span>Source</span>

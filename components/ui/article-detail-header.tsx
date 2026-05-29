@@ -36,8 +36,8 @@ export function ArticleDetailHeader({
   return (
     <>
       <div
-        className={`z-20 flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 ${
-          inSheet ? 'sticky top-0 bg-header backdrop-blur-md' : 'bg-surface'
+        className={`flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 ${
+          inSheet ? 'sticky top-0 z-30 bg-header backdrop-blur-md' : 'z-20 bg-surface'
         }`}
       >
         <div className="flex min-w-0 items-center gap-2.5">

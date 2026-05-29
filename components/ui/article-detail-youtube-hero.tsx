@@ -146,7 +146,7 @@ export function ArticleDetailYouTubeHero({
 
   return (
     <div className="w-full">
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-slate-900">
+      <div className="relative isolate z-0 aspect-video w-full overflow-hidden rounded-2xl bg-slate-900">
         {sourceUrl ? (
           <CardSourceBadge href={sourceUrl} label={sourceHost} />
         ) : null}

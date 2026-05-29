@@ -401,7 +401,7 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
 
   if (inSheet) {
     return (
-      <article className="mx-auto w-full max-w-none pb-8">
+      <article className="mx-auto w-full max-w-none pb-4">
         <ArticleDetailHeader
           articleId={article.id}
           title={article.title}
@@ -415,7 +415,7 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
           canDelete={canManage}
         />
 
-        <div className="space-y-5 px-4 pb-6 pt-5 sm:px-5">
+        <div className="space-y-5 px-4 pb-4 pt-5 sm:px-5">
           {inSheetHeader}
           {heroSection}
           <div
