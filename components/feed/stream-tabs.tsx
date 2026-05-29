@@ -30,7 +30,6 @@ export function StreamTabs({ activeStream, streamCounts }: Props) {
           <Link
             key={value}
             href={href}
-            scroll={false}
             aria-current={active ? 'page' : undefined}
             aria-label={`${label}, ${formattedCount} published articles`}
             className={`flex min-h-[44px] flex-1 items-center justify-center rounded-md px-3 text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:px-5 lg:flex-1 lg:basis-0 lg:min-w-0 ${

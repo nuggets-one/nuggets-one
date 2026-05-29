@@ -22,6 +22,12 @@ async function openFirstNuggetSheet(page: Page) {
   return { dialog, href: href as string }
 }
 
+async function tapBottomNavItem(page: Page, label: string) {
+  const nav = page.getByRole('navigation', { name: 'Primary destinations' })
+  await expect(nav).toBeVisible()
+  await nav.getByRole('link', { name: label }).click()
+}
+
 test.describe('mobile nugget sheet scroll', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
@@ -70,5 +76,29 @@ test.describe('mobile nugget sheet scroll', () => {
 
     expect(overflowY).toBe('auto')
     expect(overscroll).toContain('contain')
+  })
+
+  test('resets feed scroll to top when switching streams', async ({ page }) => {
+    await gotoHomeAndScroll(page, 1200)
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThanOrEqual(500)
+
+    await tapBottomNavItem(page, 'Market Pulse')
+    await expect(page).toHaveURL(/\/\?stream=pulse/)
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeLessThanOrEqual(24)
+
+    await page.evaluate(() => window.scrollTo(0, 1000))
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThanOrEqual(500)
+
+    await tapBottomNavItem(page, 'Nuggets')
+    await expect(page).toHaveURL(/\/\?stream=standard/)
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeLessThanOrEqual(24)
   })
 })

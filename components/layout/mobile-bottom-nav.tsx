@@ -20,14 +20,13 @@ type NavItem = {
   label: string
   href: string
   icon: LucideIcon
-  scroll?: false
 }
 
 type NavAuthState = { status: 'loading' } | { status: 'anonymous' } | { status: 'authenticated' }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'nuggets', label: 'Nuggets', href: '/?stream=standard', icon: House, scroll: false },
-  { id: 'pulse', label: 'Market Pulse', href: '/?stream=pulse', icon: Activity, scroll: false },
+  { id: 'nuggets', label: 'Nuggets', href: '/?stream=standard', icon: House },
+  { id: 'pulse', label: 'Market Pulse', href: '/?stream=pulse', icon: Activity },
   { id: 'collections', label: 'Collections', href: '/collections', icon: Layers },
   { id: 'bookmarks', label: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
 ]
@@ -117,13 +116,12 @@ export function MobileBottomNav() {
           visibleItems.length === 4 ? 'grid-cols-4' : 'grid-cols-3',
         )}
       >
-        {visibleItems.map(({ id, label, href, icon: Icon, scroll }) => {
+        {visibleItems.map(({ id, label, href, icon: Icon }) => {
           const active = navReady && isItemActive(id, pathname, stream)
           return (
             <Link
               key={id}
               href={href}
-              {...(scroll === false ? { scroll: false } : {})}
               aria-label={label}
               aria-current={active ? 'page' : undefined}
               className={clsx(
