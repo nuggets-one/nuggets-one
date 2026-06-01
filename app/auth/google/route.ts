@@ -5,6 +5,24 @@ import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/config'
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3010').replace(/\/+$/, '')
 
+function isTrustedOAuthHost(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  return (
+    host === 'nuggets.one' ||
+    host === 'www.nuggets.one' ||
+    host.endsWith('.nuggets.one') ||
+    host === 'localhost' ||
+    host.endsWith('.localhost')
+  )
+}
+
+function resolveOAuthOrigin(request: NextRequest): string {
+  const fallbackOrigin = new URL(SITE_URL).origin
+  const requestHost = request.nextUrl.hostname
+  if (!isTrustedOAuthHost(requestHost)) return fallbackOrigin
+  return request.nextUrl.origin
+}
+
 function sanitizePrompt(raw: string | null): 'select_account' | undefined {
   if (!raw) return undefined
   if (raw === 'select_account') return 'select_account'
@@ -14,6 +32,7 @@ function sanitizePrompt(raw: string | null): 'select_account' | undefined {
 export async function GET(request: NextRequest) {
   const next = sanitizeNext(request.nextUrl.searchParams.get('next'))
   const prompt = sanitizePrompt(request.nextUrl.searchParams.get('prompt'))
+  const oauthOrigin = resolveOAuthOrigin(request)
 
   let response = NextResponse.next({ request })
   const supabase = createServerClient(
@@ -38,7 +57,9 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`,
+      // Keep callback on the same trusted host that initiated OAuth so PKCE
+      // verifier cookies are available during /auth/callback exchange.
+      redirectTo: `${oauthOrigin}/auth/callback?next=${encodeURIComponent(next)}`,
       queryParams: prompt ? { prompt } : undefined,
     },
   })
