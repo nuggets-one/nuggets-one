@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nuggets</string>
+    <string name="title_activity_main">Nuggets</string>
+    <string name="package_name">one.nuggets.app</string>
+    <string name="custom_url_scheme">one.nuggets.app</string>
+</resources>

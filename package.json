@@ -7,6 +7,11 @@
     "build": "npm run validate:env && next build",
     "start": "next start",
     "lint": "eslint .",
+    "cap:build": "node scripts/capacitor/prepare-webdir.mjs",
+    "cap:copy": "npm run cap:build && npx cap copy",
+    "cap:sync": "npm run cap:build && npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "cap:android": "npm run cap:sync && npm run cap:open:android",
     "validate:env": "npx tsx scripts/validate/env-verify.ts --mode=build",
     "etl:tags": "npm --prefix scripts/migrate run etl:tags",
     "etl:articles": "npm --prefix scripts/migrate run etl:articles",
@@ -33,6 +38,7 @@
     "release:check": "npm run lint && npm run check:banned-imports && npm run build && npm run check:bundle-budget && npm run test:handoff"
   },
   "dependencies": {
+    "@capacitor/core": "^8.3.4",
     "@next/third-parties": "^16.2.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.49.1",
@@ -59,6 +65,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^20",

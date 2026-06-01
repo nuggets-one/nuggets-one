@@ -36,6 +36,52 @@ Open [http://localhost:3010](http://localhost:3010).
 - `npm run test:detail-visual`: Playwright detail-contract test suite
 - `npm run etl:tags`, `npm run etl:articles`, `npm run etl:collections`: staging or production ETL steps
 
+## Capacitor Android (same repo)
+This repo now supports Capacitor Android without splitting into a separate mobile codebase.
+
+### Why hosted mode is used
+- This Next.js app uses dynamic server features (cookies, server actions, API routes).
+- Because of that, there is no safe static Next build output to use as Capacitor `webDir` without major refactors.
+- Capacitor uses a tiny local placeholder `webDir` (`mobile-web`) while Android WebView loads the deployed site URL.
+
+### Setup
+1. Set your hosted app URL for Android:
+
+```powershell
+$env:CAPACITOR_SERVER_URL='https://nuggets.one'
+```
+
+2. Generate/update Capacitor web assets placeholder:
+
+```bash
+npm run cap:build
+```
+
+3. Sync Capacitor config and web assets into native projects:
+
+```bash
+npm run cap:sync
+```
+
+4. Open Android Studio:
+
+```bash
+npm run cap:open:android
+```
+
+### Capacitor scripts
+- `npm run cap:build`: prepares `mobile-web/index.html` placeholder used by Capacitor tooling
+- `npm run cap:copy`: copies Capacitor web assets/config into native projects
+- `npm run cap:sync`: runs copy plus plugin/config sync
+- `npm run cap:open:android`: opens the in-repo `android/` project in Android Studio
+- `npm run cap:android`: convenience command that runs sync, then opens Android Studio
+
+### Android WebView checks
+- OAuth callbacks must be configured for the hosted URL used by `CAPACITOR_SERVER_URL`.
+- HTTP URLs may require Android cleartext traffic (debug only); prefer HTTPS for production.
+- File uploads/camera access can require native permissions when tested on device.
+- Validate Supabase/auth/analytics network calls from inside Android WebView during QA.
+
 ## Launch-Critical Validation
 These are the repo-local checks to run before a production cutover:
 
