@@ -12,6 +12,8 @@
     "cap:sync": "npm run cap:build && npx cap sync",
     "cap:open:android": "npx cap open android",
     "cap:android": "npm run cap:sync && npm run cap:open:android",
+    "cap:bundle:android": "cd android && gradlew.bat bundleRelease",
+    "android:preflight": "node scripts/android-release-preflight.mjs",
     "db:apply-push-migration": "node scripts/apply-push-migration.mjs",
     "setup:android-push": "node scripts/setup-android-push.mjs",
     "validate:env": "npx tsx scripts/validate/env-verify.ts --mode=build",
@@ -41,6 +43,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.3.4",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
     "@next/third-parties": "^16.2.4",
     "@supabase/ssr": "^0.8.0",
@@ -79,6 +82,7 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.4",
     "jsdom": "^27.4.0",
+    "pg": "^8.21.0",
     "sharp": "^0.34.5",
     "typescript": "^5"
   }
