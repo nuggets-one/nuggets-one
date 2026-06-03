@@ -194,6 +194,30 @@ function validateEnvVarsForMode(mode: ValidationMode): {
     },
   };
 
+  const fcmRaw = process.env.FCM_SERVICE_ACCOUNT_JSON?.trim() ?? "";
+  let fcmFormatValid = true;
+  if (fcmRaw) {
+    try {
+      const decoded = fcmRaw.startsWith("{")
+        ? fcmRaw
+        : Buffer.from(fcmRaw, "base64").toString("utf8");
+      const parsed = JSON.parse(decoded) as {
+        project_id?: string;
+        client_email?: string;
+        private_key?: string;
+      };
+      fcmFormatValid = Boolean(
+        parsed.project_id && parsed.client_email && parsed.private_key
+      );
+    } catch {
+      fcmFormatValid = false;
+    }
+  }
+  entries.FCM_SERVICE_ACCOUNT_JSON = {
+    present: !!fcmRaw,
+    formatValid: fcmRaw ? fcmFormatValid : true,
+  };
+
   const requiredKeys: string[] =
     mode === "build"
       ? ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]
