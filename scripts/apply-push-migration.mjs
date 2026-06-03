@@ -34,26 +34,39 @@ if (!databaseUrl) {
   process.exit(1)
 }
 
-const migrationPath = path.join(
-  ROOT,
-  'supabase/migrations/20240001000020_push_device_tokens.sql'
-)
-const sql = fs.readFileSync(migrationPath, 'utf8')
+const MIGRATIONS = [
+  {
+    version: '20240001000020',
+    name: 'push_device_tokens',
+    file: 'supabase/migrations/20240001000020_push_device_tokens.sql',
+    verifyTable: 'push_device_tokens',
+  },
+  {
+    version: '20240001000021',
+    name: 'push_guest_tokens',
+    file: 'supabase/migrations/20240001000021_push_guest_tokens.sql',
+    verifyTable: 'push_digest_buffer',
+  },
+]
 
 const client = new pg.Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } })
 
+async function tableExists(tableName) {
+  const { rows } = await client.query(`SELECT to_regclass($1) AS reg`, [`public.${tableName}`])
+  return Boolean(rows[0]?.reg)
+}
+
+async function recordMigration(version, name) {
+  await client.query(
+    `INSERT INTO supabase_migrations.schema_migrations (version, name)
+     VALUES ($1, $2)
+     ON CONFLICT (version) DO NOTHING`,
+    [version, name]
+  )
+}
+
 try {
   await client.connect()
-
-  const { rows: existing } = await client.query(
-    `SELECT to_regclass('public.push_device_tokens') AS reg`
-  )
-  if (existing[0]?.reg) {
-    console.log('push_device_tokens already exists — skipping migration SQL')
-  } else {
-    await client.query(sql)
-    console.log('Applied 20240001000020_push_device_tokens.sql')
-  }
 
   await client.query(`
     CREATE SCHEMA IF NOT EXISTS supabase_migrations;
@@ -64,22 +77,26 @@ try {
     );
   `)
 
-  const version = '20240001000020'
-  const { rowCount } = await client.query(
-    `INSERT INTO supabase_migrations.schema_migrations (version, name)
-     VALUES ($1, $2)
-     ON CONFLICT (version) DO NOTHING`,
-    [version, 'push_device_tokens']
-  )
+  for (const migration of MIGRATIONS) {
+    const exists = await tableExists(migration.verifyTable)
+    if (exists) {
+      console.log(`${migration.verifyTable} already exists — skipping ${migration.file}`)
+    } else {
+      const sql = fs.readFileSync(path.join(ROOT, migration.file), 'utf8')
+      await client.query(sql)
+      console.log(`Applied ${migration.file}`)
+    }
 
-  if (rowCount && rowCount > 0) {
-    console.log('Recorded migration version in schema_migrations')
+    await recordMigration(migration.version, migration.name)
   }
 
   const verify = await client.query(`
     SELECT
       to_regclass('public.push_device_tokens') AS tokens,
-      to_regclass('public.push_outbox') AS outbox
+      to_regclass('public.push_outbox') AS outbox,
+      to_regclass('public.push_digest_buffer') AS digest_buffer,
+      to_regclass('public.push_digest_outbox') AS digest_outbox,
+      to_regclass('public.push_immediate_outbox') AS immediate_outbox
   `)
   console.log('Verify:', verify.rows[0])
 } finally {
