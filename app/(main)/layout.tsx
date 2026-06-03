@@ -7,7 +7,6 @@ import { GlobalYouTubeMiniPlayerHost } from '@/components/layout/global-youtube-
 import { AuthStatusProvider } from '@/components/layout/auth-status-provider'
 import { Header } from '@/components/layout/header'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
-import { AndroidPushRegistration } from '@/components/push/android-push-registration'
 import { listAccountMenuLegalLinks } from '@/lib/queries/legal-pages'
 
 const FALLBACK_LEGAL_LINKS = [
@@ -64,7 +63,6 @@ export default async function MainLayout({
       </Suspense>
       <GlobalYouTubeMiniPlayerHost />
       <GlobalImageLightboxHost />
-      <AndroidPushRegistration />
       {/* The canonical nugget detail route may also render here as an intercepted
           in-context sheet. Direct URL hits still render via the full page route. */}
       {modal}
