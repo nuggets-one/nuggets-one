@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   markNotificationReadAction,
@@ -168,6 +169,96 @@ function NotificationList({
   )
 }
 
+function CloseIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  )
+}
+
+function PanelHeader({
+  onMarkAllRead,
+  showMarkAllRead,
+  onClose,
+  showClose,
+}: {
+  onMarkAllRead: () => void
+  showMarkAllRead: boolean
+  onClose?: () => void
+  showClose?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border shrink-0">
+      <span className="text-sm font-semibold text-primary">Notifications</span>
+      <div className="flex items-center gap-2 shrink-0">
+        {showMarkAllRead && (
+          <button
+            type="button"
+            onClick={onMarkAllRead}
+            className="text-xs text-accent hover:text-accent-hover transition-colors"
+          >
+            Mark all as read
+          </button>
+        )}
+        {showClose && onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close notifications"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-primary"
+          >
+            <CloseIcon />
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function PanelBody({
+  isLoading,
+  error,
+  notifications,
+  onRetry,
+  onRowClick,
+}: {
+  isLoading: boolean
+  error: string | null
+  notifications: NotificationWithSlug[]
+  onRetry: () => void
+  onRowClick: (row: NotificationWithSlug) => void
+}) {
+  if (isLoading) return <SkeletonRows count={3} />
+  if (error) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-10 px-4 text-center">
+        <p className="text-sm text-muted">{error}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="text-xs text-accent hover:text-accent-hover hover:underline"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+  return <NotificationList rows={notifications} onRowClick={onRowClick} />
+}
+
 function PreferencesSection({
   prefs,
   onChange,
@@ -234,7 +325,13 @@ export function NotificationPanel({
   const [error, setError] = useState<string | null>(null)
 
   const panelRef = useRef<HTMLDivElement>(null)
+  const mobileSheetRef = useRef<HTMLDivElement>(null)
+  const [portalReady, setPortalReady] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    setPortalReady(true)
+  }, [])
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true)
@@ -292,9 +389,10 @@ export function NotificationPanel({
     if (!isOpen) return
 
     function handleClickOutside(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        closePanel()
-      }
+      const target = e.target as Node
+      if (panelRef.current?.contains(target)) return
+      if (mobileSheetRef.current?.contains(target)) return
+      closePanel()
     }
 
     document.addEventListener('mousedown', handleClickOutside)
@@ -348,122 +446,93 @@ export function NotificationPanel({
     await updatePreferencesAction(update)
   }, [])
 
+  const showMarkAllRead = notifications.some((n) => !n.is_read)
+
+  const mobileOverlay =
+    isOpen && portalReady
+      ? createPortal(
+          <div className="sm:hidden fixed inset-0 z-[80] flex flex-col justify-end overscroll-none">
+            <button
+              type="button"
+              aria-label="Dismiss notifications"
+              className="absolute inset-0 z-[79] bg-scrim"
+              onClick={closePanel}
+            />
+            <div
+              ref={mobileSheetRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Notifications"
+              className="
+                relative z-[80] flex w-full flex-col
+                max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top,0px)-4.5rem))]
+                rounded-t-2xl border-t border-border bg-rail shadow-panel
+                pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]
+              "
+            >
+              <div className="flex justify-center pt-3 pb-1 shrink-0" aria-hidden="true">
+                <div className="h-1 w-10 rounded-full bg-border" />
+              </div>
+
+              <PanelHeader
+                onMarkAllRead={handleMarkAllRead}
+                showMarkAllRead={showMarkAllRead}
+                onClose={closePanel}
+                showClose
+              />
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                <PanelBody
+                  isLoading={isLoading}
+                  error={error}
+                  notifications={notifications}
+                  onRetry={fetchNotifications}
+                  onRowClick={handleRowClick}
+                />
+              </div>
+
+              <PreferencesSection prefs={prefs} onChange={handlePrefsChange} />
+            </div>
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
     <div ref={panelRef} className="relative shrink-0">
       <BellButton unreadCount={unreadCount} onClick={togglePanel} />
 
       {isOpen && (
-        <>
-          {/* Desktop panel */}
-          <div
-            role="dialog"
-            aria-label="Notifications"
-            className="
-              hidden sm:flex flex-col
-              absolute right-0 top-full mt-2
-              w-96 max-h-[32rem]
-              bg-rail border border-border rounded-xl shadow-panel
-              overflow-hidden z-50
-            "
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-              <span className="text-sm font-semibold text-primary">Notifications</span>
-              {notifications.some((n) => !n.is_read) && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllRead}
-                  className="text-xs text-accent hover:text-accent-hover transition-colors"
-                >
-                  Mark all as read
-                </button>
-              )}
-            </div>
-
-            {/* Body */}
-            <div className="overflow-y-auto flex-1">
-              {isLoading ? (
-                <SkeletonRows count={3} />
-              ) : error ? (
-                <div className="flex flex-col items-center gap-2 py-10 px-4 text-center">
-                  <p className="text-sm text-muted">{error}</p>
-                  <button
-                    type="button"
-                    onClick={fetchNotifications}
-                    className="text-xs text-accent hover:text-accent-hover hover:underline"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : (
-                <NotificationList rows={notifications} onRowClick={handleRowClick} />
-              )}
-            </div>
-
-            <PreferencesSection prefs={prefs} onChange={handlePrefsChange} />
-          </div>
-
-          {/* Mobile bottom sheet */}
-          <div
-            role="dialog"
-            aria-label="Notifications"
-            className="
-              sm:hidden fixed inset-x-0 bottom-0 z-50
-              bg-rail border-t border-border rounded-t-2xl
-              flex flex-col max-h-[85dvh]
-              shadow-panel
-            "
-          >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-border" />
-            </div>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-              <span className="text-sm font-semibold text-primary">Notifications</span>
-              {notifications.some((n) => !n.is_read) && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllRead}
-                  className="text-xs text-accent hover:text-accent-hover transition-colors"
-                >
-                  Mark all as read
-                </button>
-              )}
-            </div>
-
-            {/* Body */}
-            <div className="overflow-y-auto flex-1">
-              {isLoading ? (
-                <SkeletonRows count={3} />
-              ) : error ? (
-                <div className="flex flex-col items-center gap-2 py-10 px-4 text-center">
-                  <p className="text-sm text-muted">{error}</p>
-                  <button
-                    type="button"
-                    onClick={fetchNotifications}
-                    className="text-xs text-accent hover:text-accent-hover hover:underline"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : (
-                <NotificationList rows={notifications} onRowClick={handleRowClick} />
-              )}
-            </div>
-
-            <PreferencesSection prefs={prefs} onChange={handlePrefsChange} />
-          </div>
-
-          {/* Mobile backdrop */}
-          <div
-            className="sm:hidden fixed inset-0 bg-scrim z-40"
-            aria-hidden="true"
-            onClick={closePanel}
+        <div
+          role="dialog"
+          aria-label="Notifications"
+          className="
+            hidden sm:flex flex-col
+            absolute right-0 top-full z-50 mt-2
+            max-h-[32rem] w-96 overflow-hidden
+            rounded-xl border border-border bg-rail shadow-panel
+          "
+        >
+          <PanelHeader
+            onMarkAllRead={handleMarkAllRead}
+            showMarkAllRead={showMarkAllRead}
           />
-        </>
+
+          <div className="flex-1 overflow-y-auto">
+            <PanelBody
+              isLoading={isLoading}
+              error={error}
+              notifications={notifications}
+              onRetry={fetchNotifications}
+              onRowClick={handleRowClick}
+            />
+          </div>
+
+          <PreferencesSection prefs={prefs} onChange={handlePrefsChange} />
+        </div>
       )}
+
+      {mobileOverlay}
     </div>
   )
 }
