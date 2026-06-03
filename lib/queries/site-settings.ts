@@ -6,6 +6,10 @@ import { CACHE_TAGS } from '@/lib/cache'
 import { DEFAULT_CONSUMER_DISCLAIMER } from '@/lib/legal/consumer-disclaimer'
 
 export const CONSUMER_DISCLAIMER_SETTING_KEY = 'consumer_disclaimer' as const
+export const PUSH_DIGEST_INTERVAL_HOURS_KEY = 'push_digest_interval_hours' as const
+
+export const PUSH_DIGEST_INTERVAL_OPTIONS = [1, 2, 3] as const
+export type PushDigestIntervalHours = (typeof PUSH_DIGEST_INTERVAL_OPTIONS)[number]
 
 const PENDING_MIGRATION_CODES = new Set(['PGRST205', '42P01'])
 
@@ -53,4 +57,42 @@ const cachedConsumerDisclaimer = unstable_cache(fetchConsumerDisclaimerUncached,
 
 export async function getConsumerDisclaimer(): Promise<string> {
   return cachedConsumerDisclaimer()
+}
+
+function normalizeDigestIntervalHours(raw: string | undefined | null): PushDigestIntervalHours {
+  const parsed = Number.parseInt(String(raw ?? '1'), 10)
+  if (parsed === 2 || parsed === 3) return parsed
+  return 1
+}
+
+async function fetchPushDigestIntervalHoursUncached(): Promise<PushDigestIntervalHours> {
+  const supabase = getPublicClient()
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('setting_value')
+    .eq('setting_key', PUSH_DIGEST_INTERVAL_HOURS_KEY)
+    .maybeSingle()
+
+  if (error) {
+    if (!isSiteSettingsTableUnavailable(error)) {
+      console.error('fetchPushDigestIntervalHours:', error.message)
+    }
+    return 1
+  }
+
+  const row = data as { setting_value?: string } | null
+  return normalizeDigestIntervalHours(row?.setting_value)
+}
+
+const cachedPushDigestIntervalHours = unstable_cache(
+  fetchPushDigestIntervalHoursUncached,
+  ['site-push-digest-interval'],
+  {
+    tags: [CACHE_TAGS.siteSettings],
+    revalidate: false,
+  }
+)
+
+export async function getPushDigestIntervalHours(): Promise<PushDigestIntervalHours> {
+  return cachedPushDigestIntervalHours()
 }

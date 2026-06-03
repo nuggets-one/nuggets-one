@@ -4,14 +4,21 @@ import { useActionState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  updateConsumerDisclaimerFormStateAction,
+  updateSiteCopyFormStateAction,
   type SiteSettingsActionResult,
 } from '@/lib/actions/site-settings'
+import type { PushDigestIntervalHours } from '@/lib/queries/site-settings'
 
-export function SiteCopyEditorForm({ initialDisclaimer }: { initialDisclaimer: string }) {
+export function SiteCopyEditorForm({
+  initialDisclaimer,
+  initialDigestIntervalHours,
+}: {
+  initialDisclaimer: string
+  initialDigestIntervalHours: PushDigestIntervalHours
+}) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(
-    updateConsumerDisclaimerFormStateAction,
+    updateSiteCopyFormStateAction,
     null as SiteSettingsActionResult | null
   )
 
@@ -59,6 +66,23 @@ export function SiteCopyEditorForm({ initialDisclaimer }: { initialDisclaimer: s
           className="mt-1 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-primary"
         />
         <span className="mt-1 block text-xs text-muted">Markdown allowed for links and emphasis. Max 4000 characters.</span>
+      </label>
+
+      <label className="block text-sm">
+        <span className="font-medium text-primary">Push digest interval</span>
+        <select
+          name="push_digest_interval_hours"
+          defaultValue={String(initialDigestIntervalHours)}
+          className="mt-1 w-full max-w-xs rounded-lg border border-border bg-bg px-3 py-2 text-sm text-primary"
+        >
+          <option value="1">Every 1 hour</option>
+          <option value="2">Every 2 hours</option>
+          <option value="3">Every 3 hours</option>
+        </select>
+        <span className="mt-1 block text-xs text-muted">
+          Default push mode batches publishes into digest windows per stream. Immediate push bypasses digest when
+          enabled on publish.
+        </span>
       </label>
 
       <button

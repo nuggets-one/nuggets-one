@@ -5,10 +5,11 @@ import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { revalidateSiteSettings } from '@/lib/cache'
-import { consumerDisclaimerFormSchema } from '@/lib/validation/site-settings'
+import { consumerDisclaimerFormSchema, pushDigestIntervalFormSchema } from '@/lib/validation/site-settings'
 import {
   CONSUMER_DISCLAIMER_SETTING_KEY,
   isSiteSettingsTableUnavailable,
+  PUSH_DIGEST_INTERVAL_HOURS_KEY,
   SITE_SETTINGS_SETUP_INSTRUCTIONS,
 } from '@/lib/queries/site-settings'
 
@@ -64,4 +65,51 @@ export async function updateConsumerDisclaimerFormStateAction(
   formData: FormData
 ): Promise<SiteSettingsActionResult> {
   return updateConsumerDisclaimerFromFormAction(formData)
+}
+
+export async function updateSiteCopyFormStateAction(
+  _prev: SiteSettingsActionResult | null,
+  formData: FormData
+): Promise<SiteSettingsActionResult> {
+  const gate = await requireAdmin()
+  if (!gate.ok) return gate
+
+  const disclaimerParsed = consumerDisclaimerFormSchema.safeParse({
+    consumer_disclaimer: String(formData.get('consumer_disclaimer') ?? ''),
+  })
+  if (!disclaimerParsed.success) {
+    return { ok: false, error: disclaimerParsed.error.issues.map((e) => e.message).join('; ') }
+  }
+
+  const digestParsed = pushDigestIntervalFormSchema.safeParse({
+    push_digest_interval_hours: String(formData.get('push_digest_interval_hours') ?? '1'),
+  })
+  if (!digestParsed.success) {
+    return { ok: false, error: digestParsed.error.issues.map((e) => e.message).join('; ') }
+  }
+
+  const db = getAdminClient()
+  const { error } = await db.from('site_settings').upsert(
+    [
+      {
+        setting_key: CONSUMER_DISCLAIMER_SETTING_KEY,
+        setting_value: disclaimerParsed.data.consumer_disclaimer,
+      },
+      {
+        setting_key: PUSH_DIGEST_INTERVAL_HOURS_KEY,
+        setting_value: digestParsed.data.push_digest_interval_hours,
+      },
+    ],
+    { onConflict: 'setting_key' }
+  )
+
+  if (error) {
+    if (isSiteSettingsTableUnavailable(error)) {
+      return { ok: false, error: SITE_SETTINGS_SETUP_INSTRUCTIONS }
+    }
+    return { ok: false, error: error.message }
+  }
+
+  revalidateSiteSettings()
+  return { ok: true }
 }
