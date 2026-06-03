@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
+import { enqueuePushOutbox } from '@/lib/notifications/push-outbox'
 import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
 
 export const FAN_OUT_CAP = 5000
@@ -184,14 +185,36 @@ export async function upsertNotifications({
  * Synchronous up to FAN_OUT_CAP recipients.
  * Above cap: inserts a pending_fanout row for cron drain.
  */
+async function enqueuePushForRecipients({
+  recipientIds,
+  articleId,
+  stream,
+  title,
+  slug,
+}: {
+  recipientIds: string[]
+  articleId: string
+  stream: 'standard' | 'pulse'
+  title: string
+  slug: string
+}): Promise<void> {
+  try {
+    await enqueuePushOutbox({ recipientIds, articleId, stream, title, slug })
+  } catch (err) {
+    console.warn('[fanOutOnPublish] push outbox enqueue error:', err)
+  }
+}
+
 export async function fanOutOnPublish({
   articleId,
   stream,
   title,
+  slug,
 }: {
   articleId: string
   stream: 'standard' | 'pulse'
   title: string
+  slug: string
 }): Promise<FanOutResult> {
   const adminClient = getAdminClient()
   const recipients = await getRecipients(stream)
@@ -204,6 +227,13 @@ export async function fanOutOnPublish({
       stream,
       title,
     })
+    await enqueuePushForRecipients({
+      recipientIds: recipients,
+      articleId,
+      stream,
+      title,
+      slug,
+    })
     return { inserted, mode: 'sync' }
   }
 
@@ -213,6 +243,13 @@ export async function fanOutOnPublish({
     articleId,
     stream,
     title,
+  })
+  await enqueuePushForRecipients({
+    recipientIds: syncSlice,
+    articleId,
+    stream,
+    title,
+    slug,
   })
 
   const { error: queueError } = await adminClient.from('pending_fanout').insert({

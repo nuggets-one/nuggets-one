@@ -1,0 +1,23 @@
+import 'server-only'
+
+import { NextRequest, NextResponse } from 'next/server'
+import { drainPushOutbox } from '@/lib/notifications/push-outbox'
+
+// Vercel Cron schedule: `vercel.json` — same auth pattern as notifications-fanout.
+export async function GET(req: NextRequest) {
+  const authHeader = req.headers.get('authorization')
+  const cronSecret = process.env.CRON_SECRET
+
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const result = await drainPushOutbox()
+    return NextResponse.json(result)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[cron/push-outbox] error:', message)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}

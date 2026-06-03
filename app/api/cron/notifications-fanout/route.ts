@@ -3,6 +3,7 @@ import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { upsertNotifications } from '@/lib/notifications/fan-out'
+import { enqueuePushOutbox } from '@/lib/notifications/push-outbox'
 
 /** Max failed drain attempts before marking row drained (remaining IDs abandoned — see logs). */
 const MAX_DRAIN_ATTEMPTS = 15
@@ -44,12 +45,37 @@ export async function GET(req: NextRequest) {
     const attempts = Number(row.drain_attempts ?? 0)
 
     try {
+      const recipientIds = row.remaining_user_ids as string[]
+      const articleId = row.article_id as string
+      const stream = row.stream as 'standard' | 'pulse'
+      const title = row.title as string
+
       await upsertNotifications({
-        recipientIds: row.remaining_user_ids as string[],
-        articleId: row.article_id as string,
-        stream: row.stream as 'standard' | 'pulse',
-        title: row.title as string,
+        recipientIds,
+        articleId,
+        stream,
+        title,
       })
+
+      const { data: article } = await adminClient
+        .from('articles')
+        .select('slug')
+        .eq('id', articleId)
+        .maybeSingle()
+
+      if (article?.slug) {
+        try {
+          await enqueuePushOutbox({
+            recipientIds,
+            articleId,
+            stream,
+            title,
+            slug: article.slug as string,
+          })
+        } catch (pushErr) {
+          console.warn('[cron/notifications-fanout] push enqueue error:', pushErr)
+        }
+      }
 
       await adminClient
         .from('pending_fanout')
