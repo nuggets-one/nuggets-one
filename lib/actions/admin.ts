@@ -10,6 +10,10 @@ import { generateArticleSlug, slugify } from '@shared/slug'
 import { resolveCardPreview } from '@shared/article-preview'
 import { resolveArticleHeroFields } from '@/lib/admin/resolve-article-hero'
 import { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
+import {
+  articleIdsForTag,
+  recomputeTagSlugsForArticles,
+} from '@/lib/admin/recompute-article-tag-slugs'
 import { syncArticleTags } from '@/lib/admin/sync-article-tags'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
 import { normalizePublishPayload } from '@/lib/validation/publish-article'
@@ -376,12 +380,14 @@ export async function publishArticleAction(formData: FormData) {
   revalidateArticle(id)
 
   if (publishPayload.content_stream && publishPayload.title) {
+    const slug = generateArticleSlug(publishPayload.title, id)
     let fanResult: Awaited<ReturnType<typeof fanOutOnPublish>>
     try {
       fanResult = await fanOutOnPublish({
         articleId: id,
         stream: publishPayload.content_stream as 'standard' | 'pulse',
         title: publishPayload.title,
+        slug,
       })
     } catch (fanOutError) {
       console.error('[publishArticleAction] fan-out error:', fanOutError)
@@ -431,12 +437,30 @@ export async function deleteArticleAction(formData: FormData) {
   redirect(redirectTo)
 }
 
+type TagDimension = 'format' | 'domain' | 'subtopic' | null
+
+function parseTagDimension(raw: FormDataEntryValue | null): TagDimension {
+  const value = typeof raw === 'string' ? raw.trim() : ''
+  if (!value) return null
+  if (value === 'format' || value === 'domain' || value === 'subtopic') return value
+  throw new Error('Invalid dimension')
+}
+
+function parseTagSlugInput(raw: FormDataEntryValue | null): string {
+  const value = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  if (!value) throw new Error('Slug is required')
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
+    throw new Error('Slug must use lowercase letters, numbers, and hyphens only')
+  }
+  return value
+}
+
 export async function createTagAction(formData: FormData) {
   await requireAdmin()
   const db = createAdminClient()
 
   const label = (formData.get('label') as string).trim()
-  const dimension = (formData.get('dimension') as string | null)?.trim() || null
+  const dimension = parseTagDimension(formData.get('dimension'))
   const is_official = formData.get('is_official') === 'on'
 
   if (!label) throw new Error('Label is required')
@@ -447,11 +471,75 @@ export async function createTagAction(formData: FormData) {
   const { error } = await db.from('tags').insert({
     slug,
     label,
-    dimension: dimension || null,
+    dimension,
     is_official,
   })
 
   if (error) throw new Error(error.message)
+
+  revalidateOfficialTags()
+  redirect('/admin/tags')
+}
+
+export async function updateTagAction(formData: FormData) {
+  await requireAdmin()
+  const db = createAdminClient()
+
+  const id = String(formData.get('id') ?? '').trim()
+  if (!id) throw new Error('Missing tag id')
+
+  const label = (formData.get('label') as string).trim()
+  const dimension = parseTagDimension(formData.get('dimension'))
+  const is_official = formData.get('is_official') === 'on'
+  const nextSlug = parseTagSlugInput(formData.get('slug'))
+
+  if (!label) throw new Error('Label is required')
+
+  const { data: existing, error: fetchError } = await db
+    .from('tags')
+    .select('id, slug')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (fetchError) throw new Error(fetchError.message)
+  if (!existing) throw new Error('Tag not found')
+
+  const slugChanged = existing.slug !== nextSlug
+
+  const { error } = await db
+    .from('tags')
+    .update({
+      label,
+      slug: nextSlug,
+      dimension,
+      is_official,
+    })
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+
+  if (slugChanged) {
+    const articleIds = await articleIdsForTag(db, id)
+    await recomputeTagSlugsForArticles(db, articleIds)
+  }
+
+  revalidateOfficialTags()
+  redirect(`/admin/tags/${id}?saved=1`)
+}
+
+export async function deleteTagAction(formData: FormData) {
+  await requireAdmin()
+  const db = createAdminClient()
+
+  const id = String(formData.get('id') ?? '').trim()
+  if (!id) throw new Error('Missing tag id')
+
+  const articleIds = await articleIdsForTag(db, id)
+
+  const { error } = await db.from('tags').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+
+  await recomputeTagSlugsForArticles(db, articleIds)
 
   revalidateOfficialTags()
   redirect('/admin/tags')

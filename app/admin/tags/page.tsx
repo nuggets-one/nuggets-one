@@ -1,7 +1,9 @@
 import 'server-only'
 
+import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createTagAction } from '@/lib/actions/admin'
+import { TagFormFields } from '@/app/admin/tags/_components/TagFormFields'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,44 +16,23 @@ export default async function AdminTagsPage() {
     .order('label', { ascending: true })
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-xl font-bold text-primary mb-6">Tags</h1>
+    <div className="max-w-3xl">
+      <h1 className="text-xl font-bold text-primary mb-2">Tags</h1>
+      <p className="text-sm text-muted mb-6 max-w-2xl">
+        Tags power Home filters and nugget classification. Each tag has one optional dimension:{' '}
+        <strong className="font-medium text-primary">Format</strong>,{' '}
+        <strong className="font-medium text-primary">Domain</strong>, or{' '}
+        <strong className="font-medium text-primary">Subtopic</strong>. Official tags with a dimension
+        appear on the Home chip rail and in the article editor. Click a row to edit label, dimension,
+        official status, or slug.
+      </p>
 
       <form
         action={createTagAction}
         className="flex flex-col gap-3 mb-8 p-4 rounded-xl border border-border bg-surface-raised"
       >
         <h2 className="text-sm font-semibold text-primary">New tag</h2>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted">Label *</span>
-          <input
-            type="text"
-            name="label"
-            required
-            placeholder="Fintech"
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:ring-2 focus:ring-accent/40"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted">Dimension</span>
-          <select
-            name="dimension"
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:ring-2 focus:ring-accent/40"
-          >
-            <option value="">None</option>
-            <option value="domain">Domain</option>
-            <option value="format">Format</option>
-            <option value="subtopic">Subtopic</option>
-          </select>
-        </label>
-
-        <label className="flex items-center gap-2 text-sm text-primary cursor-pointer">
-          <input type="checkbox" name="is_official" className="rounded" />
-          Show on Home chip rail (official)
-        </label>
-
+        <TagFormFields />
         <button
           type="submit"
           className="self-start px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent-hover transition-colors"
@@ -68,12 +49,17 @@ export default async function AdminTagsPage() {
               <th className="px-4 py-3 text-left font-medium text-muted">Slug</th>
               <th className="px-4 py-3 text-left font-medium text-muted">Dimension</th>
               <th className="px-4 py-3 text-left font-medium text-muted">Official</th>
+              <th className="px-4 py-3 text-right font-medium text-muted">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {(tags ?? []).map((tag) => (
               <tr key={tag.id as string} className="hover:bg-surface-raised transition-colors">
-                <td className="px-4 py-3 font-medium text-primary">{tag.label as string}</td>
+                <td className="px-4 py-3 font-medium text-primary">
+                  <Link href={`/admin/tags/${tag.id as string}`} className="hover:underline">
+                    {tag.label as string}
+                  </Link>
+                </td>
                 <td className="px-4 py-3 text-muted font-mono text-xs">{tag.slug as string}</td>
                 <td className="px-4 py-3 text-muted">{(tag.dimension as string | null) ?? '—'}</td>
                 <td className="px-4 py-3">
@@ -82,6 +68,14 @@ export default async function AdminTagsPage() {
                       ✓ Official
                     </span>
                   )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/admin/tags/${tag.id as string}`}
+                    className="text-xs font-medium text-accent hover:underline"
+                  >
+                    Edit
+                  </Link>
                 </td>
               </tr>
             ))}
