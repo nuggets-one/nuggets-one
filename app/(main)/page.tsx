@@ -2,6 +2,7 @@ import { unstable_noStore } from 'next/cache'
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuthUser } from '@/lib/supabase/resolve-auth-user'
 import { getFeedPage } from '@/lib/queries/feed'
 import { listOfficialTags } from '@/lib/queries/tags'
 import { getTagCountsForStream } from '@/lib/queries/tag-counts'
@@ -105,9 +106,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const streamLabel = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { user } = await resolveAuthUser(supabase)
   const isAuthenticated = !!user
   const isAdmin = user?.app_metadata?.is_admin === true
   const articleIds = articles.map((a) => a.id)

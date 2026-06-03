@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { resolveAuthUser } from '@/lib/supabase/resolve-auth-user'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
@@ -30,10 +31,7 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // getUser() refreshes the session token when needed.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { user } = await resolveAuthUser(supabase, { clearStaleSession: true })
 
   if (!user) {
     // S7-F2: API routes must receive JSON 401, not an HTML redirect.

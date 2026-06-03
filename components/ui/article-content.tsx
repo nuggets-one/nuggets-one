@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuthUser } from '@/lib/supabase/resolve-auth-user'
 import { getArticleById, getRelatedArticles } from '@/lib/queries/article'
 import { getArticleGalleryMedia } from '@/lib/queries/article-media'
 import { buildCardGalleryImages } from '@/lib/ui/build-card-gallery'
@@ -81,13 +82,12 @@ function estimateReadingTimeMinutes(markdown: string | null): number {
  */
 export async function ArticleContent({ id, inSheet = false }: Props) {
   const supabase = await createClient()
-  const [article, galleryMedia, authResult, consumerDisclaimer] = await Promise.all([
+  const [article, galleryMedia, { user }, consumerDisclaimer] = await Promise.all([
     getArticleById(id),
     getArticleGalleryMedia(id),
-    supabase.auth.getUser(),
+    resolveAuthUser(supabase),
     getConsumerDisclaimer(),
   ])
-  const user = authResult.data.user
   const isAuthenticated = !!user
   const bookmarkedIds =
     user ? await getBookmarkedArticleIdsForUser(user.id, [article.id]) : new Set<string>()

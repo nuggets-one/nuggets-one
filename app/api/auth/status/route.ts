@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuthUser } from '@/lib/supabase/resolve-auth-user'
 import { resolveAvatarDisplayName } from '@/lib/ui/resolve-display-name'
 
 export async function GET() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { user } = await resolveAuthUser(supabase, { clearStaleSession: true })
 
   const isAdmin = user?.app_metadata?.is_admin === true
 
