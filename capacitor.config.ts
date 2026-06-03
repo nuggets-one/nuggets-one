@@ -8,7 +8,7 @@ const usesCleartext = serverUrl.startsWith('http://')
 const allowNavigation = ['nuggets.one', 'www.nuggets.one', '*.nuggets.one']
 
 const config: CapacitorConfig = {
-  appId: 'one.nuggets.app',
+  appId: 'nuggets.one',
   appName: 'Nuggets',
   webDir: 'mobile-web',
   server: {

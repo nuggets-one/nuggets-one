@@ -1,4 +1,4 @@
-package one.nuggets.app;
+package nuggets.one;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
