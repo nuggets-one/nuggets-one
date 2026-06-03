@@ -76,6 +76,12 @@ npm run cap:open:android
 - `npm run cap:open:android`: opens the in-repo `android/` project in Android Studio
 - `npm run cap:android`: convenience command that runs sync, then opens Android Studio
 
+### Android internal testing (Google Play)
+Testers do **not** auto-update; upload each new `.aab` to **Internal testing** with a higher `versionCode`. Push needs **both** a Play build (native Firebase/plugin) and a **Vercel** deploy (server/UI). Step-by-step: [`docs/ANDROID_INTERNAL_TESTING.md`](docs/ANDROID_INTERNAL_TESTING.md).
+
+- `npm run android:preflight` — checks `google-services.json`, version, manifest before upload
+- `npm run cap:bundle:android` — builds `app-release.aab` after `cap:sync` (requires `android/keystore.properties` for signing)
+
 ### Android WebView checks
 - OAuth callbacks must be configured for the hosted URL used by `CAPACITOR_SERVER_URL`.
 - HTTP URLs may require Android cleartext traffic (debug only); prefer HTTPS for production.
