@@ -3,21 +3,45 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
-import { createClient } from '@/lib/supabase/client'
 
-function isAndroidNative(): boolean {
+type AuthStatus = {
+  authenticated: boolean
+}
+
+function isCapacitorAndroid(): boolean {
+  if (typeof window === 'undefined') return false
+
+  const injected = (
+    window as Window & {
+      Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string }
+    }
+  ).Capacitor
+
+  if (injected?.isNativePlatform?.()) {
+    return injected.getPlatform?.() === 'android'
+  }
+
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+}
+
+async function fetchAuthStatus(): Promise<AuthStatus> {
+  const res = await fetch('/api/auth/status', { cache: 'no-store' })
+  if (!res.ok) return { authenticated: false }
+  return (await res.json()) as AuthStatus
 }
 
 export function AndroidPushRegistration() {
   const router = useRouter()
   const tokenRef = useRef<string | null>(null)
-  const startedRef = useRef(false)
+  const setupStartedRef = useRef(false)
+  const listenersReadyRef = useRef(false)
 
   useEffect(() => {
-    if (!isAndroidNative()) return
+    if (!isCapacitorAndroid()) return
 
-    const supabase = createClient()
+    let cancelled = false
+    let removeListeners: (() => void) | undefined
+    let authPollTimer: ReturnType<typeof setInterval> | undefined
 
     const unregisterToken = async (token: string) => {
       await fetch('/api/push/unregister', {
@@ -27,84 +51,112 @@ export function AndroidPushRegistration() {
       })
     }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' && tokenRef.current) {
-        void unregisterToken(tokenRef.current)
-        tokenRef.current = null
-        startedRef.current = false
+    async function ensureListeners() {
+      if (listenersReadyRef.current) return
+
+      const { PushNotifications } = await import('@capacitor/push-notifications')
+
+      const registerToken = async (token: string) => {
+        tokenRef.current = token
+        const res = await fetch('/api/push/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, platform: 'android' }),
+        })
+        if (!res.ok) {
+          console.warn('[push] register API failed', res.status)
+        }
       }
 
-      if (event === 'SIGNED_IN' && session && !startedRef.current) {
-        startedRef.current = true
-        void setupPush()
-      }
-    })
+      const regHandle = await PushNotifications.addListener('registration', (token) => {
+        void registerToken(token.value)
+      })
 
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && !startedRef.current) {
-        startedRef.current = true
-        void setupPush()
-      }
-    })
+      const errHandle = await PushNotifications.addListener('registrationError', (error) => {
+        console.warn('[push] registration error', error)
+        setupStartedRef.current = false
+      })
 
-    let removeListeners: (() => void) | undefined
+      const actionHandle = await PushNotifications.addListener(
+        'pushNotificationActionPerformed',
+        (action) => {
+          const data = action.notification.data
+          const articleId = data?.articleId ?? data?.article_id
+          const slug = data?.slug
+          if (typeof articleId === 'string' && typeof slug === 'string') {
+            router.push(`/nuggets/${articleId}/${slug}`)
+          }
+        }
+      )
+
+      removeListeners = () => {
+        void regHandle.remove()
+        void errHandle.remove()
+        void actionHandle.remove()
+        listenersReadyRef.current = false
+      }
+
+      listenersReadyRef.current = true
+    }
 
     async function setupPush() {
+      if (cancelled || setupStartedRef.current) return
+
+      const auth = await fetchAuthStatus()
+      if (!auth.authenticated) return
+
+      setupStartedRef.current = true
+
       try {
+        await ensureListeners()
+
         const { PushNotifications } = await import('@capacitor/push-notifications')
 
-        const registerToken = async (token: string) => {
-          tokenRef.current = token
-          await fetch('/api/push/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, platform: 'android' }),
-          })
-        }
-
-        const regHandle = await PushNotifications.addListener('registration', (token) => {
-          void registerToken(token.value)
-        })
-
-        const errHandle = await PushNotifications.addListener('registrationError', (error) => {
-          console.warn('[push] registration error', error)
-        })
-
-        const actionHandle = await PushNotifications.addListener(
-          'pushNotificationActionPerformed',
-          (action) => {
-            const data = action.notification.data
-            const articleId = data?.articleId ?? data?.article_id
-            const slug = data?.slug
-            if (typeof articleId === 'string' && typeof slug === 'string') {
-              router.push(`/nuggets/${articleId}/${slug}`)
-            }
-          }
-        )
-
-        removeListeners = () => {
-          void regHandle.remove()
-          void errHandle.remove()
-          void actionHandle.remove()
-        }
-
         let perm = await PushNotifications.checkPermissions()
-        if (perm.receive === 'prompt') {
+        if (perm.receive !== 'granted') {
           perm = await PushNotifications.requestPermissions()
         }
-        if (perm.receive !== 'granted') return
+        if (perm.receive !== 'granted') {
+          console.warn('[push] notification permission not granted:', perm.receive)
+          setupStartedRef.current = false
+          return
+        }
 
         await PushNotifications.register()
       } catch (err) {
         console.warn('[push] setup failed', err)
-        startedRef.current = false
+        setupStartedRef.current = false
       }
     }
 
+    async function onAuthMaybeChanged() {
+      const auth = await fetchAuthStatus()
+      if (!auth.authenticated) {
+        if (tokenRef.current) {
+          void unregisterToken(tokenRef.current)
+          tokenRef.current = null
+        }
+        setupStartedRef.current = false
+        return
+      }
+      void setupPush()
+    }
+
+    void onAuthMaybeChanged()
+
+    authPollTimer = setInterval(() => {
+      void onAuthMaybeChanged()
+    }, 5000)
+
+    const onFocus = () => {
+      void onAuthMaybeChanged()
+    }
+    window.addEventListener('focus', onFocus)
+
     return () => {
-      subscription.unsubscribe()
+      cancelled = true
+      if (authPollTimer) clearInterval(authPollTimer)
+      window.removeEventListener('focus', onFocus)
       removeListeners?.()
     }
   }, [router])
