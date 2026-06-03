@@ -3,12 +3,12 @@
 // S1-F3: single client island for header right cluster (create · theme · bell · avatar).
 // One /api/auth/status fetch; server Header stays cookie-free.
 
-import { useState, useEffect, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { LogIn, Sparkles } from 'lucide-react'
+import { useAuthStatus, type AuthStatusState } from '@/components/layout/auth-status-provider'
 import { logoutAction } from '@/lib/actions/auth'
-import { readResponseJson } from '@/lib/http/parse-json-response'
 import type { LegalFooterLink } from '@/lib/queries/legal-pages'
 import { accountAvatarLetter } from '@/lib/ui/account-avatar-initial'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -26,15 +26,7 @@ const NotificationPanel = dynamic(
   }
 )
 
-type AuthState =
-  | { status: 'loading' }
-  | { status: 'anonymous' }
-  | {
-      status: 'authenticated'
-      email: string | null
-      displayName: string | null
-      isAdmin: boolean
-    }
+type AuthState = AuthStatusState
 
 function CreateNuggetHeaderLink() {
   return (
@@ -215,62 +207,7 @@ type Props = {
 }
 
 export function HeaderRightUtilities({ legalLinks }: Props) {
-  const [auth, setAuth] = useState<AuthState>({ status: 'loading' })
-
-  useEffect(() => {
-    let cancelled = false
-    const controller = new AbortController()
-    const timeout = setTimeout(() => {
-      controller.abort()
-    }, 4000)
-
-    fetch('/api/auth/status', { cache: 'no-store', signal: controller.signal })
-      .then(async (res) => {
-        if (!res.ok) return { authenticated: false as const }
-        const data = await readResponseJson<{
-          authenticated?: boolean
-          email?: string | null
-          displayName?: string | null
-          isAdmin?: boolean
-        }>(res)
-        return data ?? { authenticated: false as const }
-      })
-      .then(
-        (data: {
-          authenticated?: boolean
-          email?: string | null
-          displayName?: string | null
-          isAdmin?: boolean
-        }) => {
-          if (cancelled) return
-          if (data.authenticated) {
-            setAuth({
-              status: 'authenticated',
-              email: data.email ?? null,
-              displayName:
-                typeof data.displayName === 'string' && data.displayName.trim()
-                  ? data.displayName.trim()
-                  : null,
-              isAdmin: data.isAdmin === true,
-            })
-          } else {
-            setAuth({ status: 'anonymous' })
-          }
-        }
-      )
-      .catch(() => {
-        if (!cancelled) setAuth({ status: 'anonymous' })
-      })
-      .finally(() => {
-        clearTimeout(timeout)
-      })
-
-    return () => {
-      cancelled = true
-      clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [])
+  const auth = useAuthStatus()
 
   return (
     <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">

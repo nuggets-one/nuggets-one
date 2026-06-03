@@ -5,8 +5,8 @@ import { Activity, Bookmark, House, Layers, type LucideIcon } from 'lucide-react
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { readResponseJson } from '@/lib/http/parse-json-response'
+import { useMemo, useSyncExternalStore } from 'react'
+import { useAuthStatus } from '@/components/layout/auth-status-provider'
 import { DEFAULT_STREAM, type ContentStream } from '@/types/article'
 
 function pathActive(pathname: string, base: string) {
@@ -21,8 +21,6 @@ type NavItem = {
   href: string
   icon: LucideIcon
 }
-
-type NavAuthState = { status: 'loading' } | { status: 'anonymous' } | { status: 'authenticated' }
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'nuggets', label: 'Nuggets', href: '/?stream=standard', icon: House },
@@ -56,7 +54,7 @@ export function MobileBottomNav() {
     parse: (v): ContentStream => (v === 'pulse' ? 'pulse' : 'standard'),
     shallow: true,
   })
-  const [auth, setAuth] = useState<NavAuthState>({ status: 'loading' })
+  const auth = useAuthStatus()
   // Active tab uses pathname + stream; defer until mount so SSR and the first
   // client paint match (usePathname / URL state can differ during hydration).
   const navReady = useSyncExternalStore(
@@ -64,37 +62,6 @@ export function MobileBottomNav() {
     () => true,
     () => false,
   )
-
-  useEffect(() => {
-    let cancelled = false
-    const controller = new AbortController()
-    const timeout = setTimeout(() => {
-      controller.abort()
-    }, 4000)
-
-    fetch('/api/auth/status', { cache: 'no-store', signal: controller.signal })
-      .then(async (res) => {
-        if (!res.ok) return { authenticated: false as const }
-        const data = await readResponseJson<{ authenticated?: boolean }>(res)
-        return data ?? { authenticated: false as const }
-      })
-      .then((data) => {
-        if (cancelled) return
-        setAuth(data.authenticated ? { status: 'authenticated' } : { status: 'anonymous' })
-      })
-      .catch(() => {
-        if (!cancelled) setAuth({ status: 'anonymous' })
-      })
-      .finally(() => {
-        clearTimeout(timeout)
-      })
-
-    return () => {
-      cancelled = true
-      clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [])
 
   const visibleItems = useMemo(
     () =>
