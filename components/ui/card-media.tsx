@@ -97,6 +97,7 @@ export function CardMedia({
                   sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc((100vw - 3rem) / 2), (max-width: 1536px) calc((100vw - 4rem) / 4), 320px"
                   quality={75}
                   priority={priority}
+                  loading={priority ? 'eager' : 'lazy'}
                   unoptimized={!shouldOptimizeImage(safeHostname(resolvedHeroUrl))}
                 />
               )}
