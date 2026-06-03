@@ -1,79 +1,27 @@
 import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
-import { isPushSendConfigured, sendPushForOutboxRows, type PushOutboxRow } from '@/lib/notifications/push-send'
+import { flushCompletedDigestBuffers } from '@/lib/notifications/push-digest'
+import {
+  fetchUnsentDigestRows,
+  fetchUnsentImmediateRows,
+  markDigestSent,
+  markImmediateSent,
+  recordDigestFailure,
+  recordImmediateFailure,
+} from '@/lib/notifications/push-immediate-outbox'
+import {
+  isPushSendConfigured,
+  sendPushForDigestRows,
+  sendPushForImmediateRows,
+  sendPushForOutboxRows,
+  type PushOutboxRow,
+} from '@/lib/notifications/push-send'
 
-const ENQUEUE_CHUNK = 500
 const DRAIN_BATCH = 100
 const MAX_DRAIN_ATTEMPTS = 15
 
-export async function enqueuePushOutbox({
-  recipientIds,
-  articleId,
-  stream,
-  title,
-  slug,
-}: {
-  recipientIds: string[]
-  articleId: string
-  stream: 'standard' | 'pulse'
-  title: string
-  slug: string
-}): Promise<number> {
-  if (recipientIds.length === 0) return 0
-
-  const adminClient = getAdminClient()
-  const uniqueRecipients = [...new Set(recipientIds)]
-  let enqueued = 0
-
-  for (let i = 0; i < uniqueRecipients.length; i += ENQUEUE_CHUNK) {
-    const chunk = uniqueRecipients.slice(i, i + ENQUEUE_CHUNK)
-
-    const { data: tokenRows, error: tokenError } = await adminClient
-      .from('push_device_tokens')
-      .select('user_id')
-      .in('user_id', chunk)
-
-    if (tokenError) {
-      console.warn('[enqueuePushOutbox] token lookup error:', tokenError.message)
-      continue
-    }
-
-    const usersWithTokens = [...new Set((tokenRows ?? []).map((row) => row.user_id as string))]
-    if (usersWithTokens.length === 0) continue
-
-    const rows = usersWithTokens.map((userId) => ({
-      user_id: userId,
-      article_id: articleId,
-      title,
-      slug,
-      content_stream: stream,
-    }))
-
-    const { error: insertError, count } = await adminClient
-      .from('push_outbox')
-      .upsert(rows, {
-        onConflict: 'user_id,article_id',
-        ignoreDuplicates: true,
-        count: 'exact',
-      })
-
-    if (insertError) {
-      console.warn('[enqueuePushOutbox] insert error:', insertError.message)
-      continue
-    }
-
-    enqueued += count ?? 0
-  }
-
-  return enqueued
-}
-
-export async function drainPushOutbox(): Promise<{ drained: number; sent: number }> {
-  if (!isPushSendConfigured()) {
-    return { drained: 0, sent: 0 }
-  }
-
+async function drainLegacyPushOutbox(): Promise<{ drained: number; sent: number }> {
   const adminClient = getAdminClient()
 
   const { data: pending, error: fetchError } = await adminClient
@@ -84,49 +32,78 @@ export async function drainPushOutbox(): Promise<{ drained: number; sent: number
     .order('created_at', { ascending: true })
     .limit(DRAIN_BATCH)
 
-  if (fetchError) {
-    throw new Error(`drainPushOutbox fetch error: ${fetchError.message}`)
-  }
-
-  if (!pending || pending.length === 0) {
+  if (fetchError || !pending?.length) {
     return { drained: 0, sent: 0 }
   }
-
-  const rows = pending as PushOutboxRow[]
-  let sendResult = { sent: 0, failed: 0, prunedTokens: 0 }
 
   try {
-    sendResult = await sendPushForOutboxRows(rows)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[drainPushOutbox] send error:', message)
-
+    const sendResult = await sendPushForOutboxRows(pending as PushOutboxRow[])
+    const now = new Date().toISOString()
     for (const row of pending) {
-      const attempts = Number(row.attempts ?? 0) + 1
       await adminClient
         .from('push_outbox')
-        .update({
-          attempts,
-          last_error: message.slice(0, 2000),
-          ...(attempts >= MAX_DRAIN_ATTEMPTS ? { sent_at: new Date().toISOString() } : {}),
-        })
+        .update({ sent_at: now, last_error: null })
         .eq('id', row.id as string)
     }
-
+    return { drained: pending.length, sent: sendResult.sent }
+  } catch {
     return { drained: 0, sent: 0 }
   }
+}
 
-  const now = new Date().toISOString()
-  let drained = 0
+async function drainImmediateOutbox(): Promise<{ drained: number; sent: number }> {
+  const rows = await fetchUnsentImmediateRows(DRAIN_BATCH)
+  if (rows.length === 0) return { drained: 0, sent: 0 }
 
-  for (const row of pending) {
-    const { error: updateError } = await adminClient
-      .from('push_outbox')
-      .update({ sent_at: now, last_error: null })
-      .eq('id', row.id as string)
+  try {
+    const result = await sendPushForImmediateRows(rows)
+    await markImmediateSent(rows.map((r) => r.id))
+    return { drained: rows.length, sent: result.sent }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    for (const row of rows) {
+      await recordImmediateFailure(row.id, message, row.attempts)
+    }
+    return { drained: 0, sent: 0 }
+  }
+}
 
-    if (!updateError) drained += 1
+async function drainDigestOutbox(): Promise<{ drained: number; sent: number }> {
+  const rows = await fetchUnsentDigestRows(DRAIN_BATCH)
+  if (rows.length === 0) return { drained: 0, sent: 0 }
+
+  try {
+    const result = await sendPushForDigestRows(rows)
+    await markDigestSent(rows.map((r) => r.id))
+    return { drained: rows.length, sent: result.sent }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    for (const row of rows) {
+      await recordDigestFailure(row.id, message, row.attempts)
+    }
+    return { drained: 0, sent: 0 }
+  }
+}
+
+export async function drainPushOutbox(): Promise<{
+  digestBuffersFlushed: number
+  immediate: { drained: number; sent: number }
+  digest: { drained: number; sent: number }
+  legacy: { drained: number; sent: number }
+}> {
+  if (!isPushSendConfigured()) {
+    return {
+      digestBuffersFlushed: 0,
+      immediate: { drained: 0, sent: 0 },
+      digest: { drained: 0, sent: 0 },
+      legacy: { drained: 0, sent: 0 },
+    }
   }
 
-  return { drained, sent: sendResult.sent }
+  const digestBuffersFlushed = await flushCompletedDigestBuffers()
+  const immediate = await drainImmediateOutbox()
+  const digest = await drainDigestOutbox()
+  const legacy = await drainLegacyPushOutbox()
+
+  return { digestBuffersFlushed, immediate, digest, legacy }
 }

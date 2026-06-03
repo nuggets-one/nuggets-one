@@ -381,6 +381,7 @@ export async function publishArticleAction(formData: FormData) {
 
   if (publishPayload.content_stream && publishPayload.title) {
     const slug = generateArticleSlug(publishPayload.title, id)
+    const pushNotifyImmediately = formData.get('push_notify_immediately') === 'on'
     let fanResult: Awaited<ReturnType<typeof fanOutOnPublish>>
     try {
       fanResult = await fanOutOnPublish({
@@ -388,6 +389,7 @@ export async function publishArticleAction(formData: FormData) {
         stream: publishPayload.content_stream as 'standard' | 'pulse',
         title: publishPayload.title,
         slug,
+        pushNotifyImmediately,
       })
     } catch (fanOutError) {
       console.error('[publishArticleAction] fan-out error:', fanOutError)

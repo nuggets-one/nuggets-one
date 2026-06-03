@@ -3,9 +3,10 @@ import 'server-only'
 import { getAdminClient } from '@/lib/supabase/admin'
 
 export type PushDeviceToken = {
-  user_id: string
+  user_id: string | null
   token: string
   platform: 'android'
+  install_id?: string
 }
 
 export async function listTokensForUser(userId: string): Promise<string[]> {
@@ -14,6 +15,7 @@ export async function listTokensForUser(userId: string): Promise<string[]> {
     .from('push_device_tokens')
     .select('token')
     .eq('user_id', userId)
+    .eq('notifications_enabled', true)
 
   if (error) {
     throw new Error(`listTokensForUser error: ${error.message}`)
@@ -30,6 +32,7 @@ export async function listTokensForUsers(userIds: string[]): Promise<Map<string,
     .from('push_device_tokens')
     .select('user_id, token')
     .in('user_id', userIds)
+    .eq('notifications_enabled', true)
 
   if (error) {
     throw new Error(`listTokensForUsers error: ${error.message}`)

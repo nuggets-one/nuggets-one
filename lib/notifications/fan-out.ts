@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
-import { enqueuePushOutbox } from '@/lib/notifications/push-outbox'
+import { enqueuePushOnPublish } from '@/lib/notifications/push-publish'
 import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
 
 export const FAN_OUT_CAP = 5000
@@ -114,8 +114,6 @@ export async function getRecipients(
     return getRecipientsFallback(stream)
   }
 
-  // Prefer graceful degradation over publish-time failure when the RPC exists
-  // but is temporarily unhealthy (permissions, schema cache drift, etc.).
   console.warn('[getRecipients] rpc failed, falling back to listUsers path:', {
     code: error.code,
     message: error.message,
@@ -158,14 +156,11 @@ export async function upsertNotifications({
       })
 
     if (error?.code === '42P10') {
-      // Partial unique index only — insert rows and ignore duplicate pairs.
       inserted += await insertChunkRows(chunk)
       continue
     }
 
     if (error) {
-      // Retry with row inserts to recover from ON CONFLICT inference or
-      // transient PostgREST upsert issues.
       console.warn('[upsertNotifications] upsert failed, falling back to row inserts:', {
         code: error.code,
         message: error.message,
@@ -179,46 +174,31 @@ export async function upsertNotifications({
   return inserted
 }
 
-
-/**
- * Main fan-out entry point called by the publish handler.
- * Synchronous up to FAN_OUT_CAP recipients.
- * Above cap: inserts a pending_fanout row for cron drain.
- */
-async function enqueuePushForRecipients({
-  recipientIds,
-  articleId,
-  stream,
-  title,
-  slug,
-}: {
-  recipientIds: string[]
-  articleId: string
-  stream: 'standard' | 'pulse'
-  title: string
-  slug: string
-}): Promise<void> {
-  try {
-    await enqueuePushOutbox({ recipientIds, articleId, stream, title, slug })
-  } catch (err) {
-    console.warn('[fanOutOnPublish] push outbox enqueue error:', err)
-  }
-}
-
 export async function fanOutOnPublish({
   articleId,
   stream,
   title,
   slug,
+  pushNotifyImmediately = false,
 }: {
   articleId: string
   stream: 'standard' | 'pulse'
   title: string
   slug: string
+  pushNotifyImmediately?: boolean
 }): Promise<FanOutResult> {
   const adminClient = getAdminClient()
   const recipients = await getRecipients(stream)
   const batchKey = buildBatchKey(stream)
+
+  const pushEnqueue = () =>
+    enqueuePushOnPublish({
+      articleId,
+      stream,
+      title,
+      slug,
+      pushNotifyImmediately,
+    })
 
   if (recipients.length <= FAN_OUT_CAP) {
     const inserted = await upsertNotifications({
@@ -227,13 +207,7 @@ export async function fanOutOnPublish({
       stream,
       title,
     })
-    await enqueuePushForRecipients({
-      recipientIds: recipients,
-      articleId,
-      stream,
-      title,
-      slug,
-    })
+    await pushEnqueue()
     return { inserted, mode: 'sync' }
   }
 
@@ -244,13 +218,7 @@ export async function fanOutOnPublish({
     stream,
     title,
   })
-  await enqueuePushForRecipients({
-    recipientIds: syncSlice,
-    articleId,
-    stream,
-    title,
-    slug,
-  })
+  await pushEnqueue()
 
   const { error: queueError } = await adminClient.from('pending_fanout').insert({
     article_id: articleId,

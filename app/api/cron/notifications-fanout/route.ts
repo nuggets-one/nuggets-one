@@ -3,7 +3,7 @@ import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { upsertNotifications } from '@/lib/notifications/fan-out'
-import { enqueuePushOutbox } from '@/lib/notifications/push-outbox'
+import { enqueuePushOnPublish } from '@/lib/notifications/push-publish'
 
 /** Max failed drain attempts before marking row drained (remaining IDs abandoned — see logs). */
 const MAX_DRAIN_ATTEMPTS = 15
@@ -65,12 +65,12 @@ export async function GET(req: NextRequest) {
 
       if (article?.slug) {
         try {
-          await enqueuePushOutbox({
-            recipientIds,
+          await enqueuePushOnPublish({
             articleId,
             stream,
             title,
             slug: article.slug as string,
+            pushNotifyImmediately: false,
           })
         } catch (pushErr) {
           console.warn('[cron/notifications-fanout] push enqueue error:', pushErr)
