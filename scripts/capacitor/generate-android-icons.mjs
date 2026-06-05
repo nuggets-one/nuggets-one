@@ -1,6 +1,7 @@
 /**
- * Regenerates legacy mipmap PNGs from brand sources.
- * Adaptive icons (API 26+) use @drawable/ic_launcher_foreground vector + yellow background.
+ * Regenerates Android mipmap PNGs + splash screens from brand SVGs.
+ * Adaptive icons use @mipmap/ic_launcher_foreground (PNG) + yellow @color background.
+ * No vector drawable/ic_launcher_foreground.xml — avoids AAPT linking failures.
  *
  * Run: npm run icons:android  (after npm run icons:generate)
  */
@@ -26,6 +27,34 @@ const sizes = {
 
 if (!fs.existsSync(fullIcon)) {
   throw new Error(`Missing ${fullIcon} — run npm run icons:generate first.`)
+}
+
+// Capacitor default robot foreground overrides branded assets on API 24+ if left in place.
+const capRobotForeground = path.join(
+  root,
+  'android',
+  'app',
+  'src',
+  'main',
+  'res',
+  'drawable-v24',
+  'ic_launcher_foreground.xml',
+)
+if (fs.existsSync(capRobotForeground)) {
+  fs.unlinkSync(capRobotForeground)
+}
+const brandedVectorForeground = path.join(
+  root,
+  'android',
+  'app',
+  'src',
+  'main',
+  'res',
+  'drawable',
+  'ic_launcher_foreground.xml',
+)
+if (fs.existsSync(brandedVectorForeground)) {
+  fs.unlinkSync(brandedVectorForeground)
 }
 
 for (const [density, size] of Object.entries(sizes)) {
@@ -58,4 +87,35 @@ for (const [density, size] of Object.entries(sizes)) {
     .toFile(path.join(dir, 'ic_launcher_foreground.png'))
 }
 
-console.log('Updated Android mipmap PNGs (legacy fallback) from brand icon sources')
+/** Legacy Capacitor splash PNGs — yellow field + centered N (matches launch theme). */
+const splashTargets = [
+  { dir: 'drawable', size: 480 },
+  { dir: 'drawable-port-mdpi', size: 320 },
+  { dir: 'drawable-port-hdpi', size: 480 },
+  { dir: 'drawable-port-xhdpi', size: 720 },
+  { dir: 'drawable-port-xxhdpi', size: 1080 },
+  { dir: 'drawable-port-xxxhdpi', size: 1440 },
+  { dir: 'drawable-land-mdpi', size: 320 },
+  { dir: 'drawable-land-hdpi', size: 480 },
+  { dir: 'drawable-land-xhdpi', size: 720 },
+  { dir: 'drawable-land-xxhdpi', size: 1080 },
+  { dir: 'drawable-land-xxxhdpi', size: 1440 },
+]
+
+for (const { dir, size } of splashTargets) {
+  const outDir = path.join(root, 'android', 'app', 'src', 'main', 'res', dir)
+  fs.mkdirSync(outDir, { recursive: true })
+  const glyphSize = Math.round(size * 0.22)
+  const glyph = await sharp(glyphSvg)
+    .resize(glyphSize, glyphSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer()
+  await sharp({
+    create: { width: size, height: size, channels: 4, background: '#facc15' },
+  })
+    .composite([{ input: glyph, gravity: 'center' }])
+    .png()
+    .toFile(path.join(outDir, 'splash.png'))
+}
+
+console.log('Updated Android mipmap PNGs and splash screens from brand icon sources')
