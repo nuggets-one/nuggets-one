@@ -38,7 +38,15 @@ async function main() {
   await pngFromSvg(master, path.join(iconsDir, 'favicon-32.png'), 32)
   await pngFromSvg(master, path.join(publicDir, 'apple-touch-icon.png'), 180)
 
-  console.log('Brand icons written to public/icons and public/apple-touch-icon.png')
+  const ogSvg = path.join(publicDir, 'og-default.svg')
+  if (fs.existsSync(ogSvg)) {
+    const svg = fs.readFileSync(ogSvg)
+    await sharp(svg).resize(1200, 630).png().toFile(path.join(publicDir, 'og-default.png'))
+  }
+
+  console.log(
+    'Brand icons written to public/icons, public/apple-touch-icon.png, and public/og-default.png',
+  )
 }
 
 main().catch((err) => {
