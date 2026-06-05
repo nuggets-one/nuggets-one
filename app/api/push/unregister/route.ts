@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { unsubscribePushTokenFromAllTopics } from '@/lib/push/topic-sync'
 
 const unregisterSchema = z.object({
   token: z.string().trim().min(1).max(4096),
@@ -27,6 +28,8 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
+
+  await unsubscribePushTokenFromAllTopics(parsed.data.token)
 
   const { error } = await supabase
     .from('push_device_tokens')

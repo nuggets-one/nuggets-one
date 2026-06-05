@@ -1,14 +1,12 @@
 import 'server-only'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeCronSecret } from '@/lib/cron/authorize'
 import { drainPushOutbox } from '@/lib/notifications/push-outbox'
 
 // Vercel Cron schedule: `vercel.json` — hourly (`0 * * * *`) is ideal on Pro for digest windows.
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!authorizeCronSecret(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

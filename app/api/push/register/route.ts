@@ -7,8 +7,9 @@ import { upsertPushDeviceToken } from '@/lib/push/register-token'
 const registerSchema = z.object({
   install_id: z.string().uuid(),
   token: z.string().trim().min(1).max(4096),
-  platform: z.literal('android'),
+  platform: z.enum(['android', 'ios', 'web']).default('android'),
   app_version: z.string().trim().max(64).optional().nullable(),
+  timezone: z.string().trim().max(64).optional().nullable(),
   notifications_enabled: z.boolean().optional(),
 })
 
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
       token: parsed.data.token,
       platform: parsed.data.platform,
       appVersion: parsed.data.app_version,
+      timezone: parsed.data.timezone,
       notificationsEnabled: parsed.data.notifications_enabled,
       userId: user?.id ?? null,
     })
