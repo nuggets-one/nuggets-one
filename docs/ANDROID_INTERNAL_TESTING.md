@@ -18,13 +18,13 @@ Nuggets Android is a **Capacitor** shell: most UI loads from the hosted site (`C
 
 | Layer | Examples | How testers get it |
 |-------|----------|-------------------|
-| **Website + server** | Push token API, registration UI, notification send/cron, Supabase migrations | **Vercel production deploy** — force-close app and reopen (no Play upload) |
+| **Website + server** | Push token API, registration UI, topic enqueue, Supabase Edge Function sender, Supabase migrations | **Vercel production deploy + Supabase function deploy** — force-close app and reopen (no Play upload) |
 | **Native Android** | `@capacitor/push-notifications`, `google-services.json`, `POST_NOTIFICATIONS`, Capacitor sync into `android/` | **New `.aab` on Internal testing** — Play Store → Update |
 
 **For the current push rollout (as of version 1.1 / versionCode 2):**
 
 - **Play upload required** if the build testers installed was **before** push native setup (no Firebase plugin, no `google-services.json`, or `versionCode` 1 without push permissions).
-- **Vercel deploy required** for server push (`FCM_SERVICE_ACCOUNT_JSON`, cron routes, DB migrations). Run `npm run db:apply-push-migration` in the right Supabase project if not already applied.
+- **Server deploy required** for push (`FCM_SERVICE_ACCOUNT_JSON`, topic sender, DB migrations). Deploy Vercel for the app/API and deploy the Supabase Edge Function from `docs/PUSH_NOTIFICATIONS_ARCHITECTURE.md`. Run `npm run db:apply-push-migration` in the right Supabase project if not already applied.
 - **Both** are required for end-to-end push on devices that only have the old internal build.
 
 Quick check: In Play Console → Internal testing → latest release, if **version code** is still **1**, testers do **not** have native push — upload **version code 2** (1.1) from this repo.
@@ -49,7 +49,25 @@ Quick check: In Play Console → Internal testing → latest release, if **versi
 
 ### Build steps (engineer or scripted)
 
-From repo root:
+You do **not** need `npm run build` (Next.js). Capacitor uses a small `mobile-web` placeholder; the app loads the hosted site from `CAPACITOR_SERVER_URL`.
+
+**Java (CLI):** `gradlew` needs JDK 17+. PowerShell often has no `java` on PATH. `npm run cap:bundle:android` auto-detects Android Studio’s JBR. If that fails, set once per session:
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+```
+
+**Android SDK (CLI):** Gradle needs `sdk.dir` in `android/local.properties`. Open the project once in Android Studio (**File → Open → `android/`**) so Studio creates that file, or copy `sdk.dir` from another machine.
+
+From repo root (recommended — sync + bundle):
+
+```powershell
+$env:CAPACITOR_SERVER_URL='https://www.nuggets.one'
+npm run android:preflight
+npm run android:bundle
+```
+
+Or sync and bundle separately:
 
 ```powershell
 $env:CAPACITOR_SERVER_URL='https://www.nuggets.one'
@@ -57,9 +75,18 @@ npm run cap:sync
 npm run cap:bundle:android
 ```
 
-Output (unsigned path may vary): `android/app/build/outputs/bundle/release/app-release.aab`
+**Output:** `android/app/build/outputs/bundle/release/app-release.aab`
 
-If signing is configured in `android/app/build.gradle` via `keystore.properties`, the bundle is **release-signed** for Play.
+If `android/keystore.properties` exists, the bundle is **release-signed** for Play.
+
+**Verify the AAB exists:**
+
+```powershell
+Test-Path 'android\app\build\outputs\bundle\release\app-release.aab'
+Get-Item 'android\app\build\outputs\bundle\release\app-release.aab' | Select-Object FullName, Length, LastWriteTime
+```
+
+**Android Studio (no CLI):** **Build → Build Bundle(s) / APK(s) → Build Bundle(s)** — same output path. Run/Debug and **Build APK(s)** only create files under `outputs/apk/`, not the `.aab`.
 
 ### Upload in Google Play Console
 
@@ -94,9 +121,18 @@ No new opt-in link is needed per version if already enrolled.
 2. Open app → sign in if your flow requires auth for token registration.
 3. Accept **Notifications** when Android prompts (`POST_NOTIFICATIONS`).
 4. Optional: use in-app push debug panel if enabled in your build.
-5. Trigger a test publish/notification from admin or cron; confirm device receives it.
+5. Confirm server push health: `GET https://<deploy-url>/api/health/push` → `configured: true`, `status: ok`.
+6. Publish a test article (optional: check **Notify immediately** in admin).
+7. Trigger the topic sender if you do not want to wait for the scheduled Supabase cron:
 
-If the app is updated but push fails, check **Vercel env** (`FCM_SERVICE_ACCOUNT_JSON`) and **Supabase** push tables — not only the Play install.
+```bash
+curl -s -X POST https://<supabase-project>.supabase.co/functions/v1/push-topic-outbox \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+8. Confirm device receives the notification.
+
+If the app is updated but push fails, check **Supabase Edge Function secrets** (`FCM_SERVICE_ACCOUNT_JSON`, `CRON_SECRET`), **`/api/health/push`**, and **Supabase** push tables — not only the Play install. See [`PUSH_NOTIFICATIONS_ARCHITECTURE.md`](PUSH_NOTIFICATIONS_ARCHITECTURE.md) and [`NOTIFICATIONS_SLA.md`](NOTIFICATIONS_SLA.md) for delivery timing expectations.
 
 ---
 
@@ -114,8 +150,8 @@ Before each new Play upload: increment **`versionCode`** in `android/app/build.g
 ## Play Console upload checklist (you do this manually)
 
 - [ ] Run `npm run android:preflight` (must pass)
-- [ ] `npm run cap:sync` with `CAPACITOR_SERVER_URL=https://www.nuggets.one`
-- [ ] `npm run cap:bundle:android` (Java + Android SDK; `android/keystore.properties` for signing)
+- [ ] `npm run android:bundle` with `CAPACITOR_SERVER_URL=https://www.nuggets.one` (or `cap:sync` + `cap:bundle:android`)
+- [ ] Confirm `app-release.aab` exists; `android/keystore.properties` for signing
 - [ ] Play Console → **Internal testing** → **Create new release** → upload `android/app/build/outputs/bundle/release/app-release.aab`
 - [ ] Release notes + **Start rollout**
 - [ ] Email testers: [`ANDROID_TESTER_CHECKLIST.md`](ANDROID_TESTER_CHECKLIST.md)

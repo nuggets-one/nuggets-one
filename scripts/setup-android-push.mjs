@@ -9,7 +9,7 @@
  *
  * Then rebuild Android:
  *   npm run cap:sync
- *   cd android && gradlew assembleRelease
+ *   npm run android:bundle
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -89,4 +89,4 @@ if (args.serviceAccount && args.skipVercel) {
   console.log('Skipped Vercel env (--skip-vercel). Add FCM_SERVICE_ACCOUNT_JSON manually.')
 }
 
-console.log('\nNext: npm run cap:sync && cd android && gradlew assembleRelease')
+console.log('\nNext: npm run android:bundle')

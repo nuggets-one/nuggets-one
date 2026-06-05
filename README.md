@@ -80,7 +80,8 @@ npm run cap:open:android
 Testers do **not** auto-update; upload each new `.aab` to **Internal testing** with a higher `versionCode`. Push needs **both** a Play build (native Firebase/plugin) and a **Vercel** deploy (server/UI). Step-by-step: [`docs/ANDROID_INTERNAL_TESTING.md`](docs/ANDROID_INTERNAL_TESTING.md).
 
 - `npm run android:preflight` — checks `google-services.json`, version, manifest before upload
-- `npm run cap:bundle:android` — builds `app-release.aab` after `cap:sync` (requires `android/keystore.properties` for signing)
+- `npm run android:bundle` — `cap:sync` then builds `app-release.aab` (auto-detects Android Studio Java on Windows)
+- `npm run cap:bundle:android` — bundle only (run after `cap:sync`; requires `android/keystore.properties` for signing)
 
 ### Android WebView checks
 - OAuth callbacks must be configured for the hosted URL used by `CAPACITOR_SERVER_URL`.
@@ -113,4 +114,4 @@ The OG validator exits non-zero on failure and emits `::error` lines for CI cons
 ## Deployment Notes
 - Production hosting is Vercel.
 - The current repo is the greenfield Next.js app at the repository root; there is no legacy `server/` or `src/` app tree in this repo.
-- Above-cap notification fan-out currently follows the Vercel Hobby cron constraint documented in `docs/VERCEL_FREE_PLAN_FOLLOWUP.md`. Revisit that decision before launch if delayed notification drain is unacceptable.
+- Broadcast push delivery uses FCM topic messaging plus the Supabase Edge Function documented in `docs/PUSH_NOTIFICATIONS_ARCHITECTURE.md`, so it is not tied to Vercel Hobby cron cadence. Use `POST /api/admin/notifications/drain` only as a manual compatibility drain for old rows; monitor `GET /api/health/push` before declaring push live.

@@ -46,8 +46,8 @@ console.log(
 
 console.log('\nBuild:')
 console.log('  $env:CAPACITOR_SERVER_URL=\'https://www.nuggets.one\'')
-console.log('  npm run cap:sync')
-console.log('  npm run cap:bundle:android')
+console.log('  npm run android:bundle')
+console.log('  (or: npm run cap:sync && npm run cap:bundle:android)')
 console.log('\nUpload: Play Console → Testing → Internal testing → new release')
 console.log('Guide: docs/ANDROID_INTERNAL_TESTING.md\n')
 

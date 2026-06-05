@@ -43,7 +43,6 @@ export function AndroidPushRegistration() {
 
     let cancelled = false
     let removeListeners: (() => void) | undefined
-    let authPollTimer: ReturnType<typeof setInterval> | undefined
 
     async function ensureListeners() {
       if (listenersReadyRef.current) return
@@ -137,7 +136,7 @@ export function AndroidPushRegistration() {
 
     void setupPush()
 
-    authPollTimer = setInterval(() => {
+    const authPollTimer = setInterval(() => {
       void onAuthMaybeChanged()
     }, 5000)
 
