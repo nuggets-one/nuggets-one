@@ -79,6 +79,7 @@ Production base URL for all public assets: `https://nuggets.one`
 9. `public/og-default.png`
    - `1200x630` PNG
    - Final OG/Twitter fallback image (generated from `og-default.svg` via `npm run icons:generate`)
+   - After replacing this file, bump `OG_DEFAULT_ASSET_VERSION` in `lib/seo/site-url.ts` so WhatsApp/Facebook fetch the new image (they cache by URL)
 
 ### C) Source templates used to generate final files (this repo)
 
