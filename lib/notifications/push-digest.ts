@@ -2,8 +2,7 @@ import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getPushDigestIntervalHours } from '@/lib/queries/site-settings'
-import { getRecipients } from '@/lib/notifications/fan-out'
-import { insertOutboxRowsIgnoreDuplicates } from '@/lib/notifications/outbox-insert'
+import { enqueueDigestTopicPush } from '@/lib/notifications/push-topic-outbox'
 
 export type DigestStream = 'standard' | 'pulse'
 
@@ -80,32 +79,6 @@ export async function accumulateDigestBuffer({
   if (error) console.warn('[accumulateDigestBuffer] insert error:', error.message)
 }
 
-async function listGuestTokens(): Promise<string[]> {
-  const adminClient = getAdminClient()
-  const { data, error } = await adminClient
-    .from('push_device_tokens')
-    .select('token')
-    .is('user_id', null)
-    .eq('notifications_enabled', true)
-
-  if (error) throw new Error(`listGuestTokens: ${error.message}`)
-  return (data ?? []).map((row) => row.token as string)
-}
-
-async function listUserIdsWithTokens(userIds: string[]): Promise<string[]> {
-  if (userIds.length === 0) return []
-  const adminClient = getAdminClient()
-  const { data, error } = await adminClient
-    .from('push_device_tokens')
-    .select('user_id')
-    .in('user_id', userIds)
-    .eq('notifications_enabled', true)
-    .not('user_id', 'is', null)
-
-  if (error) throw new Error(`listUserIdsWithTokens: ${error.message}`)
-  return [...new Set((data ?? []).map((row) => row.user_id as string))]
-}
-
 export async function flushCompletedDigestBuffers(now = new Date()): Promise<number> {
   const adminClient = getAdminClient()
   const { data: buffers, error } = await adminClient.from('push_digest_buffer').select('*')
@@ -127,35 +100,7 @@ export async function flushCompletedDigestBuffers(now = new Date()): Promise<num
     const windowEnd = parseBatchKeyWindowEnd(batchKey, intervalHours)
     if (!windowEnd || now < windowEnd) continue
 
-    const body = digestBodyForCount(stream, count)
-    const guestTokens = await listGuestTokens()
-    const recipientIds = await getRecipients(stream)
-    const userIdsWithTokens = await listUserIdsWithTokens(recipientIds)
-
-    const guestRows = guestTokens.map((token) => ({
-      audience: 'guest' as const,
-      token,
-      user_id: null,
-      batch_key: batchKey,
-      body,
-      content_stream: stream,
-    }))
-
-    const userRows = userIdsWithTokens.map((userId) => ({
-      audience: 'user' as const,
-      token: null,
-      user_id: userId,
-      batch_key: batchKey,
-      body,
-      content_stream: stream,
-    }))
-
-    if (guestRows.length > 0) {
-      await insertOutboxRowsIgnoreDuplicates('push_digest_outbox', guestRows)
-    }
-    if (userRows.length > 0) {
-      await insertOutboxRowsIgnoreDuplicates('push_digest_outbox', userRows)
-    }
+    await enqueueDigestTopicPush({ batchKey, stream, count })
 
     await adminClient.from('push_digest_buffer').delete().eq('batch_key', batchKey)
     flushed += 1

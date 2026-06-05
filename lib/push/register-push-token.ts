@@ -8,10 +8,11 @@ export async function registerPushToken({
   notificationsEnabled = true,
 }: {
   token: string
-  platform?: 'android'
+  platform?: 'android' | 'ios' | 'web'
   notificationsEnabled?: boolean
 }): Promise<boolean> {
   const installId = await getOrCreateInstallId()
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const res = await fetch('/api/push/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -20,6 +21,7 @@ export async function registerPushToken({
       token,
       platform,
       app_version: '1.0',
+      timezone,
       notifications_enabled: notificationsEnabled,
     }),
   })

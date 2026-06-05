@@ -1,7 +1,34 @@
 import 'server-only'
 
 import { accumulateDigestBuffer, getDigestIntervalForPublish } from '@/lib/notifications/push-digest'
-import { enqueueImmediatePush } from '@/lib/notifications/push-immediate-outbox'
+import { enqueueImmediateTopicPush } from '@/lib/notifications/push-topic-outbox'
+import { getAdminClient } from '@/lib/supabase/admin'
+
+export const PUSH_IMMEDIATE_DAILY_CAP_PER_STREAM = 5 as const
+
+function utcDayStartIso(now = new Date()): string {
+  const y = now.getUTCFullYear()
+  const mo = String(now.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(now.getUTCDate()).padStart(2, '0')
+  return `${y}-${mo}-${d}T00:00:00.000Z`
+}
+
+async function hasImmediatePushCapacity(stream: 'standard' | 'pulse'): Promise<boolean> {
+  const adminClient = getAdminClient()
+  const { count, error } = await adminClient
+    .from('push_topic_outbox')
+    .select('id', { count: 'exact', head: true })
+    .eq('kind', 'immediate')
+    .eq('content_stream', stream)
+    .gte('created_at', utcDayStartIso())
+
+  if (error) {
+    console.warn('[push-publish] immediate cap check failed:', error.message)
+    return false
+  }
+
+  return (count ?? 0) < PUSH_IMMEDIATE_DAILY_CAP_PER_STREAM
+}
 
 export async function enqueuePushOnPublish({
   articleId,
@@ -18,7 +45,13 @@ export async function enqueuePushOnPublish({
 }): Promise<void> {
   try {
     if (pushNotifyImmediately) {
-      await enqueueImmediatePush({ articleId, stream, title, slug })
+      if (await hasImmediatePushCapacity(stream)) {
+        await enqueueImmediateTopicPush({ articleId, stream, title, slug })
+        return
+      }
+
+      const intervalHours = await getDigestIntervalForPublish()
+      await accumulateDigestBuffer({ stream, title, intervalHours })
       return
     }
 

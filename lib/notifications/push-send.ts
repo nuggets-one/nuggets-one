@@ -4,6 +4,7 @@ import * as admin from 'firebase-admin'
 import { listTokensForUsers, pruneInvalidTokens } from '@/lib/queries/push-tokens'
 import { streamPushLabel } from '@/lib/notifications/push-digest'
 import type { DigestOutboxRow, ImmediateOutboxRow } from '@/lib/notifications/push-immediate-outbox'
+import { getAdminClient } from '@/lib/supabase/admin'
 
 type ServiceAccountJson = {
   project_id: string
@@ -66,6 +67,80 @@ export type PushSendResult = {
   prunedTokens: number
 }
 
+export type PushTopicOutboxRow = {
+  id: string
+  topic: string
+  kind: 'immediate' | 'digest'
+  article_id: string | null
+  title: string
+  body: string
+  slug: string | null
+  batch_key: string | null
+  content_stream: 'standard' | 'pulse'
+  data: Record<string, unknown> | null
+  attempts: number
+}
+
+async function recordPushAttempt(input: {
+  outboxTable: 'push_topic_outbox' | 'push_immediate_outbox' | 'push_digest_outbox' | 'push_outbox'
+  outboxId: string
+  targetType: 'topic' | 'token'
+  target: string
+  status: 'sent' | 'failed'
+  providerMessageId?: string | null
+  errorCode?: string | null
+  errorMessage?: string | null
+}): Promise<void> {
+  const adminClient = getAdminClient()
+  const { error } = await adminClient.from('push_delivery_attempts').insert({
+    outbox_table: input.outboxTable,
+    outbox_id: input.outboxId,
+    target_type: input.targetType,
+    target: input.target,
+    status: input.status,
+    provider_message_id: input.providerMessageId ?? null,
+    error_code: input.errorCode ?? null,
+    error_message: input.errorMessage?.slice(0, 2000) ?? null,
+  })
+
+  if (error && error.code !== '42P01' && error.code !== 'PGRST205') {
+    console.warn('[push-send] delivery attempt insert failed:', error.message)
+  }
+}
+
+export async function syncTokenTopics({
+  token,
+  desiredTopics,
+  allTopics,
+}: {
+  token: string
+  desiredTopics: string[]
+  allTopics: string[]
+}): Promise<boolean> {
+  const app = ensureFirebaseAdmin()
+  if (!app) return false
+
+  const messaging = admin.messaging(app)
+  const desired = new Set(desiredTopics)
+  const uniqueAllTopics = [...new Set(allTopics)]
+
+  for (const topic of uniqueAllTopics) {
+    try {
+      if (desired.has(topic)) {
+        await messaging.subscribeToTopic(token, topic)
+      } else {
+        await messaging.unsubscribeFromTopic(token, topic)
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.warn('[push-send] topic sync failed:', { topic, message })
+      return false
+    }
+  }
+
+  return true
+}
+
 async function sendTokenMessages(
   messages: admin.messaging.TokenMessage[]
 ): Promise<PushSendResult> {
@@ -100,6 +175,87 @@ async function sendTokenMessages(
   }
 
   return { sent, failed, prunedTokens: invalidTokens.length }
+}
+
+export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<string | null> {
+  const app = ensureFirebaseAdmin()
+  if (!app) return null
+
+  const data: Record<string, string> = {
+    stream: row.content_stream,
+    kind: row.kind,
+  }
+
+  if (row.article_id) data.articleId = row.article_id
+  if (row.slug) data.slug = row.slug
+  if (row.batch_key) data.batchKey = row.batch_key
+
+  for (const [key, value] of Object.entries(row.data ?? {})) {
+    if (value != null && typeof value !== 'object') {
+      data[key] = String(value)
+    }
+  }
+
+  try {
+    const providerMessageId = await admin.messaging(app).send({
+      topic: row.topic,
+      notification: {
+        title: row.title,
+        body: row.body,
+      },
+      data,
+      android: {
+        priority: row.kind === 'immediate' ? 'high' : 'normal',
+        collapseKey: row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+      },
+      apns: {
+        headers: {
+          'apns-priority': row.kind === 'immediate' ? '10' : '5',
+          ...(row.kind === 'immediate' && row.article_id
+            ? { 'apns-collapse-id': `article:${row.article_id}` }
+            : {}),
+          ...(row.kind === 'digest' && row.batch_key
+            ? { 'apns-collapse-id': `digest:${row.batch_key}` }
+            : {}),
+        },
+        payload: {
+          aps: {
+            sound: row.kind === 'immediate' ? 'default' : undefined,
+          },
+        },
+      },
+      webpush: {
+        headers: {
+          TTL: row.kind === 'immediate' ? '86400' : '43200',
+          Urgency: row.kind === 'immediate' ? 'high' : 'normal',
+          Topic: row.kind === 'immediate' ? `article-${row.article_id}` : `digest-${row.batch_key}`,
+        },
+      },
+    })
+
+    await recordPushAttempt({
+      outboxTable: 'push_topic_outbox',
+      outboxId: row.id,
+      targetType: 'topic',
+      target: row.topic,
+      status: 'sent',
+      providerMessageId,
+    })
+
+    return providerMessageId
+  } catch (err) {
+    const error = err as { code?: string; message?: string }
+    await recordPushAttempt({
+      outboxTable: 'push_topic_outbox',
+      outboxId: row.id,
+      targetType: 'topic',
+      target: row.topic,
+      status: 'failed',
+      errorCode: error.code ?? null,
+      errorMessage: error.message ?? String(err),
+    })
+    throw err
+  }
 }
 
 /** @deprecated Legacy push_outbox drain — kept for in-flight rows. */

@@ -12,11 +12,17 @@ import {
 } from '@/lib/notifications/push-immediate-outbox'
 import {
   isPushSendConfigured,
+  sendPushForTopicRow,
   sendPushForDigestRows,
   sendPushForImmediateRows,
   sendPushForOutboxRows,
   type PushOutboxRow,
 } from '@/lib/notifications/push-send'
+import {
+  fetchUnsentTopicRows,
+  markTopicSent,
+  recordTopicFailure,
+} from '@/lib/notifications/push-topic-outbox'
 
 const DRAIN_BATCH = 100
 const MAX_DRAIN_ATTEMPTS = 15
@@ -68,6 +74,28 @@ async function drainImmediateOutbox(): Promise<{ drained: number; sent: number }
   }
 }
 
+async function drainTopicOutbox(): Promise<{ drained: number; sent: number }> {
+  const rows = await fetchUnsentTopicRows(DRAIN_BATCH)
+  if (rows.length === 0) return { drained: 0, sent: 0 }
+
+  let drained = 0
+  let sent = 0
+
+  for (const row of rows) {
+    try {
+      const providerMessageId = await sendPushForTopicRow(row)
+      if (providerMessageId) sent += 1
+      await markTopicSent(row.id)
+      drained += 1
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      await recordTopicFailure(row.id, message, row.attempts)
+    }
+  }
+
+  return { drained, sent }
+}
+
 async function drainDigestOutbox(): Promise<{ drained: number; sent: number }> {
   const rows = await fetchUnsentDigestRows(DRAIN_BATCH)
   if (rows.length === 0) return { drained: 0, sent: 0 }
@@ -87,6 +115,7 @@ async function drainDigestOutbox(): Promise<{ drained: number; sent: number }> {
 
 export async function drainPushOutbox(): Promise<{
   digestBuffersFlushed: number
+  topic: { drained: number; sent: number }
   immediate: { drained: number; sent: number }
   digest: { drained: number; sent: number }
   legacy: { drained: number; sent: number }
@@ -94,6 +123,7 @@ export async function drainPushOutbox(): Promise<{
   if (!isPushSendConfigured()) {
     return {
       digestBuffersFlushed: 0,
+      topic: { drained: 0, sent: 0 },
       immediate: { drained: 0, sent: 0 },
       digest: { drained: 0, sent: 0 },
       legacy: { drained: 0, sent: 0 },
@@ -101,9 +131,10 @@ export async function drainPushOutbox(): Promise<{
   }
 
   const digestBuffersFlushed = await flushCompletedDigestBuffers()
+  const topic = await drainTopicOutbox()
   const immediate = await drainImmediateOutbox()
   const digest = await drainDigestOutbox()
   const legacy = await drainLegacyPushOutbox()
 
-  return { digestBuffersFlushed, immediate, digest, legacy }
+  return { digestBuffersFlushed, topic, immediate, digest, legacy }
 }

@@ -1,6 +1,13 @@
 import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
+import {
+  buildDailyDigestBatchKey,
+  digestTitleForOverflow,
+  parseOverflowCount,
+  partitionRecipientsByDailyCap,
+  utcDayStartIso,
+} from '@/lib/notifications/daily-cap'
 import { enqueuePushOnPublish } from '@/lib/notifications/push-publish'
 import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
 
@@ -121,10 +128,111 @@ export async function getRecipients(
   return getRecipientsFallback(stream)
 }
 
+const UPSERT_CHUNK = 500
+
+async function getTodaySingleCountsByUser(
+  userIds: string[],
+  stream: 'standard' | 'pulse',
+  dayStart: string
+): Promise<Map<string, number>> {
+  const adminClient = getAdminClient()
+  const counts = new Map<string, number>()
+
+  for (let i = 0; i < userIds.length; i += UPSERT_CHUNK) {
+    const chunk = userIds.slice(i, i + UPSERT_CHUNK)
+    const { data, error } = await adminClient
+      .from('user_notifications')
+      .select('user_id')
+      .in('user_id', chunk)
+      .eq('kind', 'single')
+      .eq('content_stream', stream)
+      .gte('created_at', dayStart)
+
+    if (error) throw new Error(`getTodaySingleCountsByUser: ${error.message}`)
+
+    for (const row of data ?? []) {
+      const uid = row.user_id as string
+      counts.set(uid, (counts.get(uid) ?? 0) + 1)
+    }
+  }
+
+  return counts
+}
+
+async function upsertDigestOverflowRows({
+  userIds,
+  stream,
+  batchKey,
+}: {
+  userIds: string[]
+  stream: 'standard' | 'pulse'
+  batchKey: string
+}): Promise<number> {
+  if (userIds.length === 0) return 0
+
+  const adminClient = getAdminClient()
+  let affected = 0
+
+  for (let i = 0; i < userIds.length; i += UPSERT_CHUNK) {
+    const chunk = userIds.slice(i, i + UPSERT_CHUNK)
+
+    const { data: existing, error: fetchError } = await adminClient
+      .from('user_notifications')
+      .select('user_id, body, title')
+      .in('user_id', chunk)
+      .eq('batch_key', batchKey)
+      .eq('kind', 'digest')
+
+    if (fetchError) {
+      throw new Error(`upsertDigestOverflowRows fetch: ${fetchError.message}`)
+    }
+
+    const existingByUser = new Map(
+      (existing ?? []).map((row) => [row.user_id as string, row])
+    )
+
+    const rows = chunk.map((userId) => {
+      const prev = existingByUser.get(userId)
+      const nextCount = parseOverflowCount(
+        (prev?.body as string | null) ?? null,
+        (prev?.title as string | null) ?? null
+      ) + 1
+
+      return {
+        user_id: userId,
+        article_id: null,
+        kind: 'digest' as const,
+        content_stream: stream,
+        title: digestTitleForOverflow(stream, nextCount),
+        body: String(nextCount),
+        batch_key: batchKey,
+        is_read: false,
+      }
+    })
+
+    const { error, count } = await adminClient.from('user_notifications').upsert(rows, {
+      onConflict: 'user_id,batch_key',
+      count: 'exact',
+    })
+
+    if (error) {
+      console.warn('[upsertDigestOverflowRows] upsert error:', {
+        code: error.code,
+        message: error.message,
+      })
+      continue
+    }
+
+    affected += count ?? rows.length
+  }
+
+  return affected
+}
+
 /**
- * Upsert a single-article notification for each recipient.
- * Idempotent via ux_user_notifications_user_article_single index.
- * Chunked at 500 rows to stay within Supabase payload limits.
+ * Upsert in-app notifications per recipient.
+ * Blueprint §6.6: up to DAILY_SINGLE_CAP singles per UTC day; overflow rolls into one digest row.
+ * Singles are idempotent via ux_user_notifications_user_article_single.
  */
 export async function upsertNotifications({
   recipientIds,
@@ -140,35 +248,58 @@ export async function upsertNotifications({
   const adminClient = getAdminClient()
   if (recipientIds.length === 0) return 0
 
-  const rows = buildSingleNotificationRows({ recipientIds, articleId, stream, title })
+  const uniqueRecipients = [...new Set(recipientIds)]
+  const dayStart = utcDayStartIso()
+  const singleCounts = await getTodaySingleCountsByUser(uniqueRecipients, stream, dayStart)
+  const { singleRecipients, overflowRecipients } = partitionRecipientsByDailyCap(
+    uniqueRecipients,
+    singleCounts
+  )
 
-  const CHUNK = 500
   let inserted = 0
 
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const chunk = rows.slice(i, i + CHUNK)
-    const { error, count } = await adminClient
-      .from('user_notifications')
-      .upsert(chunk, {
-        onConflict: 'user_id,article_id',
-        ignoreDuplicates: true,
-        count: 'exact',
-      })
+  if (singleRecipients.length > 0) {
+    const rows = buildSingleNotificationRows({
+      recipientIds: singleRecipients,
+      articleId,
+      stream,
+      title,
+    })
 
-    if (error?.code === '42P10') {
-      inserted += await insertChunkRows(chunk)
-      continue
-    }
+    for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
+      const chunk = rows.slice(i, i + UPSERT_CHUNK)
+      const { error, count } = await adminClient
+        .from('user_notifications')
+        .upsert(chunk, {
+          onConflict: 'user_id,article_id',
+          ignoreDuplicates: true,
+          count: 'exact',
+        })
 
-    if (error) {
-      console.warn('[upsertNotifications] upsert failed, falling back to row inserts:', {
-        code: error.code,
-        message: error.message,
-      })
-      inserted += await insertChunkRows(chunk)
-      continue
+      if (error?.code === '42P10') {
+        inserted += await insertChunkRows(chunk)
+        continue
+      }
+
+      if (error) {
+        console.warn('[upsertNotifications] upsert failed, falling back to row inserts:', {
+          code: error.code,
+          message: error.message,
+        })
+        inserted += await insertChunkRows(chunk)
+        continue
+      }
+      inserted += count ?? 0
     }
-    inserted += count ?? 0
+  }
+
+  if (overflowRecipients.length > 0) {
+    const batchKey = buildDailyDigestBatchKey(stream)
+    inserted += await upsertDigestOverflowRows({
+      userIds: overflowRecipients,
+      stream,
+      batchKey,
+    })
   }
 
   return inserted
