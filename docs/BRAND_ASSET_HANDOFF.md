@@ -82,9 +82,12 @@ Production base URL for all public assets: `https://nuggets.one`
 
 ### C) Source templates used to generate final files (this repo)
 
+- `scripts/brand-icons/n-glyph.svg` — N-only path layer (canonical geometry in `glyph-paths.mjs`)
 - `scripts/brand-icons/icon-maskable.svg`
+- `scripts/brand-icons/notification-small.svg` — white N for Android `ic_stat_notification`
 - `scripts/brand-icons/badge.svg`
 - `scripts/generate-brand-icons.mjs` (run **`npm run icons:generate`** — requires devDependency **`sharp`**)
+- `scripts/capacitor/generate-android-icons.mjs` (run **`npm run icons:android`** after PNG generate; or **`npm run icons:all`**)
 
 ## 4) Usage Map (Where each logo/image is used)
 
