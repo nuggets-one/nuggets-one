@@ -74,11 +74,11 @@ Production base URL for all public assets: `https://nuggets.one`
 8. `public/og-default.svg`
    - Editable source
    - `1200x630` SVG
-   - Dark gradient background + subtle grid + "Nuggets" headline + support line
+   - Editorial light background (`#FAFAF9`) + subtle yellow radial glow + centered brand lockup (yellow **N** tile, "Nuggets" wordmark, "The Knowledge App" subline)
 
 9. `public/og-default.png`
    - `1200x630` PNG
-   - Final OG/Twitter fallback image
+   - Final OG/Twitter fallback image (generated from `og-default.svg` via `npm run icons:generate`)
 
 ### C) Source templates used to generate final files (this repo)
 
@@ -163,6 +163,6 @@ Deterministic PNG exports from the SVG sources:
    - `public/icon.svg` (master mark)
    - `scripts/brand-icons/icon-maskable.svg` (glyph inset for maskable safe area)
    - `scripts/brand-icons/badge.svg` (white **N** on transparent for notification badge)
-2. Run **`npm run icons:generate`** (writes `public/icons/*` and `public/apple-touch-icon.png`).
-3. Commit updated PNGs when the mark changes.
-4. Smoke test: favicon, PWA install icons, OG fallback (`public/og-default.png` is separate from this script).
+2. Run **`npm run icons:generate`** (writes `public/icons/*`, `public/apple-touch-icon.png`, and `public/og-default.png`).
+3. Commit updated PNGs when the mark or OG asset changes.
+4. Smoke test: favicon, PWA install icons, OG fallback (`public/og-default.png`).
