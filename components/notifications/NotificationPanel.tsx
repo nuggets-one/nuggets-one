@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   markNotificationReadAction,
+  markBatchNotificationsReadAction,
   markAllReadAction,
   lazyCreatePreferencesAction,
   updatePreferencesAction,
@@ -99,6 +100,10 @@ function NotificationRowItem({
   })
 
   const streamLabel = row.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+  const displayTitle =
+    row.kind === 'digest'
+      ? (row.title ?? 'New updates')
+      : (row.title ?? 'New article')
 
   return (
     <button
@@ -119,7 +124,7 @@ function NotificationRowItem({
           />
         )}
         <span className={`text-sm text-primary leading-snug ${row.is_read ? '' : 'font-medium'}`}>
-          {row.title ?? 'New article'}
+          {displayTitle}
         </span>
       </span>
       <span className="text-xs text-muted pl-4">
@@ -413,13 +418,24 @@ export function NotificationPanel({
 
   const handleRowClick = useCallback(
     async (row: NotificationWithSlug) => {
-      // Mark read optimistically
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === row.id ? { ...n, is_read: true } : n))
-      )
-      setUnreadCount((c) => Math.max(0, c - (row.is_read ? 0 : 1)))
-
-      await markNotificationReadAction(row.id)
+      if (row.kind === 'digest' && row.batch_key) {
+        setNotifications((prev) => {
+          const batchUnread = prev.filter(
+            (n) => n.batch_key === row.batch_key && !n.is_read
+          ).length
+          setUnreadCount((c) => Math.max(0, c - batchUnread))
+          return prev.map((n) =>
+            n.batch_key === row.batch_key ? { ...n, is_read: true } : n
+          )
+        })
+        await markBatchNotificationsReadAction(row.batch_key)
+      } else {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === row.id ? { ...n, is_read: true } : n))
+        )
+        setUnreadCount((c) => Math.max(0, c - (row.is_read ? 0 : 1)))
+        await markNotificationReadAction(row.id)
+      }
 
       if (row.kind === 'single' && row.article_id) {
         const slug = row.article?.slug

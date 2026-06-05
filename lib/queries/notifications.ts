@@ -7,6 +7,7 @@ export type NotificationRow = {
   kind: 'single' | 'digest'
   content_stream: 'standard' | 'pulse' | null
   title: string | null
+  body: string | null
   is_read: boolean
   read_at: string | null
   created_at: string
@@ -19,7 +20,7 @@ export async function getMyNotifications(limit = 15): Promise<NotificationRow[]>
   const { data, error } = await supabase
     .from('user_notifications')
     .select(
-      'id, article_id, kind, content_stream, title, ' +
+      'id, article_id, kind, content_stream, title, body, ' +
       'is_read, read_at, created_at, batch_key'
     )
     .order('created_at', { ascending: false })

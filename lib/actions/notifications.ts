@@ -1,6 +1,10 @@
 'use server'
 
+import 'server-only'
+
 import { createClient } from '@/lib/supabase/server'
+import { syncPushTopicsForUser } from '@/lib/push/topic-sync'
+import { getAdminClient } from '@/lib/supabase/admin'
 
 export async function markNotificationReadAction(
   notificationId: string
@@ -14,6 +18,20 @@ export async function markNotificationReadAction(
     .update({ is_read: true, read_at: new Date().toISOString() })
     .eq('id', notificationId)
     .eq('user_id', user.id)
+}
+
+/** Blueprint §6.6b — mark all rows sharing a digest batch_key read on summary tap. */
+export async function markBatchNotificationsReadAction(batchKey: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !batchKey) return
+
+  await supabase
+    .from('user_notifications')
+    .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .eq('batch_key', batchKey)
+    .eq('is_read', false)
 }
 
 export async function markAllReadAction(): Promise<void> {
@@ -55,10 +73,28 @@ export async function updatePreferencesAction(prefs: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  await supabase
+  const { error } = await supabase
     .from('notification_preferences')
     .upsert(
       { user_id: user.id, ...prefs, updated_at: new Date().toISOString() },
       { onConflict: 'user_id' }
     )
+
+  if (error) {
+    console.warn('[notifications] preference update failed:', error.message)
+    return
+  }
+
+  const adminClient = getAdminClient()
+  const { data } = await adminClient
+    .from('notification_preferences')
+    .select('mute_all, stream_standard, stream_pulse')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  await syncPushTopicsForUser(user.id, {
+    mute_all: data?.mute_all === true,
+    stream_standard: data?.stream_standard !== false,
+    stream_pulse: data?.stream_pulse !== false,
+  })
 }

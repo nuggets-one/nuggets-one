@@ -16,7 +16,7 @@ export async function GET() {
     supabase
       .from('user_notifications')
       .select(
-        'id, article_id, kind, content_stream, title, ' +
+        'id, article_id, kind, content_stream, title, body, ' +
         'is_read, read_at, created_at, batch_key, ' +
         'article:articles(slug)'
       )
