@@ -13,7 +13,7 @@ import type { LegalFooterLink } from '@/lib/queries/legal-pages'
 export function Header({ legalLinks }: { legalLinks: LegalFooterLink[] }) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-header backdrop-blur-sm">
-      <div className="mx-auto flex h-14 max-w-[90rem] items-center gap-3 px-4 lg:px-6">
+      <div className="relative mx-auto flex h-14 max-w-[90rem] items-center gap-3 px-4 lg:px-6">
         <div className="flex min-w-0 shrink-0 items-center gap-2">
           <Link
             href="/"
@@ -56,10 +56,16 @@ export function Header({ legalLinks }: { legalLinks: LegalFooterLink[] }) {
         <div className="min-w-0 flex-1 px-2 sm:px-4 lg:px-6">
           <Suspense
             fallback={
-              <div className="mx-auto h-9 w-full max-w-md rounded-lg border border-border bg-surface-raised" />
+              <>
+                <div
+                  className="ml-auto size-11 animate-pulse rounded-lg bg-surface-raised md:hidden"
+                  aria-hidden="true"
+                />
+                <div className="mx-auto hidden h-9 w-full max-w-md rounded-lg border border-border bg-surface-raised md:block lg:max-w-lg" />
+              </>
             }
           >
-            <div className="mx-auto w-full max-w-md lg:max-w-lg">
+            <div className="relative mx-auto flex w-full justify-end md:max-w-md md:justify-center lg:max-w-lg">
               <HeaderSearch />
             </div>
           </Suspense>
