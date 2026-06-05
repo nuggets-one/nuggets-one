@@ -171,9 +171,19 @@ async function fetchRows(supabaseUrl: string, serviceRoleKey: string): Promise<T
 }
 
 function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
+  const imageUrl =
+    typeof row.data?.imageUrl === 'string' && row.data.imageUrl.trim()
+      ? row.data.imageUrl.trim()
+      : undefined
+  const groupKey =
+    typeof row.data?.groupKey === 'string' && row.data.groupKey.trim()
+      ? row.data.groupKey.trim()
+      : `nuggets-${row.content_stream}`
+
   const data: Record<string, string> = {
     stream: row.content_stream,
     kind: row.kind,
+    groupKey,
   }
 
   if (row.article_id) data.articleId = row.article_id
@@ -187,12 +197,22 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
   return {
     message: {
       topic: row.topic,
-      notification: { title: row.title, body: row.body },
+      notification: {
+        title: row.title,
+        ...(row.body ? { body: row.body } : {}),
+        ...(imageUrl ? { image: imageUrl } : {}),
+      },
       data,
       android: {
         priority: row.kind === 'immediate' ? 'high' : 'normal',
         collapse_key:
           row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+        notification: {
+          tag: row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+          icon: 'ic_stat_notification',
+          color: '#facc15',
+          ...(imageUrl ? { image: imageUrl } : {}),
+        },
       },
       apns: {
         headers: {
@@ -200,6 +220,12 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
           'apns-collapse-id':
             row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
         },
+        payload: {
+          aps: {
+            ...(imageUrl ? { 'mutable-content': 1 } : {}),
+          },
+        },
+        ...(imageUrl ? { fcm_options: { image: imageUrl } } : {}),
       },
       webpush: {
         headers: {
@@ -207,6 +233,7 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
           Urgency: row.kind === 'immediate' ? 'high' : 'normal',
           Topic: row.kind === 'immediate' ? `article-${row.article_id}` : `digest-${row.batch_key}`,
         },
+        ...(imageUrl ? { notification: { image: imageUrl } } : {}),
       },
     },
   }

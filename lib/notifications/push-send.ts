@@ -14,6 +14,12 @@ type ServiceAccountJson = {
 
 let initialized = false
 
+/** Android small notification icon + tint (must match res/drawable + res/values). */
+const ANDROID_PUSH_NOTIFICATION = {
+  icon: 'ic_stat_notification',
+  color: '#facc15',
+} as const
+
 function parseServiceAccountJson(): ServiceAccountJson | null {
   const raw = process.env.FCM_SERVICE_ACCOUNT_JSON?.trim()
   if (!raw) return null
@@ -181,9 +187,19 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
   const app = ensureFirebaseAdmin()
   if (!app) return null
 
+  const imageUrl =
+    typeof row.data?.imageUrl === 'string' && row.data.imageUrl.trim()
+      ? row.data.imageUrl.trim()
+      : undefined
+  const groupKey =
+    typeof row.data?.groupKey === 'string' && row.data.groupKey.trim()
+      ? row.data.groupKey.trim()
+      : `nuggets-${row.content_stream}`
+
   const data: Record<string, string> = {
     stream: row.content_stream,
     kind: row.kind,
+    groupKey,
   }
 
   if (row.article_id) data.articleId = row.article_id
@@ -201,12 +217,19 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
       topic: row.topic,
       notification: {
         title: row.title,
-        body: row.body,
+        ...(row.body ? { body: row.body } : {}),
+        ...(imageUrl ? { imageUrl } : {}),
       },
       data,
       android: {
         priority: row.kind === 'immediate' ? 'high' : 'normal',
         collapseKey: row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+        notification: {
+          tag: row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+          icon: ANDROID_PUSH_NOTIFICATION.icon,
+          color: ANDROID_PUSH_NOTIFICATION.color,
+          ...(imageUrl ? { imageUrl } : {}),
+        },
       },
       apns: {
         headers: {
@@ -221,8 +244,10 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
         payload: {
           aps: {
             sound: row.kind === 'immediate' ? 'default' : undefined,
+            ...(imageUrl ? { 'mutable-content': 1 } : {}),
           },
         },
+        ...(imageUrl ? { fcmOptions: { imageUrl } } : {}),
       },
       webpush: {
         headers: {
@@ -230,6 +255,7 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
           Urgency: row.kind === 'immediate' ? 'high' : 'normal',
           Topic: row.kind === 'immediate' ? `article-${row.article_id}` : `digest-${row.batch_key}`,
         },
+        ...(imageUrl ? { notification: { image: imageUrl } } : {}),
       },
     })
 
@@ -278,7 +304,10 @@ export async function sendPushForOutboxRows(rows: PushOutboxRow[]): Promise<Push
           articleId: row.article_id,
           slug: row.slug,
         },
-        android: { priority: 'high' },
+        android: {
+          priority: 'high',
+          notification: ANDROID_PUSH_NOTIFICATION,
+        },
       })
     }
   }
@@ -301,7 +330,10 @@ export async function sendPushForImmediateRows(rows: ImmediateOutboxRow[]): Prom
           body: row.title,
         },
         data: { articleId: row.article_id, slug: row.slug },
-        android: { priority: 'high' },
+        android: {
+          priority: 'high',
+          notification: ANDROID_PUSH_NOTIFICATION,
+        },
       })
       continue
     }
@@ -315,7 +347,10 @@ export async function sendPushForImmediateRows(rows: ImmediateOutboxRow[]): Prom
             body: row.title,
           },
           data: { articleId: row.article_id, slug: row.slug },
-          android: { priority: 'high' },
+          android: {
+            priority: 'high',
+            notification: ANDROID_PUSH_NOTIFICATION,
+          },
         })
       }
     }
@@ -337,7 +372,10 @@ export async function sendPushForDigestRows(rows: DigestOutboxRow[]): Promise<Pu
         token: row.token,
         notification: { title, body: row.body },
         data: { stream: row.content_stream },
-        android: { priority: 'high' },
+        android: {
+          priority: 'high',
+          notification: ANDROID_PUSH_NOTIFICATION,
+        },
       })
       continue
     }
@@ -348,7 +386,10 @@ export async function sendPushForDigestRows(rows: DigestOutboxRow[]): Promise<Pu
           token,
           notification: { title, body: row.body },
           data: { stream: row.content_stream },
-          android: { priority: 'high' },
+          android: {
+            priority: 'high',
+            notification: ANDROID_PUSH_NOTIFICATION,
+          },
         })
       }
     }

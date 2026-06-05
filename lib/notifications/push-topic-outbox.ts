@@ -12,23 +12,31 @@ export async function enqueueImmediateTopicPush({
   stream,
   title,
   slug,
+  imageUrl,
 }: {
   articleId: string
   stream: PushStream
   title: string
   slug: string
+  imageUrl?: string | null
 }): Promise<number> {
   const adminClient = getAdminClient()
   const { error } = await adminClient.from('push_topic_outbox').insert({
     topic: topicForStream(stream),
     kind: 'immediate',
     article_id: articleId,
-    title: stream === 'pulse' ? 'Market Pulse' : 'New Nugget',
+    title: streamPushLabel(stream),
     body: title,
     slug,
     batch_key: null,
     content_stream: stream,
-    data: { articleId, slug, stream },
+    data: {
+      articleId,
+      slug,
+      stream,
+      groupKey: `nuggets-${stream}`,
+      ...(imageUrl ? { imageUrl } : {}),
+    },
   })
 
   if (error?.code === '23505') return 0

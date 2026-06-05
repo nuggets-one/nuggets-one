@@ -35,18 +35,20 @@ export async function enqueuePushOnPublish({
   stream,
   title,
   slug,
+  imageUrl,
   pushNotifyImmediately,
 }: {
   articleId: string
   stream: 'standard' | 'pulse'
   title: string
   slug: string
+  imageUrl?: string | null
   pushNotifyImmediately: boolean
 }): Promise<void> {
   try {
     if (pushNotifyImmediately) {
       if (await hasImmediatePushCapacity(stream)) {
-        await enqueueImmediateTopicPush({ articleId, stream, title, slug })
+        await enqueueImmediateTopicPush({ articleId, stream, title, slug, imageUrl })
         return
       }
 

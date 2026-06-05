@@ -310,12 +310,14 @@ export async function fanOutOnPublish({
   stream,
   title,
   slug,
+  imageUrl,
   pushNotifyImmediately = false,
 }: {
   articleId: string
   stream: 'standard' | 'pulse'
   title: string
   slug: string
+  imageUrl?: string | null
   pushNotifyImmediately?: boolean
 }): Promise<FanOutResult> {
   const adminClient = getAdminClient()
@@ -328,6 +330,7 @@ export async function fanOutOnPublish({
       stream,
       title,
       slug,
+      imageUrl,
       pushNotifyImmediately,
     })
 

@@ -332,7 +332,7 @@ export async function publishArticleAction(formData: FormData) {
 
   const { data: existing } = await db
     .from('articles')
-    .select('published_at, content_stream, title, content_markdown, source_url, excerpt')
+    .select('published_at, content_stream, title, content_markdown, source_url, excerpt, hero_thumb_url')
     .eq('id', id)
     .single()
 
@@ -389,6 +389,7 @@ export async function publishArticleAction(formData: FormData) {
         stream: publishPayload.content_stream as 'standard' | 'pulse',
         title: publishPayload.title,
         slug,
+        imageUrl: existing.hero_thumb_url as string | null,
         pushNotifyImmediately,
       })
     } catch (fanOutError) {
