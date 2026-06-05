@@ -29,6 +29,8 @@
     "backfill:missing-previews": "npm --prefix scripts/migrate run backfill:missing-previews",
     "backfill:cloudinary-heroes": "npm --prefix scripts/migrate run backfill:cloudinary-heroes",
     "icons:generate": "node scripts/generate-brand-icons.mjs",
+    "icons:android": "node scripts/capacitor/generate-android-icons.mjs",
+    "icons:all": "npm run icons:generate && npm run icons:android",
     "validate:og": "node scripts/validate-og.mjs",
     "check:banned-imports": "node scripts/check-banned-imports.mjs",
     "check:bundle-budget": "node scripts/check-bundle-budget.mjs",
