@@ -3,10 +3,6 @@
     {
       "path": "/api/cron/notifications-fanout",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/push-outbox",
-      "schedule": "0 0 * * *"
     }
   ]
 }

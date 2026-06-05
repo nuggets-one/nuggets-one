@@ -40,9 +40,9 @@ This document captures the current production trade-offs when launching on Verce
 
 ### Option A: Keep Vercel Hobby
 - Keep daily cron.
-- Add an admin/manual fan-out drain trigger for urgent sends.
-- Monitor queue age and publish-to-notification latency.
-- Explicitly accept that large-recipient publishes may notify users much later than the publish event.
+- **Manual drain is implemented:** `POST /api/admin/notifications/drain` (Bearer `CRON_SECRET` or admin session). Use after urgent publishes — see [`NOTIFICATIONS_SLA.md`](NOTIFICATIONS_SLA.md).
+- Monitor queue via `GET /api/health/push` and the admin layout banner when FCM is misconfigured or backlog is high.
+- Explicitly accept that large-recipient publishes may notify users much later than the publish event unless drain is called.
 
 ### Option B: Upgrade Vercel plan
 - Restore frequent cron schedule (e.g., every minute) after plan change.
@@ -56,8 +56,9 @@ This document captures the current production trade-offs when launching on Verce
   - homepage/detail runtime check
 
 ## Launch decision checklist
-- [ ] Decide whether once-daily above-cap notification drain is acceptable for launch.
-- [ ] If not acceptable, upgrade plan or add a manual urgent-drain operator path before launch.
+- [ ] Decide whether once-daily above-cap notification drain is acceptable for launch (manual drain exists for urgent sends).
+- [ ] If not acceptable for routine push, upgrade plan or call manual drain after every time-sensitive publish.
+- [ ] `GET /api/health/push` returns `configured: true` and `status: ok` on production.
 - [ ] Run the `Release Readiness` workflow against a real deploy candidate.
 - [ ] Re-check `vercel.json` and `next.config.ts` before launch to confirm docs still match config.
 

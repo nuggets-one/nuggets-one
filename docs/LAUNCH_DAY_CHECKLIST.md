@@ -83,13 +83,35 @@ Set/verify:
 - `NEXT_PUBLIC_GA_ID`
 - `NEXT_PUBLIC_SITE_URL=https://nuggets.one`
 - `CRON_SECRET`
+- `FCM_SERVICE_ACCOUNT_JSON` (required for Android push; base64 or raw JSON)
 
 Notes:
 
 - `CRON_SECRET` must match what cron-protected route expects.
 - Keep `NEXT_PUBLIC_GA_ID` empty in local; set real ID in production.
-- If deploying on Vercel Hobby/free plan, review `docs/VERCEL_FREE_PLAN_FOLLOWUP.md` before launch decisions.
-- Confirm the team has explicitly accepted the current once-daily above-cap fan-out drain, or upgrade/add a manual urgent-drain path before launch.
+- If deploying on Vercel Hobby/free plan, review `docs/VERCEL_FREE_PLAN_FOLLOWUP.md` and `docs/NOTIFICATIONS_SLA.md` before launch decisions.
+- Confirm the team has explicitly accepted the current once-daily cron SLA, or uses manual drain / Pro for time-sensitive push.
+
+### Push health gate (launch-blocking if Android push is live)
+
+Against production deploy URL:
+
+```bash
+curl -s https://<deploy-url>/api/health/push
+```
+
+Expected: `"configured": true`, `"status": "ok"`.
+
+If `misconfigured`, fix `FCM_SERVICE_ACCOUNT_JSON` before telling testers push is ready.
+
+Manual drain smoke test (optional but recommended):
+
+```bash
+curl -s -X POST https://<deploy-url>/api/admin/notifications/drain \
+  -H "Authorization: Bearer $CRON_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"targets":["push"]}'
+```
 
 ## 5) OG validation (preview/prod candidate)
 
