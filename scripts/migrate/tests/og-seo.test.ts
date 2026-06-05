@@ -23,7 +23,7 @@ test('getSiteUrl strips trailing slash', () => {
   process.env.NEXT_PUBLIC_SITE_URL = 'https://example.com/'
   try {
     assert.equal(getSiteUrl(), 'https://example.com')
-    assert.equal(getDefaultOgImageUrl(), 'https://example.com/og-default.png')
+    assert.equal(getDefaultOgImageUrl(), 'https://example.com/og-default.png?v=2')
   } finally {
     if (prev === undefined) delete process.env.NEXT_PUBLIC_SITE_URL
     else process.env.NEXT_PUBLIC_SITE_URL = prev
@@ -34,7 +34,7 @@ test('resolveOgImageUrl falls back when hero is missing', () => {
   const prev = process.env.NEXT_PUBLIC_SITE_URL
   process.env.NEXT_PUBLIC_SITE_URL = 'https://nuggets.one'
   try {
-    assert.equal(resolveOgImageUrl(null), 'https://nuggets.one/og-default.png')
+    assert.equal(resolveOgImageUrl(null), 'https://nuggets.one/og-default.png?v=2')
   } finally {
     if (prev === undefined) delete process.env.NEXT_PUBLIC_SITE_URL
     else process.env.NEXT_PUBLIC_SITE_URL = prev
