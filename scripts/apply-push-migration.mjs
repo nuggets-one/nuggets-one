@@ -47,6 +47,12 @@ const MIGRATIONS = [
     file: 'supabase/migrations/20240001000021_push_guest_tokens.sql',
     verifyTable: 'push_digest_buffer',
   },
+  {
+    version: '20240001000022',
+    name: 'push_topic_architecture',
+    file: 'supabase/migrations/20240001000022_push_topic_architecture.sql',
+    verifyTable: 'push_topic_outbox',
+  },
 ]
 
 const client = new pg.Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } })
@@ -96,7 +102,9 @@ try {
       to_regclass('public.push_outbox') AS outbox,
       to_regclass('public.push_digest_buffer') AS digest_buffer,
       to_regclass('public.push_digest_outbox') AS digest_outbox,
-      to_regclass('public.push_immediate_outbox') AS immediate_outbox
+      to_regclass('public.push_immediate_outbox') AS immediate_outbox,
+      to_regclass('public.push_topic_outbox') AS topic_outbox,
+      to_regclass('public.push_delivery_attempts') AS delivery_attempts
   `)
   console.log('Verify:', verify.rows[0])
 } finally {
