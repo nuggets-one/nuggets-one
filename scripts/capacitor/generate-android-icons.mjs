@@ -17,12 +17,22 @@ const brandDir = path.join(root, 'scripts', 'brand-icons')
 const fullIcon = path.join(root, 'public', 'icons', 'icon-512.png')
 const glyphSvg = path.join(brandDir, 'n-glyph.svg')
 
-const sizes = {
+/** Legacy launcher icon (pre–API 26). */
+const launcherSizes = {
   mdpi: 48,
   hdpi: 72,
   xhdpi: 96,
   xxhdpi: 144,
   xxxhdpi: 192,
+}
+
+/** Adaptive-icon foreground layer is 108dp — use full density px to avoid blur on upscale. */
+const adaptiveForegroundSizes = {
+  mdpi: 108,
+  hdpi: 162,
+  xhdpi: 216,
+  xxhdpi: 324,
+  xxxhdpi: 432,
 }
 
 if (!fs.existsSync(fullIcon)) {
@@ -57,7 +67,7 @@ if (fs.existsSync(brandedVectorForeground)) {
   fs.unlinkSync(brandedVectorForeground)
 }
 
-for (const [density, size] of Object.entries(sizes)) {
+for (const [density, size] of Object.entries(launcherSizes)) {
   const dir = path.join(root, 'android', 'app', 'src', 'main', 'res', `mipmap-${density}`)
   fs.mkdirSync(dir, { recursive: true })
 
@@ -70,22 +80,43 @@ for (const [density, size] of Object.entries(sizes)) {
     .resize(size, size, { fit: 'contain', background: '#facc15' })
     .png()
     .toFile(path.join(dir, 'ic_launcher_round.png'))
+}
 
-  // Match adaptive-icon safe zone: glyph ~72/108 of foreground canvas
-  const fgSize = Math.round(size * (72 / 108))
-  const pad = Math.round((size - fgSize) / 2)
+for (const [density, fgCanvas] of Object.entries(adaptiveForegroundSizes)) {
+  const dir = path.join(root, 'android', 'app', 'src', 'main', 'res', `mipmap-${density}`)
+  fs.mkdirSync(dir, { recursive: true })
+
+  // N sits in adaptive safe zone (~72dp of 108dp canvas)
+  const glyphSize = Math.round(fgCanvas * (72 / 108))
+  const pad = Math.round((fgCanvas - glyphSize) / 2)
   await sharp(glyphSvg)
-    .resize(fgSize, fgSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .resize(glyphSize, glyphSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .extend({
       top: pad,
-      bottom: size - fgSize - pad,
+      bottom: fgCanvas - glyphSize - pad,
       left: pad,
-      right: size - fgSize - pad,
+      right: fgCanvas - glyphSize - pad,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
     .png()
     .toFile(path.join(dir, 'ic_launcher_foreground.png'))
 }
+
+// Density-independent splash glyph (512px) — sharp on all devices; bg color is set in styles.xml
+const nodpiDir = path.join(root, 'android', 'app', 'src', 'main', 'res', 'drawable-nodpi')
+fs.mkdirSync(nodpiDir, { recursive: true })
+const splashGlyphSize = 288
+await sharp(glyphSvg)
+  .resize(splashGlyphSize, splashGlyphSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .extend({
+    top: Math.round((512 - splashGlyphSize) / 2),
+    bottom: Math.round((512 - splashGlyphSize) / 2),
+    left: Math.round((512 - splashGlyphSize) / 2),
+    right: Math.round((512 - splashGlyphSize) / 2),
+    background: { r: 0, g: 0, b: 0, alpha: 0 },
+  })
+  .png()
+  .toFile(path.join(nodpiDir, 'ic_splash_icon.png'))
 
 /** Legacy Capacitor splash PNGs — yellow field + centered N (matches launch theme). */
 const splashTargets = [
