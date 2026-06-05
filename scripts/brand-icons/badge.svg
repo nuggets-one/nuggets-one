@@ -1,5 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" fill="none">
-  <g transform="translate(36 36) scale(0.138) translate(-272 -268)">
-    <path fill="#FFFFFF" fill-rule="evenodd" d="M155 118H225V418H155Z M319 118H389V418H319Z M287 107L361 132L251 430L177 405Z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <text
+    x="48"
+    y="50"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-size="64"
+    font-weight="700"
+    letter-spacing="-0.05em"
+    fill="#FFFFFF"
+  >N</text>
 </svg>
