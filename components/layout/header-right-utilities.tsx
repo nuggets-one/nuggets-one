@@ -21,7 +21,7 @@ const NotificationPanel = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-9 w-9 rounded-lg bg-surface-raised animate-pulse" aria-hidden="true" />
+      <div className="min-h-11 min-w-11 rounded-lg bg-surface-raised animate-pulse md:h-9 md:w-9 md:min-h-0 md:min-w-0" aria-hidden="true" />
     ),
   }
 )
@@ -34,7 +34,7 @@ function CreateNuggetHeaderLink() {
       href="/admin/articles/new"
       data-testid="create-nugget-button"
       aria-label="Create Nugget"
-      className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+      className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus md:size-9 md:min-h-0 md:min-w-0"
     >
       <Sparkles className="size-4 text-yellow-500" aria-hidden />
     </Link>
@@ -123,7 +123,7 @@ function AuthenticatedAccountMenu({
         aria-label="Open account menu"
         className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus/60 [&:-moz-focusring]:outline-none"
       >
-        <span className="inline-flex size-9 select-none items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-hover">
+        <span className="inline-flex min-h-11 min-w-11 select-none items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-hover md:size-9 md:min-h-0 md:min-w-0">
           {initials}
         </span>
       </summary>

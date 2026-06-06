@@ -12,16 +12,17 @@ export function ThemeToggle() {
   );
 
   if (!mounted) {
-    return <div className="w-9 h-9" aria-hidden="true" />;
+    return <div className="min-h-11 min-w-11 md:h-9 md:w-9" aria-hidden="true" />;
   }
 
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="w-9 h-9 flex items-center justify-center rounded-lg
+      className="flex min-h-11 min-w-11 items-center justify-center rounded-lg
                  text-muted hover:text-primary hover:bg-surface-raised active:bg-surface-raised/80
                  transition-colors focus-visible:outline-none
-                 focus-visible:ring-2 focus-visible:ring-focus"
+                 focus-visible:ring-2 focus-visible:ring-focus
+                 md:h-9 md:w-9 md:min-h-0 md:min-w-0"
       aria-label={
         theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
       }

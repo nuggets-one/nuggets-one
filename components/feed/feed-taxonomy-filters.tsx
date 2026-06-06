@@ -36,8 +36,8 @@ function RailDivider() {
 
 function tagPillClasses(active: boolean) {
   return active
-    ? 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-active-border bg-chip-active-bg px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
-    : 'inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-inactive-border bg-transparent px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+    ? 'inline-flex min-h-[36px] max-w-[9.5rem] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-active-border bg-chip-active-bg px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+    : 'inline-flex min-h-[36px] max-w-[9.5rem] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-chip-inactive-border bg-transparent px-4 py-1.5 text-xs font-semibold tracking-[0.01em] text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
 }
 
 const scrollArrowBtn =
@@ -151,7 +151,7 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
       {scrollState.overflow ? (
         <button
           type="button"
-          className={scrollArrowBtn}
+          className={`${scrollArrowBtn} hidden sm:inline-flex`}
           aria-label="Scroll tags left"
           disabled={!scrollState.canLeft}
           onClick={() => scrollByDir(-1)}
@@ -179,7 +179,7 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
                     aria-pressed={active}
                     className={tagPillClasses(active)}
                   >
-                    {tag.label}
+                    <span className="truncate">{tag.label}</span>
                   </button>
                 )
               })}
@@ -191,7 +191,7 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
       {scrollState.overflow ? (
         <button
           type="button"
-          className={scrollArrowBtn}
+          className={`${scrollArrowBtn} hidden sm:inline-flex`}
           aria-label="Scroll tags right"
           disabled={!scrollState.canRight}
           onClick={() => scrollByDir(1)}
