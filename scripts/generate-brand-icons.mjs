@@ -44,8 +44,16 @@ async function main() {
     await sharp(svg).resize(1200, 630).png().toFile(path.join(publicDir, 'og-default.png'))
   }
 
+  const storeDir = path.join(publicDir, 'store')
+  const featureSvg = path.join(storeDir, 'play-feature-graphic.svg')
+  if (fs.existsSync(featureSvg)) {
+    fs.mkdirSync(storeDir, { recursive: true })
+    const svg = fs.readFileSync(featureSvg)
+    await sharp(svg).resize(1024, 500).png().toFile(path.join(storeDir, 'play-feature-graphic.png'))
+  }
+
   console.log(
-    'Brand icons written to public/icons, public/apple-touch-icon.png, and public/og-default.png',
+    'Brand icons written to public/icons, public/apple-touch-icon.png, public/og-default.png, and public/store/play-feature-graphic.png',
   )
 }
 

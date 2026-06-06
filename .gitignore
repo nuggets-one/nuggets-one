@@ -57,6 +57,7 @@ next-env.d.ts
 # validation reports
 scripts/validate/output/
 .tmp-*
+.preview-brand-assets/
 
 # local Supabase CLI
 supabase/.temp

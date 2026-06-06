@@ -31,6 +31,7 @@
     "icons:generate": "node scripts/generate-brand-icons.mjs",
     "icons:android": "node scripts/capacitor/generate-android-icons.mjs",
     "icons:all": "npm run icons:generate && npm run icons:android",
+    "icons:validate": "node scripts/validate-brand-assets.mjs",
     "validate:og": "node scripts/validate-og.mjs",
     "check:banned-imports": "node scripts/check-banned-imports.mjs",
     "check:bundle-budget": "node scripts/check-bundle-budget.mjs",

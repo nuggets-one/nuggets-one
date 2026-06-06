@@ -1,7 +1,7 @@
 const DEFAULT_SITE_URL = 'https://nuggets.one'
 
 /** Bump when `public/og-default.png` changes — busts WhatsApp/Facebook OG image cache. */
-export const OG_DEFAULT_ASSET_VERSION = 2
+export const OG_DEFAULT_ASSET_VERSION = 3
 
 /** Production canonical origin — no trailing slash. */
 export function getSiteUrl(): string {
