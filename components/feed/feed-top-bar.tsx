@@ -2,6 +2,7 @@ import { StreamTabs } from '@/components/feed/stream-tabs'
 import { FeedIntro } from '@/components/feed/feed-intro'
 import { FeedTaxonomyFilters } from '@/components/feed/feed-taxonomy-filters'
 import { ActiveFiltersBar } from '@/components/feed/active-filters-bar'
+import { FeedFiltersChrome } from '@/components/feed/feed-filters-chrome'
 import type { ContentStream, TagSummary } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
 import type { StreamArticleCounts } from '@/lib/queries/stream-counts'
@@ -31,15 +32,17 @@ export function FeedTopBar({
         <StreamTabs activeStream={stream} streamCounts={streamCounts} />
       </div>
 
-      <section
-        className="sticky top-[var(--header-height)] z-40 border-b border-border bg-rail/95 backdrop-blur-sm"
-        aria-label="Feed filters"
-      >
-        <div className="space-y-2 px-4 py-2.5 lg:px-6">
-          <FeedTaxonomyFilters tags={tags} counts={counts} />
-          <ActiveFiltersBar />
-        </div>
-      </section>
+      <FeedFiltersChrome>
+        <section
+          className="sticky top-[var(--header-height)] z-40 overflow-x-hidden border-b border-border bg-rail/95 backdrop-blur-sm"
+          aria-label="Feed filters"
+        >
+          <div className="space-y-2 px-4 py-2.5 lg:px-6">
+            <FeedTaxonomyFilters tags={tags} counts={counts} />
+            <ActiveFiltersBar />
+          </div>
+        </section>
+      </FeedFiltersChrome>
 
       <FeedIntro
         stream={stream}

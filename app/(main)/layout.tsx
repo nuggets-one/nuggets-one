@@ -6,6 +6,7 @@ import { GlobalImageLightboxHost } from '@/components/layout/global-image-lightb
 import { GlobalYouTubeMiniPlayerHost } from '@/components/layout/global-youtube-mini-player-host'
 import { AuthStatusProvider } from '@/components/layout/auth-status-provider'
 import { Header } from '@/components/layout/header'
+import { MobileSearchProvider } from '@/components/layout/mobile-search-context'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
 import { listAccountMenuLegalLinks } from '@/lib/queries/legal-pages'
 
@@ -32,6 +33,7 @@ export default async function MainLayout({
 
   return (
     <NuqsAdapter>
+      <MobileSearchProvider>
       <AuthStatusProvider>
       <Header legalLinks={legalLinks} />
       <div className="pb-20 lg:pb-0">
@@ -67,6 +69,7 @@ export default async function MainLayout({
           in-context sheet. Direct URL hits still render via the full page route. */}
       {modal}
       </AuthStatusProvider>
+      </MobileSearchProvider>
     </NuqsAdapter>
   )
 }
