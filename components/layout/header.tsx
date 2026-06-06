@@ -7,6 +7,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { HeaderSearch } from '@/components/layout/header-search'
 import { HeaderRightUtilities } from '@/components/layout/header-right-utilities'
+import { NuggetsLogoMark } from '@/components/ui/nuggets-logo-mark'
 import type { LegalFooterLink } from '@/lib/queries/legal-pages'
 
 /** Legal links are loaded in `(main)/layout` so this shell stays synchronous under `NuqsAdapter` (nuqs context + Next App Router SSR). */
@@ -20,16 +21,7 @@ export function Header({ legalLinks }: { legalLinks: LegalFooterLink[] }) {
               href="/"
               className="flex min-w-0 shrink-0 items-center gap-2 rounded-md outline-none ring-focus ring-offset-2 ring-offset-[var(--color-bg)] focus-visible:ring-2"
             >
-              <span
-                className="flex size-9 shrink-0 items-center justify-center rounded-[18.75%] bg-[#facc15] text-sm font-bold tracking-tighter text-[#111827] shadow-sm"
-                style={{
-                  fontFamily:
-                    "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                }}
-                aria-hidden="true"
-              >
-                N
-              </span>
+              <NuggetsLogoMark size={36} />
               <span className="hidden truncate text-lg font-semibold tracking-tight text-primary md:inline">
                 Nuggets
               </span>
