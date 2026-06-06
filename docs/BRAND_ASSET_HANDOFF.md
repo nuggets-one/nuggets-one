@@ -17,6 +17,7 @@ Production base URL for all public assets: `https://nuggets.one`
 
 ### Colors
 
+- **Canonical brand yellow:** `#facc15` (Tailwind `primary-400`) — use for logo tile, accent, and focus ring everywhere. Do not use `#F5B800` (deprecated doc value).
 - Brand primary (logo tile): `#facc15`
 - Logo letter (`N`): `#111827`
 - Theme color (manifest/browser UI): `#0f172a`
@@ -33,7 +34,7 @@ Production base URL for all public assets: `https://nuggets.one`
 
 - Logo glyph family: `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
 - Header wordmark family: `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
-- Glyph: uppercase `N`, bold weight
+- Glyph: uppercase geometric **N** as SVG path (not `<text>`) — see `lib/brand/glyph.ts`
 
 ## 3) Required Deliverables (Filenames + Specs)
 
@@ -80,6 +81,18 @@ Production base URL for all public assets: `https://nuggets.one`
    - `1200x630` PNG
    - Final OG/Twitter fallback image (generated from `og-default.svg` via `npm run icons:generate`)
    - After replacing this file, bump `OG_DEFAULT_ASSET_VERSION` in `lib/seo/site-url.ts` so WhatsApp/Facebook fetch the new image (they cache by URL)
+
+### D) Google Play store listing
+
+10. `public/store/play-feature-graphic.svg`
+    - Editable source
+    - `1024x500` SVG — horizontal lockup for Play Store feature graphic
+
+11. `public/store/play-feature-graphic.png`
+    - `1024x500` PNG
+    - Generated from SVG via `npm run icons:generate`
+
+Phone/tablet screenshots: capture manually — see `docs/STORE_LISTING_ASSETS.md`.
 
 ### C) Source templates used to generate final files (this repo)
 
@@ -139,6 +152,7 @@ In `public/manifest.json`:
 - PNG exports must be crisp; no blurry scaling artifacts
 - SVGs should remain clean and editable (no unnecessary metadata)
 - Keep icon center alignment consistent at all sizes
+- **PNG export from SVG:** use `font-family="sans-serif"` and `font-weight="700"` max on any remaining `<text>` in OG/store SVGs — Sharp/librsvg has no `system-ui`; weight 800 faux-bolds and glitches
 - Validate favicon contrast in both light/dark browser chrome
 - Keep maskable glyph inside safe area (no clipping on Android masks)
 
@@ -154,7 +168,9 @@ In `public/manifest.json`:
 - [ ] Push notifications show correct fallback icon and badge
 - [ ] OG/Twitter previews use `public/og-default.png` fallback when no custom image exists
 - [ ] No icon/image 404s in browser network panel
-- [ ] PWA/icon-related checks pass in Lighthouse
+- [ ] Play Store feature graphic (1024×500) designed — `public/store/play-feature-graphic.png`
+- [ ] Screenshot set prepared for store listing — see `docs/STORE_LISTING_ASSETS.md`
+- [ ] Run `npm run icons:validate` — all dimension checks pass
 
 ## 7) Icon automation (this repo — no other project required)
 
@@ -164,6 +180,8 @@ Deterministic PNG exports from the SVG sources:
    - `public/icon.svg` (master mark)
    - `scripts/brand-icons/icon-maskable.svg` (glyph inset for maskable safe area)
    - `scripts/brand-icons/badge.svg` (white **N** on transparent for notification badge)
-2. Run **`npm run icons:generate`** (writes `public/icons/*`, `public/apple-touch-icon.png`, and `public/og-default.png`).
-3. Commit updated PNGs when the mark or OG asset changes.
-4. Smoke test: favicon, PWA install icons, OG fallback (`public/og-default.png`).
+2. Run **`npm run icons:generate`** (writes `public/icons/*`, `public/apple-touch-icon.png`, `public/og-default.png`, and `public/store/play-feature-graphic.png`).
+3. Run **`npm run icons:android`** (or **`npm run icons:all`**).
+4. Run **`npm run icons:validate`** — confirms all PNG dimensions and manifest references.
+5. Commit updated PNGs when the mark or OG asset changes.
+6. Smoke test: favicon, PWA install icons, OG fallback (`public/og-default.png`).

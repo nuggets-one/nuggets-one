@@ -155,7 +155,7 @@ Two interaction stories appeared across drafts; **only one is valid for v2**:
 
 ## 3. Design system direction
 
-**Visual direction:** **Quiet editorial premium** — neutral zinc/slate surfaces, **one brand accent** (Nuggets yellow `#F5B800` range per existing identity), restrained borders, **no loud gradients** except deliberate empty-image placeholders.
+**Visual direction:** **Quiet editorial premium** — neutral zinc/slate surfaces, **one brand accent** (Nuggets yellow `#facc15` / Tailwind `primary-400`), restrained borders, **no loud gradients** except deliberate empty-image placeholders.
 
 ### Color system
 
@@ -166,7 +166,7 @@ Two interaction stories appeared across drafts; **only one is valid for v2**:
 | **Border** | `zinc-200` | `zinc-800` | 1px default |
 | **Text primary** | `zinc-900` | `zinc-100` | |
 | **Text muted** | `zinc-500` | `zinc-400` | Meta, timestamps |
-| **Accent / brand** | `#F5B800` (and darker hover) | Same hue, slightly softer on hover | Chips active, logo mark, focus adjunct |
+| **Accent / brand** | `#facc15` (hover `#eab308`) | Same hue, slightly softer on hover | Chips active, logo mark, focus adjunct |
 
 ### Light / dark mode
 
@@ -256,9 +256,9 @@ Implemented via `next-themes` + Tailwind `dark:` + CSS variables (§3 / `BUILD` 
 | `--color-border` | `#E4E4E7` (zinc-200) | `#27272A` (zinc-800) | `border-border` |
 | `--color-text-primary` | `#18181B` (zinc-900) | `#F4F4F5` (zinc-100) | `text-primary` |
 | `--color-text-muted` | `#71717A` (zinc-500) | `#A1A1AA` (zinc-400) | `text-muted` |
-| `--color-accent` | `#F5B800` | `#F5B800` (same) | `bg-accent` / `text-accent` |
-| `--color-accent-hover` | `#D4A000` | `#E5AC00` | `hover:bg-accent-hover` |
-| `--color-focus-ring` | `#F5B800` | `#F5B800` (same) | `ring-focus` |
+| `--color-accent` | `#facc15` | `#facc15` (same) | `bg-accent` / `text-accent` |
+| `--color-accent-hover` | `#eab308` | `#eab308` (same) | `hover:bg-accent-hover` |
+| `--color-focus-ring` | `#facc15` | `#facc15` (same) | `ring-focus` |
 
 **Brand discipline:**
 

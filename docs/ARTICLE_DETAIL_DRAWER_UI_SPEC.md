@@ -86,9 +86,9 @@ All semantic colors are **CSS variables** in `:root` and `.dark` in `app/globals
 | Borders | `--color-border` | `zinc.200` |
 | Primary text | `--color-text-primary` | `zinc.900` |
 | Muted text | `--color-text-muted` | `zinc.500` |
-| Brand accent | `--color-accent` | `#F5B800` |
+| Brand accent | `--color-accent` | `#facc15` |
 | Accent hover | `--color-accent-hover` | `#D4A000` |
-| Focus ring | `--color-focus-ring` | `#F5B800` |
+| Focus ring | `--color-focus-ring` | `#facc15` |
 | Pulse stream chip | `--color-pulse-chip-bg` | `amber.100` |
 | Pulse stream chip text | `--color-pulse-chip-fg` | `amber.700` |
 
@@ -100,7 +100,7 @@ All semantic colors are **CSS variables** in `:root` and `.dark` in `app/globals
 | Text | Primary `zinc.100`, muted `zinc.400` |
 | Border | `zinc.800` |
 | Pulse chip | Background `rgb(120 53 15 / 0.3)`, foreground `amber.400` |
-| Accent | Same yellow `#F5B800` (hover `#E5AC00`) |
+| Accent | Same yellow `#facc15` (hover `#eab308`) |
 
 ### 2.3 Tailwind class → token mapping (used in drawer)
 
