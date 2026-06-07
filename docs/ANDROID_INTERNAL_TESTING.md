@@ -2,6 +2,8 @@
 
 Non-engineer guide for Google Play **Internal testing**. Engineers: see [Build and upload](#build-and-upload-aab) and [Push release decision](#push-release-decision-native-vs-website).
 
+**Full publish path (Internal → Closed → Production):** [ANDROID_PLAY_PUBLISHING.md](./ANDROID_PLAY_PUBLISHING.md) · Store copy: [STORE_LISTING_COPY.md](./STORE_LISTING_COPY.md) · Compliance: [PLAY_CONSOLE_COMPLIANCE.md](./PLAY_CONSOLE_COMPLIANCE.md)
+
 ---
 
 ## Do testers get updates automatically?
@@ -142,6 +144,8 @@ If the app is updated but push fails, check **Supabase Edge Function secrets** (
 |-------------|-------------|------|-------|
 | 1 | 1.0 | (first internal upload) | Pre-push or initial internal test |
 | 2 | 1.1 | (fill on upload) | Push: Firebase + Capacitor push plugin + POST_NOTIFICATIONS |
+| 3 | 1.2 | (fill on upload) | — |
+| 4 | 1.3 | (current in build.gradle) | Current repo default |
 
 Before each new Play upload: increment **`versionCode`** in `android/app/build.gradle` (required by Play) and bump **`versionName`** for humans.
 
