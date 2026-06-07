@@ -49,7 +49,11 @@ console.log('  $env:CAPACITOR_SERVER_URL=\'https://www.nuggets.one\'')
 console.log('  npm run android:bundle')
 console.log('  (or: npm run cap:sync && npm run cap:bundle:android)')
 console.log('\nUpload: Play Console → Testing → Internal testing → new release')
-console.log('Guide: docs/ANDROID_INTERNAL_TESTING.md\n')
+console.log('Guides:')
+console.log('  Internal: docs/ANDROID_INTERNAL_TESTING.md')
+console.log('  Full publish: docs/ANDROID_PLAY_PUBLISHING.md')
+console.log('  Store copy: docs/STORE_LISTING_COPY.md')
+console.log('  Compliance: docs/PLAY_CONSOLE_COMPLIANCE.md\n')
 
 let failed = false
 if (!hasGoogleServices) failed = true
