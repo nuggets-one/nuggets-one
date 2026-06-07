@@ -16,11 +16,24 @@ Regenerate PNGs after editing SVGs:
 npm run icons:generate
 ```
 
-## Phone screenshots (capture manually)
+## Phone screenshots
 
 Google Play requires **at least 2** phone screenshots. Recommended: **4–8** at **1080×1920** (9:16) or native device resolution.
 
-Save exports under `docs/store-listing/screenshots/phone/` (gitignored if large — commit only when ready for launch).
+Save exports under `docs/store-listing/screenshots/phone/`.
+
+### Automated capture (recommended)
+
+From repo root against production (same UI the Capacitor app loads):
+
+```powershell
+$env:PLAYWRIGHT_BASE_URL='https://www.nuggets.one'
+npm run store:screenshots
+```
+
+Uses Playwright Pixel 7 viewport (1080×2400), crops to 1080×1920. Override detail route: `STORE_SCREENSHOT_DETAIL_PATH=/nuggets/...`.
+
+### Manual capture (alternative)
 
 ### Recommended shots
 
@@ -67,11 +80,15 @@ Save under `docs/store-listing/screenshots/tablet-7/` and `tablet-10/`.
 | LinkedIn | Cover | 1128×191 |
 | Link previews | OG default | 1200×630 (`public/og-default.png`) |
 
+## Store copy
+
+Play Console short/full descriptions and release-note templates: [STORE_LISTING_COPY.md](./STORE_LISTING_COPY.md).
+
 ## Designer deliverables checklist
 
 - [ ] `play-feature-graphic.svg` refined (copy, layout, optional device mockup)
-- [ ] Phone screenshot set (min 2, recommend 4–8)
-- [ ] Short description + full description copy for Play Console
+- [x] Phone screenshot set (8) — `docs/store-listing/screenshots/phone/` (`npm run store:screenshots` to regenerate)
+- [x] Short description + full description copy — [STORE_LISTING_COPY.md](./STORE_LISTING_COPY.md)
 - [ ] Optional tablet screenshots
 - [ ] Optional iOS assets if App Store is in scope
 
