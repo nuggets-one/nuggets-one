@@ -9,7 +9,13 @@ import {
 } from '@/lib/feed/feed-view'
 
 const segmentBase =
-  'inline-flex min-h-[32px] min-w-[44px] flex-1 items-center justify-center rounded-md px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1 disabled:opacity-60'
+  'inline-flex min-h-[32px] min-w-[44px] flex-1 items-center justify-center rounded-md border border-transparent px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1 disabled:opacity-60'
+
+const segmentActive =
+  'border-chip-active-border bg-chip-active-bg text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20'
+
+const segmentInactive =
+  'text-muted hover:bg-chip-hover-bg hover:text-chip-hover-text'
 
 export function FeedViewToggle() {
   const [view, setView] = useQueryState('view', {
@@ -58,11 +64,7 @@ export function FeedViewToggle() {
         aria-label="Card view"
         disabled={isPending}
         onClick={() => select('grid')}
-        className={
-          !isSkim
-            ? `${segmentBase} bg-surface text-primary shadow-sm`
-            : `${segmentBase} text-muted hover:text-primary`
-        }
+        className={`${segmentBase} ${!isSkim ? segmentActive : segmentInactive}`}
       >
         <LayoutGrid className="size-4 shrink-0" aria-hidden="true" />
       </button>
@@ -72,11 +74,7 @@ export function FeedViewToggle() {
         aria-label="Skim view"
         disabled={isPending}
         onClick={() => select('skim')}
-        className={
-          isSkim
-            ? `${segmentBase} bg-surface text-primary shadow-sm`
-            : `${segmentBase} text-muted hover:text-primary`
-        }
+        className={`${segmentBase} ${isSkim ? segmentActive : segmentInactive}`}
       >
         <List className="size-4 shrink-0" aria-hidden="true" />
       </button>
