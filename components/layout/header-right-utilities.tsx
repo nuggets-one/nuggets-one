@@ -3,7 +3,7 @@
 // S1-F3: single client island for header right cluster (create · theme · bell · avatar).
 // One /api/auth/status fetch; server Header stays cookie-free.
 
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { LogIn, Sparkles } from 'lucide-react'
@@ -49,6 +49,37 @@ function MenuHeading({ children }: { children: ReactNode }) {
   )
 }
 
+function AccountDetailsMenu({ children }: { children: ReactNode }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const details = detailsRef.current
+      if (!details?.open) return
+      if (details.contains(e.target as Node)) return
+      details.open = false
+    }
+
+    function handleEscape(e: KeyboardEvent) {
+      const details = detailsRef.current
+      if (e.key === 'Escape' && details?.open) details.open = false
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  return (
+    <details ref={detailsRef} className="group relative">
+      {children}
+    </details>
+  )
+}
+
 function LegalMenuBlock({ legalLinks }: { legalLinks: readonly LegalFooterLink[] }) {
   const year = new Date().getFullYear()
 
@@ -73,7 +104,7 @@ function LegalMenuBlock({ legalLinks }: { legalLinks: readonly LegalFooterLink[]
 
 function AnonymousAccountMenu({ legalLinks }: { legalLinks: readonly LegalFooterLink[] }) {
   return (
-    <details className="group relative">
+    <AccountDetailsMenu>
       <summary
         aria-label="Sign in"
         className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus/60 [&:-moz-focusring]:outline-none"
@@ -104,7 +135,7 @@ function AnonymousAccountMenu({ legalLinks }: { legalLinks: readonly LegalFooter
 
         <LegalMenuBlock legalLinks={legalLinks} />
       </div>
-    </details>
+    </AccountDetailsMenu>
   )
 }
 
@@ -118,7 +149,7 @@ function AuthenticatedAccountMenu({
   const initials = accountAvatarLetter(auth.displayName, auth.email)
 
   return (
-    <details className="group relative">
+    <AccountDetailsMenu>
       <summary
         aria-label="Open account menu"
         className="list-none [&::-webkit-details-marker]:hidden inline-flex cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus/60 [&:-moz-focusring]:outline-none"
@@ -198,7 +229,7 @@ function AuthenticatedAccountMenu({
           </button>
         </form>
       </div>
-    </details>
+    </AccountDetailsMenu>
   )
 }
 
