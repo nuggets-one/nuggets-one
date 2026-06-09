@@ -1,5 +1,6 @@
 import { unstable_noStore } from 'next/cache'
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { resolveAuthUser } from '@/lib/supabase/resolve-auth-user'
@@ -11,7 +12,7 @@ import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
 import { ArticleSkimRow } from '@/components/ui/article-skim-row'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
-import { isSkimFeedView } from '@/lib/feed/feed-view'
+import { FEED_VIEW_STORAGE_KEY, isSkimFeedView } from '@/lib/feed/feed-view'
 import { FeedPager } from '@/components/feed/feed-pager'
 import { FeedEmpty } from '@/components/feed/feed-empty'
 import { FeedTopBar } from '@/components/feed/feed-top-bar'
@@ -70,7 +71,9 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       .slice(0, MAX_TAGS)
     : []
   const q = (searchParams.q ?? '').trim().slice(0, MAX_Q_LENGTH)
-  const skimView = isSkimFeedView(searchParams.view)
+  const cookieStore = await cookies()
+  const storedFeedView = cookieStore.get(FEED_VIEW_STORAGE_KEY)?.value ?? null
+  const skimView = isSkimFeedView(searchParams.view, storedFeedView)
 
   // Filtered or search URLs must never be served from stale ISR cache.
   // BLUEPRINT §11: "Filtered / search URLs → expect dynamic behavior."
@@ -197,7 +200,9 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
 
 export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams
-  const skimView = isSkimFeedView(params.view)
+  const cookieStore = await cookies()
+  const storedFeedView = cookieStore.get(FEED_VIEW_STORAGE_KEY)?.value ?? null
+  const skimView = isSkimFeedView(params.view, storedFeedView)
 
   return (
     <Suspense

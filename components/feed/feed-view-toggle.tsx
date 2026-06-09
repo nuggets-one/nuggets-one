@@ -3,10 +3,13 @@
 import { LayoutGrid, List } from 'lucide-react'
 import { useEffect, useRef, useTransition } from 'react'
 import { useQueryState } from 'nuqs'
-import { FEED_VIEW_STORAGE_KEY } from '@/lib/feed/feed-view'
+import {
+  FEED_VIEW_STORAGE_KEY,
+  persistFeedViewPreference,
+} from '@/lib/feed/feed-view'
 
-const toggleBtn =
-  'inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1'
+const segmentBase =
+  'inline-flex min-h-[32px] min-w-[44px] flex-1 items-center justify-center rounded-md px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1 disabled:opacity-60'
 
 export function FeedViewToggle() {
   const [view, setView] = useQueryState('view', {
@@ -16,7 +19,7 @@ export function FeedViewToggle() {
   const [isPending, startTransition] = useTransition()
   const hydratedRef = useRef(false)
 
-  const isSkim = view === 'skim'
+  const isSkim = view !== 'grid'
 
   useEffect(() => {
     if (hydratedRef.current) return
@@ -26,30 +29,26 @@ export function FeedViewToggle() {
 
     try {
       const stored = localStorage.getItem(FEED_VIEW_STORAGE_KEY)
-      if (stored === 'skim') {
+      if (stored === 'grid') {
         startTransition(() => {
-          void setView('skim')
+          void setView('grid')
         })
       }
     } catch {
-      // localStorage unavailable — keep default grid
+      // localStorage unavailable — server default skim applies
     }
   }, [view, setView])
 
   function select(next: 'grid' | 'skim') {
     startTransition(() => {
-      void setView(next === 'skim' ? 'skim' : null)
-      try {
-        localStorage.setItem(FEED_VIEW_STORAGE_KEY, next)
-      } catch {
-        // ignore
-      }
+      void setView(next === 'grid' ? 'grid' : null)
+      persistFeedViewPreference(next)
     })
   }
 
   return (
     <div
-      className="flex shrink-0 items-center gap-1 md:hidden"
+      className="inline-flex h-9 shrink-0 items-center rounded-lg bg-surface-raised p-1 ring-1 ring-inset ring-border/60 md:hidden"
       role="group"
       aria-label="Feed layout"
     >
@@ -61,8 +60,8 @@ export function FeedViewToggle() {
         onClick={() => select('grid')}
         className={
           !isSkim
-            ? `${toggleBtn} border-chip-active-border bg-chip-active-bg text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20`
-            : `${toggleBtn} border-chip-inactive-border bg-transparent text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text`
+            ? `${segmentBase} bg-surface text-primary shadow-sm`
+            : `${segmentBase} text-muted hover:text-primary`
         }
       >
         <LayoutGrid className="size-4 shrink-0" aria-hidden="true" />
@@ -75,8 +74,8 @@ export function FeedViewToggle() {
         onClick={() => select('skim')}
         className={
           isSkim
-            ? `${toggleBtn} border-chip-active-border bg-chip-active-bg text-chip-active-text shadow-chip-active ring-1 ring-inset ring-focus/20`
-            : `${toggleBtn} border-chip-inactive-border bg-transparent text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text`
+            ? `${segmentBase} bg-surface text-primary shadow-sm`
+            : `${segmentBase} text-muted hover:text-primary`
         }
       >
         <List className="size-4 shrink-0" aria-hidden="true" />
