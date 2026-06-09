@@ -17,6 +17,59 @@ export function getActiveScrollRoot(): HTMLElement | null {
   return null
 }
 
+export function readActiveScrollTop(): number {
+  const root = getActiveScrollRoot()
+  return root ? root.scrollTop : window.scrollY
+}
+
+/**
+ * Subscribes to scroll on the active root (sheet body when open, else window).
+ * Re-binds when `[data-sheet-body]` mounts/unmounts or `data-sheet-open` toggles.
+ */
+export function subscribeActiveScrollRoot(onScroll: () => void): () => void {
+  if (typeof document === 'undefined') return () => {}
+
+  let boundRoot: HTMLElement | null = getActiveScrollRoot()
+
+  function unbindScrollTarget(): void {
+    if (boundRoot) {
+      boundRoot.removeEventListener('scroll', onScroll)
+      return
+    }
+    window.removeEventListener('scroll', onScroll)
+  }
+
+  function bindScrollTarget(): void {
+    const nextRoot = getActiveScrollRoot()
+    if (nextRoot === boundRoot) return
+
+    unbindScrollTarget()
+    boundRoot = nextRoot
+    ensureScrollTopSentinel(nextRoot)
+
+    const target: HTMLElement | Window = nextRoot ?? window
+    target.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+  }
+
+  bindScrollTarget()
+
+  const bodyObserver = new MutationObserver(bindScrollTarget)
+  bodyObserver.observe(document.body, { childList: true, subtree: true })
+
+  const htmlObserver = new MutationObserver(bindScrollTarget)
+  htmlObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-sheet-open'],
+  })
+
+  return () => {
+    unbindScrollTarget()
+    bodyObserver.disconnect()
+    htmlObserver.disconnect()
+  }
+}
+
 export function scrollToTop(root: HTMLElement | null): void {
   const behavior = prefersReducedMotion() ? 'auto' : 'smooth'
   if (root) {

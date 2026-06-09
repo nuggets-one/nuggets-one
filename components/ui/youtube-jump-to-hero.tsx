@@ -1,15 +1,22 @@
 'use client'
 
-import clsx from 'clsx'
 import { useEffect, useState } from 'react'
-import { fabPositionClassName } from '@/lib/ui/floating-fab-layout'
-import { isMiniPlayerVisible, getMiniPlayerDockSide } from '@/lib/ui/scroll-to-top'
+import {
+  fabPositionClassName,
+  JUMP_FAB_SHELL_CLASSNAME,
+} from '@/lib/ui/floating-fab-layout'
+import {
+  getMiniPlayerDockSide,
+  isMiniPlayerVisible,
+  isSheetOpen,
+} from '@/lib/ui/scroll-to-top'
 import {
   getYouTubeHeroScrollRoot,
   NUGGET_YOUTUBE_HERO_ID,
   scrollYouTubeHeroIntoView,
 } from '@/lib/ui/youtube-hero-scroll'
 import {
+  dispatchYouTubeJumpFabVisibility,
   YOUTUBE_FEED_CLOSE_EVENT,
   YOUTUBE_FEED_PLAY_EVENT,
   type YouTubeFeedCloseDetail,
@@ -25,11 +32,13 @@ export function YouTubeJumpToHero({ articleId }: Props) {
   const [heroOffScreen, setHeroOffScreen] = useState(false)
   const [playerVisible, setPlayerVisible] = useState(false)
   const [dockSide, setDockSide] = useState<'left' | 'right' | 'center' | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   useEffect(() => {
     function syncPlayer() {
       setPlayerVisible(isMiniPlayerVisible())
       setDockSide(getMiniPlayerDockSide())
+      setSheetOpen(isSheetOpen())
     }
 
     function onPlay(e: Event) {
@@ -57,11 +66,18 @@ export function YouTubeJumpToHero({ articleId }: Props) {
     const observer = new MutationObserver(syncPlayer)
     observer.observe(document.body, { childList: true, subtree: false })
 
+    const htmlObserver = new MutationObserver(syncPlayer)
+    htmlObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-sheet-open'],
+    })
+
     return () => {
       window.removeEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlay)
       window.removeEventListener(YOUTUBE_FEED_CLOSE_EVENT, onClose)
       window.removeEventListener('resize', syncPlayer)
       observer.disconnect()
+      htmlObserver.disconnect()
     }
   }, [articleId])
 
@@ -87,6 +103,14 @@ export function YouTubeJumpToHero({ articleId }: Props) {
 
   const showJump =
     activeArticleId === articleId && heroOffScreen && playerVisible
+
+  useEffect(() => {
+    dispatchYouTubeJumpFabVisibility(showJump)
+    return () => {
+      dispatchYouTubeJumpFabVisibility(false)
+    }
+  }, [showJump])
+
   if (!showJump) return null
 
   return (
@@ -95,7 +119,12 @@ export function YouTubeJumpToHero({ articleId }: Props) {
       data-youtube-jump-fab
       onClick={() => scrollYouTubeHeroIntoView()}
       aria-label="Jump to video"
-      className={clsx(fabPositionClassName({ dockSide, playerVisible: true }))}
+      className={fabPositionClassName({
+        dockSide,
+        playerVisible: true,
+        sheetOpen,
+        shellClassName: JUMP_FAB_SHELL_CLASSNAME,
+      })}
     >
       <svg
         className="h-5 w-5"

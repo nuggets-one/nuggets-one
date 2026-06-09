@@ -8,20 +8,22 @@ import { fabPositionClassName } from '@/lib/ui/floating-fab-layout'
 import {
   YOUTUBE_FEED_CLOSE_EVENT,
   YOUTUBE_FEED_PLAY_EVENT,
+  YOUTUBE_JUMP_FAB_VISIBILITY_EVENT,
+  type YouTubeJumpFabVisibilityDetail,
 } from '@/lib/ui/youtube-feed-play'
 import {
-  ensureScrollTopSentinel,
   getActiveScrollRoot,
   getMiniPlayerDockSide,
   isBlockingOverlayOpen,
   isMiniPlayerVisible,
   isScrollToTopRouteEnabled,
   isSheetOpen,
+  readActiveScrollTop,
   scrollToTop,
+  subscribeActiveScrollRoot,
 } from '@/lib/ui/scroll-to-top'
 
 const SCROLL_SHOW_THRESHOLD_PX = 400
-const JUMP_FAB_SELECTOR = '[data-youtube-jump-fab]'
 
 function ChevronUpIcon() {
   return (
@@ -40,11 +42,6 @@ function ChevronUpIcon() {
   )
 }
 
-function isJumpFabVisible(): boolean {
-  if (typeof document === 'undefined') return false
-  return document.querySelector(JUMP_FAB_SELECTOR) instanceof HTMLElement
-}
-
 export function ScrollToTopButton() {
   const pathname = usePathname() ?? ''
   const isSearchExpanded = useMobileSearchExpanded()
@@ -54,47 +51,38 @@ export function ScrollToTopButton() {
     () => false,
   )
   const [showButton, setShowButton] = useState(false)
-  const [hasSheet, setHasSheet] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [playerVisible, setPlayerVisible] = useState(false)
   const [dockSide, setDockSide] = useState<'left' | 'right' | 'center' | null>(null)
+  const [jumpFabActive, setJumpFabActive] = useState(false)
 
-  const routeEnabled = isScrollToTopRouteEnabled(
-    pathname || (typeof window !== 'undefined' ? window.location.pathname : ''),
-    hasSheet,
-  )
-  const isFullPageDetail = pathname.startsWith('/nuggets/') && !hasSheet
+  const activePath =
+    pathname || (typeof window !== 'undefined' ? window.location.pathname : '')
+  const routeEnabled = isScrollToTopRouteEnabled(activePath, sheetOpen)
+  const isFullPageDetail = pathname.startsWith('/nuggets/') && !sheetOpen
 
   const syncChrome = useCallback(() => {
-    setHasSheet(isSheetOpen())
+    setSheetOpen(isSheetOpen())
     setPlayerVisible(isMiniPlayerVisible())
     setDockSide(getMiniPlayerDockSide())
   }, [])
 
+  const updateVisibility = useCallback(() => {
+    const enabled =
+      isScrollToTopRouteEnabled(activePath, isSheetOpen()) &&
+      !isSearchExpanded &&
+      !isBlockingOverlayOpen()
+
+    if (!enabled || jumpFabActive) {
+      setShowButton(false)
+      return
+    }
+
+    setShowButton(readActiveScrollTop() >= SCROLL_SHOW_THRESHOLD_PX)
+  }, [activePath, isSearchExpanded, jumpFabActive])
+
   useEffect(() => {
     if (!hydrated) return
-
-    const scrollRoot = getActiveScrollRoot()
-    ensureScrollTopSentinel(scrollRoot)
-
-    function readScrollTop(): number {
-      return scrollRoot ? scrollRoot.scrollTop : window.scrollY
-    }
-
-    function updateVisibility() {
-      const activePath =
-        pathname || (typeof window !== 'undefined' ? window.location.pathname : '')
-      const enabled =
-        isScrollToTopRouteEnabled(activePath, isSheetOpen()) &&
-        !isSearchExpanded &&
-        !isBlockingOverlayOpen()
-
-      if (!enabled || isJumpFabVisible()) {
-        setShowButton(false)
-        return
-      }
-
-      setShowButton(readScrollTop() >= SCROLL_SHOW_THRESHOLD_PX)
-    }
 
     syncChrome()
 
@@ -103,15 +91,17 @@ export function ScrollToTopButton() {
       updateVisibility()
     }
 
+    function onJumpFabVisibility(e: Event) {
+      const d = (e as CustomEvent<YouTubeJumpFabVisibilityDetail>).detail
+      setJumpFabActive(Boolean(d?.visible))
+    }
+
     window.addEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlayerChromeEvent)
     window.addEventListener(YOUTUBE_FEED_CLOSE_EVENT, onPlayerChromeEvent)
+    window.addEventListener(YOUTUBE_JUMP_FAB_VISIBILITY_EVENT, onJumpFabVisibility)
     window.addEventListener('resize', updateVisibility, { passive: true })
 
-    const scrollTarget: HTMLElement | Window = scrollRoot ?? window
-    scrollTarget.addEventListener('scroll', updateVisibility, { passive: true })
-
-    const bodyObserver = new MutationObserver(updateVisibility)
-    bodyObserver.observe(document.body, { childList: true, subtree: true })
+    const unsubscribeScroll = subscribeActiveScrollRoot(updateVisibility)
 
     const htmlObserver = new MutationObserver(onPlayerChromeEvent)
     htmlObserver.observe(document.documentElement, {
@@ -124,12 +114,17 @@ export function ScrollToTopButton() {
     return () => {
       window.removeEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlayerChromeEvent)
       window.removeEventListener(YOUTUBE_FEED_CLOSE_EVENT, onPlayerChromeEvent)
+      window.removeEventListener(YOUTUBE_JUMP_FAB_VISIBILITY_EVENT, onJumpFabVisibility)
       window.removeEventListener('resize', updateVisibility)
-      scrollTarget.removeEventListener('scroll', updateVisibility)
-      bodyObserver.disconnect()
+      unsubscribeScroll()
       htmlObserver.disconnect()
     }
-  }, [hydrated, pathname, isSearchExpanded, hasSheet, syncChrome])
+  }, [hydrated, syncChrome, updateVisibility])
+
+  useEffect(() => {
+    if (!hydrated) return
+    updateVisibility()
+  }, [hydrated, jumpFabActive, updateVisibility])
 
   if (
     !hydrated ||
@@ -137,21 +132,19 @@ export function ScrollToTopButton() {
     isSearchExpanded ||
     isBlockingOverlayOpen() ||
     !showButton ||
-    isJumpFabVisible()
+    jumpFabActive
   ) {
     return null
   }
-
-  const scrollRoot = getActiveScrollRoot()
 
   return (
     <button
       type="button"
       data-scroll-to-top-fab
-      onClick={() => scrollToTop(scrollRoot)}
+      onClick={() => scrollToTop(getActiveScrollRoot())}
       aria-label="Back to top"
       className={clsx(
-        fabPositionClassName({ dockSide, playerVisible }),
+        fabPositionClassName({ dockSide, playerVisible, sheetOpen }),
         isFullPageDetail && 'xl:hidden',
       )}
     >
