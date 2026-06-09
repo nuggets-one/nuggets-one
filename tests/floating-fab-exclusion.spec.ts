@@ -22,6 +22,32 @@ async function scrollSheetBody(page: Page, dialog: ReturnType<Page['getByRole']>
     .toBeGreaterThanOrEqual(Math.min(scrollTop, 100))
 }
 
+async function openYoutubeNuggetSheet(page: Page) {
+  const targetHref = process.env.DETAIL_VISUAL_YOUTUBE_URL ?? defaultYoutubeDetail
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('main')).toBeVisible()
+  await page.waitForTimeout(600)
+
+  const cardLink = page.locator(`main a[href="${targetHref}"]`).first()
+  const hasCard = await cardLink.isVisible().catch(() => false)
+  if (!hasCard) {
+    return null
+  }
+
+  await cardLink.click()
+  const dialog = page.getByRole('dialog', { name: 'Nugget detail' })
+  await expect(dialog).toBeVisible()
+  return dialog
+}
+
+async function countBottomFabs(page: Page) {
+  return page.evaluate(() => {
+    const jump = document.querySelectorAll('[data-youtube-jump-fab]').length
+    const top = document.querySelectorAll('[data-scroll-to-top-fab]').length
+    return { jump, top, total: jump + top }
+  })
+}
+
 test.describe('floating FAB exclusion — desktop full page', () => {
   test.use({ viewport: { width: 1280, height: 900 } })
 
@@ -58,29 +84,41 @@ test.describe('floating FAB exclusion — desktop full page', () => {
 test.describe('floating FAB exclusion — desktop intercepted sheet', () => {
   test.use({ viewport: { width: 1280, height: 900 } })
 
-  test('at most one bottom FAB while mini player is open', async ({ page }) => {
-    const targetHref = process.env.DETAIL_VISUAL_YOUTUBE_URL ?? defaultYoutubeDetail
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('main')).toBeVisible()
-    await page.waitForTimeout(600)
-
-    const cardLink = page.locator(`main a[href="${targetHref}"]`).first()
-    const hasCard = await cardLink.isVisible().catch(() => false)
-    if (!hasCard) {
+  test('shows back to top after scroll before any timestamp click', async ({ page }) => {
+    const dialog = await openYoutubeNuggetSheet(page)
+    if (!dialog) {
       test.skip(true, 'Target YouTube nugget not on home feed.')
     }
 
-    await cardLink.click()
-    const dialog = page.getByRole('dialog', { name: 'Nugget detail' })
-    await expect(dialog).toBeVisible()
+    await scrollSheetBody(page, dialog!, 500)
 
-    const timestampLink = dialog.locator('a[href*="#yt="]').first()
+    const backToTop = page.getByRole('button', { name: 'Back to top' })
+    await expect(backToTop).toBeVisible({ timeout: 15_000 })
+
+    const counts = await countBottomFabs(page)
+    expect(counts.top).toBe(1)
+    expect(counts.total).toBe(1)
+
+    const box = await backToTop.boundingBox()
+    expect(box).not.toBeNull()
+    if (box) {
+      expect(box.x + box.width / 2).toBeGreaterThan(page.viewportSize()!.width * 0.5)
+    }
+  })
+
+  test('jump FAB hides back to top; closing player restores back to top', async ({ page }) => {
+    const dialog = await openYoutubeNuggetSheet(page)
+    if (!dialog) {
+      test.skip(true, 'Target YouTube nugget not on home feed.')
+    }
+
+    const timestampLink = dialog!.locator('a[href*="#yt="]').first()
     const hasTimestamp = await timestampLink.isVisible().catch(() => false)
     if (!hasTimestamp) {
       test.skip(true, 'No #yt= timestamp links in sheet body for this nugget.')
     }
 
-    await scrollSheetBody(page, dialog, 900)
+    await scrollSheetBody(page, dialog!, 900)
     await timestampLink.click()
 
     const miniPlayer = page.getByRole('complementary')
@@ -89,15 +127,52 @@ test.describe('floating FAB exclusion — desktop intercepted sheet', () => {
       test.skip(true, 'Timestamp did not open the global mini player for this nugget.')
     }
 
-    await scrollSheetBody(page, dialog, 1200)
+    await scrollSheetBody(page, dialog!, 1200)
 
-    const fabCount = await page.evaluate(() => {
-      const jump = document.querySelectorAll('[data-youtube-jump-fab]').length
-      const top = document.querySelectorAll('[data-scroll-to-top-fab]').length
-      return jump + top
-    })
+    const jumpFab = page.getByRole('button', { name: 'Jump to video' })
+    const backToTop = page.getByRole('button', { name: 'Back to top' })
 
-    expect(fabCount).toBeLessThanOrEqual(1)
+    await expect(jumpFab).toBeVisible({ timeout: 15_000 })
+    await expect(backToTop).toBeHidden()
+
+    const openCounts = await countBottomFabs(page)
+    expect(openCounts.total).toBeLessThanOrEqual(1)
+    expect(openCounts.top).toBe(0)
+
+    await page.getByRole('button', { name: 'Close player' }).click()
+    await expect(jumpFab).toHaveCount(0)
+    await expect(backToTop).toBeVisible({ timeout: 15_000 })
+
+    const closedCounts = await countBottomFabs(page)
+    expect(closedCounts.top).toBe(1)
+    expect(closedCounts.jump).toBe(0)
+  })
+
+  test('at most one bottom FAB while mini player is open', async ({ page }) => {
+    const dialog = await openYoutubeNuggetSheet(page)
+    if (!dialog) {
+      test.skip(true, 'Target YouTube nugget not on home feed.')
+    }
+
+    const timestampLink = dialog!.locator('a[href*="#yt="]').first()
+    const hasTimestamp = await timestampLink.isVisible().catch(() => false)
+    if (!hasTimestamp) {
+      test.skip(true, 'No #yt= timestamp links in sheet body for this nugget.')
+    }
+
+    await scrollSheetBody(page, dialog!, 900)
+    await timestampLink.click()
+
+    const miniPlayer = page.getByRole('complementary')
+    const hasMiniPlayer = await miniPlayer.isVisible().catch(() => false)
+    if (!hasMiniPlayer) {
+      test.skip(true, 'Timestamp did not open the global mini player for this nugget.')
+    }
+
+    await scrollSheetBody(page, dialog!, 1200)
+
+    const fabCount = await countBottomFabs(page)
+    expect(fabCount.total).toBeLessThanOrEqual(1)
 
     await page.getByRole('button', { name: 'Close player' }).click()
     await expect(page.getByRole('button', { name: 'Jump to video' })).toHaveCount(0)
