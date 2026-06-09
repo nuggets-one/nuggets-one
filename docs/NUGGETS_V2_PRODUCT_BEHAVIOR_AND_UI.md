@@ -680,7 +680,7 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 - ❌ Saved filter presets / "my filters". Defer.
 - ❌ Per-tag color coding on chips — single neutral chip style + brand-colored active state.
 - ❌ Filter affordances nested inside the header — header stays thin (logo · search · theme · sign-in/bell).
-- ❌ Always-mounted "Back to top" button (v1 `BackToTopButton.tsx`). With prefetch + fast routes, scroll length isn't the friction it was. Add later only if user research demands.
+- ❌ Always-mounted "Back to top" button (v1 `BackToTopButton.tsx`). **Allowed:** scroll-gated FAB on long-scroll surfaces (`/`, intercepted nugget sheet, full nugget detail below `xl`) via `ScrollToTopHost` — hidden near top, left-side on mobile to clear the YouTube mini player, dual scroll-root aware for sheet body vs document.
 
 #### How filters combine (unchanged)
 
@@ -807,7 +807,7 @@ Changing `stream` (Nuggets ↔ Market Pulse) **clears `tags` and `q`** — diffe
 - **Desktop left filter sidebar** — **All** + **More filters** + dialog (§11.1)
 - **Sort dropdown / sort chip** — feed always reverse-chronological, search always relevance-first (§11.1)
 - **View-mode toggle** (grid / list / compact) on Bookmarks or Collections — Home mobile Grid ↔ Skim only (§4)
-- **Always-mounted "Back to top" button** — chrome bloat with negligible UX gain given prefetch + fast routes
+- **Always-mounted "Back to top" button** — chrome bloat; use scroll-gated FAB only (see §11.1)
 - **Sticky header on scroll-down reveal** — header simply scrolls away PMF; reveal pattern is a polish item
 
 ---

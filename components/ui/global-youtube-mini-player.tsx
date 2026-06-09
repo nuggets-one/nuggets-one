@@ -203,6 +203,8 @@ export function GlobalYouTubeMiniPlayer() {
   return createPortal(
     <div
       ref={rootRef}
+      data-youtube-mini-player
+      data-dock-side={dockSide}
       className={rootClassName}
       role="complementary"
       aria-label={dialogLabel}
