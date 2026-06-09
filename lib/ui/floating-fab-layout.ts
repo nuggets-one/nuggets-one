@@ -45,7 +45,7 @@ export function fabPositionClassName(opts: {
   )
 }
 
-/** Jump FAB shell — accent ring so it is not mistaken for Back to top. */
+/** Jump FAB shell — accent ring for visual distinction. */
 export const JUMP_FAB_SHELL_CLASSNAME = clsx(
   FAB_SHELL_CLASSNAME,
   'ring-2 ring-accent/40',

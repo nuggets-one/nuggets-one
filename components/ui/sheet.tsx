@@ -190,11 +190,6 @@ export function Sheet({ children, ariaLabel }: Props) {
           className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] max-lg:pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] lg:pb-0"
           style={{ touchAction: 'pan-y' }}
         >
-          <div
-            data-scroll-top-sentinel
-            className="h-px w-full shrink-0 pointer-events-none"
-            aria-hidden
-          />
           {children}
         </div>
       </div>

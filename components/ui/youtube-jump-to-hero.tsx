@@ -9,14 +9,13 @@ import {
   getMiniPlayerDockSide,
   isMiniPlayerVisible,
   isSheetOpen,
-} from '@/lib/ui/scroll-to-top'
+} from '@/lib/ui/floating-fab-chrome'
 import {
   getYouTubeHeroScrollRoot,
   NUGGET_YOUTUBE_HERO_ID,
   scrollYouTubeHeroIntoView,
 } from '@/lib/ui/youtube-hero-scroll'
 import {
-  dispatchYouTubeJumpFabVisibility,
   YOUTUBE_FEED_CLOSE_EVENT,
   YOUTUBE_FEED_PLAY_EVENT,
   type YouTubeFeedCloseDetail,
@@ -103,14 +102,6 @@ export function YouTubeJumpToHero({ articleId }: Props) {
 
   const showJump =
     activeArticleId === articleId && heroOffScreen && playerVisible
-
-  useEffect(() => {
-    dispatchYouTubeJumpFabVisibility(showJump)
-    return () => {
-      dispatchYouTubeJumpFabVisibility(false)
-    }
-  }, [showJump])
-
   if (!showJump) return null
 
   return (
