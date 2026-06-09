@@ -15,6 +15,7 @@ type Props = {
   streamLabel: string
   shownCount: number
   totalCount?: number
+  skimView?: boolean
 }
 
 export function FeedTopBar({
@@ -25,6 +26,7 @@ export function FeedTopBar({
   streamLabel,
   shownCount,
   totalCount,
+  skimView = false,
 }: Props) {
   return (
     <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
@@ -49,6 +51,7 @@ export function FeedTopBar({
         streamLabel={streamLabel}
         shownCount={shownCount}
         totalCount={totalCount}
+        compact={skimView}
       />
     </div>
   )

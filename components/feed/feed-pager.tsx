@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { ArticleCard } from '@/components/ui/article-card'
+import { ArticleSkimRow } from '@/components/ui/article-skim-row'
 import { ArticleCardSkeleton } from '@/components/ui/article-card-skeleton'
+import { ArticleSkimRowSkeleton } from '@/components/ui/article-skim-row-skeleton'
 import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 import { StatusBlock } from '@/components/ui/status-block'
 import type { ArticleCardProps, FeedCursor, ContentStream } from '@/types/article'
@@ -15,6 +17,7 @@ type Props = {
   q: string
   isAuthenticated: boolean
   isAdmin: boolean
+  skimView?: boolean
 }
 
 type FeedApiResponse = {
@@ -22,7 +25,15 @@ type FeedApiResponse = {
   nextCursor: FeedCursor | null
 }
 
-export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated, isAdmin }: Props) {
+export function FeedPager({
+  initialCursor,
+  stream,
+  tags,
+  q,
+  isAuthenticated,
+  isAdmin,
+  skimView = false,
+}: Props) {
   const [cards, setCards] = useState<ArticleCardProps[]>([])
   const [cursor, setCursor] = useState<FeedCursor | null>(initialCursor)
   const [isLoading, setIsLoading] = useState(false)
@@ -99,10 +110,39 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated, isA
     return () => observer.disconnect()
   }, [fetchNextPage])
 
+  const gridClasses =
+    'mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4'
+  const gridClassesDesktopOnly =
+    'mt-4 hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4'
+
   return (
     <>
-      {cards.length > 0 && (
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
+      {cards.length > 0 && skimView ? (
+        <>
+          <div className="-mx-4 mt-4 flex flex-col md:hidden">
+            {cards.map((article) => (
+              <ArticleSkimRow key={article.id} article={article} />
+            ))}
+          </div>
+          <div className={gridClassesDesktopOnly}>
+            <BookmarkBatchHydrator articleIds={cards.slice(-24).map((article) => article.id)} />
+            {cards.map((article) => (
+              <ArticleCard
+                key={article.id}
+                article={article}
+                isAuthenticated={isAuthenticated}
+                initialBookmarked={false}
+                adminEditHref={
+                  isAdmin ? `/admin/articles/${article.id}` : null
+                }
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {cards.length > 0 && !skimView ? (
+        <div className={gridClasses}>
           <BookmarkBatchHydrator articleIds={cards.slice(-24).map((article) => article.id)} />
           {cards.map((article) => (
             <ArticleCard
@@ -116,15 +156,23 @@ export function FeedPager({ initialCursor, stream, tags, q, isAuthenticated, isA
             />
           ))}
         </div>
-      )}
+      ) : null}
 
-      {isLoading && (
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
+      {isLoading && skimView ? (
+        <div className="-mx-4 mt-4 flex flex-col md:hidden">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <ArticleSkimRowSkeleton key={i} />
+          ))}
+        </div>
+      ) : null}
+
+      {isLoading && !skimView ? (
+        <div className={gridClasses}>
           {Array.from({ length: 3 }).map((_, i) => (
             <ArticleCardSkeleton key={i} />
           ))}
         </div>
-      )}
+      ) : null}
 
       {error && !isLoading && (
         <StatusBlock

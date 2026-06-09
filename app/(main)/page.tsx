@@ -9,7 +9,9 @@ import { getTagCountsForStream } from '@/lib/queries/tag-counts'
 import { getStreamArticleCounts } from '@/lib/queries/stream-counts'
 import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
+import { ArticleSkimRow } from '@/components/ui/article-skim-row'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
+import { isSkimFeedView } from '@/lib/feed/feed-view'
 import { FeedPager } from '@/components/feed/feed-pager'
 import { FeedEmpty } from '@/components/feed/feed-empty'
 import { FeedTopBar } from '@/components/feed/feed-top-bar'
@@ -47,6 +49,7 @@ type SearchParams = {
   stream?: string
   tags?: string
   q?: string
+  view?: string
 }
 
 type Props = {
@@ -67,6 +70,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       .slice(0, MAX_TAGS)
     : []
   const q = (searchParams.q ?? '').trim().slice(0, MAX_Q_LENGTH)
+  const skimView = isSkimFeedView(searchParams.view)
 
   // Filtered or search URLs must never be served from stale ISR cache.
   // BLUEPRINT §11: "Filtered / search URLs → expect dynamic behavior."
@@ -127,10 +131,37 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
         streamLabel={streamLabel}
         shownCount={articles.length}
         totalCount={totalCount}
+        skimView={skimView}
       />
 
       {articles.length === 0 ? (
         <FeedEmpty q={q} hasTags={tags.length > 0} />
+      ) : skimView ? (
+        <>
+          <div className="-mx-4 flex flex-col md:hidden">
+            {articles.map((article, index) => (
+              <ArticleSkimRow
+                key={article.id}
+                article={article}
+                priority={index === 0}
+              />
+            ))}
+          </div>
+          <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
+            {articles.map((article, index) => (
+              <ArticleCard
+                key={article.id}
+                article={article}
+                priority={index === 0}
+                isAuthenticated={isAuthenticated}
+                initialBookmarked={bookmarkedIds.has(article.id)}
+                adminEditHref={
+                  isAdmin ? `/admin/articles/${article.id}` : null
+                }
+              />
+            ))}
+          </div>
+        </>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
           {articles.map((article, index) => (
@@ -150,13 +181,14 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
 
       {articles.length > 0 && (
         <FeedPager
-          key={`${stream}:${[...tags].sort().join(',')}:${q}`}
+          key={`${stream}:${[...tags].sort().join(',')}:${q}:${skimView ? 'skim' : 'grid'}`}
           initialCursor={nextCursor}
           stream={stream}
           tags={tags}
           q={q}
           isAuthenticated={isAuthenticated}
           isAdmin={isAdmin}
+          skimView={skimView}
         />
       )}
     </>
@@ -165,6 +197,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
 
 export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams
+  const skimView = isSkimFeedView(params.view)
 
   return (
     <Suspense
@@ -187,12 +220,18 @@ export default async function HomePage({ searchParams }: Props) {
               </div>
             </section>
             <div className="space-y-1.5 px-4 pb-0.5 pt-2 lg:px-6">
-              <div className="h-5 max-w-[62ch] animate-pulse rounded bg-border/35" />
-              <div className="h-3.5 max-w-[62ch] animate-pulse rounded bg-border/30" />
-              <div className="h-3.5 w-40 animate-pulse rounded bg-border/30" />
+              {skimView ? (
+                <div className="h-3.5 w-40 animate-pulse rounded bg-border/30 md:hidden" />
+              ) : (
+                <>
+                  <div className="h-5 max-w-[62ch] animate-pulse rounded bg-border/35" />
+                  <div className="h-3.5 max-w-[62ch] animate-pulse rounded bg-border/30" />
+                  <div className="h-3.5 w-40 animate-pulse rounded bg-border/30" />
+                </>
+              )}
             </div>
           </div>
-          <FeedSkeleton count={6} />
+          <FeedSkeleton count={skimView ? 8 : 6} skimView={skimView} />
         </>
       }
     >

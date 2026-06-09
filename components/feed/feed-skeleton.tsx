@@ -1,6 +1,22 @@
 import { ArticleCardSkeleton } from '@/components/ui/article-card-skeleton'
+import { ArticleSkimRowSkeleton } from '@/components/ui/article-skim-row-skeleton'
 
-export function FeedSkeleton({ count = 6 }: { count?: number }) {
+type Props = {
+  count?: number
+  skimView?: boolean
+}
+
+export function FeedSkeleton({ count = 6, skimView = false }: Props) {
+  if (skimView) {
+    return (
+      <div className="flex flex-col md:hidden">
+        {Array.from({ length: count }).map((_, i) => (
+          <ArticleSkimRowSkeleton key={i} />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
       {Array.from({ length: count }).map((_, i) => (

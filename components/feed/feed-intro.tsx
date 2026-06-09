@@ -19,17 +19,62 @@ type Props = {
   streamLabel: string
   shownCount: number
   totalCount?: number
+  /** Skim mode: single-line count only (mobile). */
+  compact?: boolean
 }
 
 const numberFmt = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 0,
 })
 
-export function FeedIntro({ stream, streamLabel, shownCount, totalCount }: Props) {
+export function FeedIntro({ stream, streamLabel, shownCount, totalCount, compact = false }: Props) {
   const { title, tagline } = INTRO_COPY[stream]
   const shown = numberFmt.format(shownCount)
   const hasExactTotal = typeof totalCount === 'number'
   const total = hasExactTotal ? numberFmt.format(totalCount) : null
+
+  const countLine = hasExactTotal ? (
+    <span>Showing {shown} of {total}</span>
+  ) : (
+    <span>Showing {shown} results</span>
+  )
+
+  if (compact) {
+    return (
+      <>
+        <section
+          className="mb-0.5 px-4 pb-0.5 pt-2 md:hidden lg:px-6"
+          aria-label="Homepage intro"
+        >
+          <p className="text-[11.5px] leading-4 text-muted sm:text-xs">
+            <span className="font-medium text-primary">{streamLabel}</span>
+            <span className="mx-1 text-muted/80" aria-hidden="true">
+              {'\u2009\u00b7\u2009'}
+            </span>
+            {countLine}
+          </p>
+        </section>
+        <section
+          className="mb-0.5 hidden px-4 pb-0.5 pt-2 md:block lg:px-6"
+          aria-label="Homepage intro"
+        >
+          <h1 className="max-w-[62ch] text-[15px] font-medium leading-5 tracking-tight text-primary sm:text-base lg:max-w-none">
+            {title}
+          </h1>
+          <p className="mt-0.5 max-w-[62ch] text-[11.5px] leading-4 text-muted sm:text-xs lg:max-w-none">
+            {tagline}
+          </p>
+          <p className="mt-1.5 text-[11.5px] leading-4 text-muted sm:text-xs">
+            <span className="font-medium text-primary">{streamLabel}</span>
+            <span className="mx-1 text-muted/80" aria-hidden="true">
+              {'\u2009\u00b7\u2009'}
+            </span>
+            {countLine}
+          </p>
+        </section>
+      </>
+    )
+  }
 
   return (
     <section
@@ -47,11 +92,7 @@ export function FeedIntro({ stream, streamLabel, shownCount, totalCount }: Props
         <span className="mx-1 text-muted/80" aria-hidden="true">
           {'\u2009\u00b7\u2009'}
         </span>
-        {hasExactTotal ? (
-          <span>Showing {shown} of {total}</span>
-        ) : (
-          <span>Showing {shown} results</span>
-        )}
+        {countLine}
       </p>
     </section>
   )

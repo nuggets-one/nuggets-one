@@ -19,6 +19,7 @@ import {
   groupedSortedByCount,
 } from '@/lib/feed/group-official-tags'
 import { FilterPopover } from '@/components/feed/filter-popover'
+import { FeedViewToggle } from '@/components/feed/feed-view-toggle'
 
 type Props = {
   tags: TagSummary[]
@@ -199,6 +200,10 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
           <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
         </button>
       ) : null}
+
+      <RailDivider />
+
+      <FeedViewToggle />
 
       <div className="shrink-0">
         <FilterPopover

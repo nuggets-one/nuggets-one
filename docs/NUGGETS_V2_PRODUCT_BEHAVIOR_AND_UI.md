@@ -341,10 +341,13 @@ Header → **Stream tabs** → **All + More filters** → **Active filters** (co
 
 - **Same grid as Home** — familiar muscle memory; empty state is instructional (“Bookmark nuggets to revisit them later”) not decorative filler.
 
-### Grid vs list
+### Grid vs skim (list)
 
-- **Default:** **Grid only** for Home and Bookmarks.
-- **Optional later:** Compact **single-column list** for accessibility / power users — **post-PMF**.
+- **Default:** **Grid** for Home and Bookmarks on all breakpoints.
+- **Home mobile skim (post-PMF):** Opt-in **Skim** list view on Home (`/?view=skim`) for viewports **&lt; 768px** only. Toggle lives in the feed filter rail (grid/list icons). Desktop and tablet always render the standard grid even when `view=skim` is in the URL.
+- **Skim row content:** Title (2 lines), 1-line plain `card_preview`, relative time + primary tag (or Pulse badge), 72×72 static thumb — no hero video, no blockquote HTML, no per-row bookmark/share.
+- **Persistence:** `view=skim` in URL (nuqs); preference mirrored to `localStorage` (`nuggets-feed-view-mobile`) so returning mobile users keep Skim without polluting shared links.
+- **Bookmarks / Collections:** Grid only — no skim toggle.
 
 ---
 
@@ -672,7 +675,7 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 - ❌ Desktop left sidebar (`DesktopFilterSidebar`, `TaxonomySidebar`).
 - ❌ Dimension grouping on the **landing** surface — use **More filters** dialog only (mega columns). **Not** a left sidebar.
 - ❌ Sort dropdown (`sortOrder=newest|oldest|popular`). Default feed is **always `published_at DESC`**; search is **always relevance-first** (`BLUEPRINT` §6.2a). No sort UI PMF.
-- ❌ View-mode toggle (grid / list / compact). Single grid PMF.
+- ❌ View-mode toggle (grid / list / compact) on Bookmarks or Collections. Home mobile **Grid ↔ Skim** only (§4) — not a three-way picker.
 - ❌ OR-mode for tags — AND only.
 - ❌ Saved filter presets / "my filters". Defer.
 - ❌ Per-tag color coding on chips — single neutral chip style + brand-colored active state.
@@ -803,7 +806,7 @@ Changing `stream` (Nuggets ↔ Market Pulse) **clears `tags` and `q`** — diffe
 - **Transactional email** (`resend`) — Supabase Auth handles its own emails; defer until `/contact` form ships
 - **Desktop left filter sidebar** — **All** + **More filters** + dialog (§11.1)
 - **Sort dropdown / sort chip** — feed always reverse-chronological, search always relevance-first (§11.1)
-- **View-mode toggle** (grid / list / compact) — single grid PMF
+- **View-mode toggle** (grid / list / compact) on Bookmarks or Collections — Home mobile Grid ↔ Skim only (§4)
 - **Always-mounted "Back to top" button** — chrome bloat with negligible UX gain given prefetch + fast routes
 - **Sticky header on scroll-down reveal** — header simply scrolls away PMF; reveal pattern is a polish item
 
