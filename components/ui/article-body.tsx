@@ -80,7 +80,7 @@ function BodyLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) {
   const { className, href, ...rest } = props
   const isYtTimestamp = typeof href === 'string' && /#yt=/.test(href)
   const ytClasses = isYtTimestamp
-    ? 'cursor-pointer rounded-sm transition-colors active:bg-primary/10'
+    ? 'cursor-pointer rounded-sm transition-colors active:bg-accent-soft'
     : ''
   return (
     <a

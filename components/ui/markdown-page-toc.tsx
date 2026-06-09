@@ -40,7 +40,7 @@ export function MarkdownPageToc({
                   className={[
                     '-ml-px block border-l py-1.5 pl-4 pr-2 text-[12.5px] leading-snug transition-colors',
                     active
-                      ? 'border-l-primary font-medium text-primary'
+                      ? 'border-l-accent font-medium text-primary'
                       : 'border-transparent text-muted hover:border-border-strong hover:text-primary',
                   ].join(' ')}
                 >

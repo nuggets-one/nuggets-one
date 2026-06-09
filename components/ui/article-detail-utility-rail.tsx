@@ -127,11 +127,17 @@ export function ArticleDetailUtilityRail({
               <span className="text-muted">Progress</span>
               <span className="tabular-nums text-primary">{Math.round(progress)}%</span>
             </div>
-            <div className="h-1 rounded-full bg-rail">
+            <div
+              className="h-1.5 rounded-full bg-border"
+              role="progressbar"
+              aria-valuenow={Math.round(progress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Reading progress"
+            >
               <div
-                className="h-full rounded-full bg-primary/80 transition-[width] duration-200"
+                className="h-full rounded-full bg-accent transition-[width] duration-200"
                 style={{ width: `${progress}%` }}
-                aria-hidden="true"
               />
             </div>
             {activeLabel ? <p className="mt-2 text-xs leading-snug text-muted">{activeLabel}</p> : null}
