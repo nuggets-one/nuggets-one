@@ -9,7 +9,7 @@ export function ArticleSkimRowSkeleton() {
         <div className="h-3 w-full max-w-[75%] animate-pulse rounded bg-surface-raised motion-reduce:animate-none" />
         <div className="h-3 w-24 animate-pulse rounded bg-surface-raised motion-reduce:animate-none" />
       </div>
-      <div className="size-[72px] shrink-0 animate-pulse rounded-lg bg-surface-raised motion-reduce:animate-none" />
+      <div className="w-[96px] shrink-0 aspect-video animate-pulse rounded-lg bg-surface-raised motion-reduce:animate-none" />
     </div>
   )
 }

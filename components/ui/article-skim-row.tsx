@@ -30,13 +30,31 @@ function formatCompactDate(iso: string): string {
   }).format(d)
 }
 
-function SkimRowThumb({ url, alt, priority }: { url: string | null; alt: string; priority: boolean }) {
+const skimThumbFrameClasses = 'w-[96px] shrink-0 aspect-video rounded-lg'
+
+function SkimRowThumb({
+  url,
+  alt,
+  priority,
+  heroMediaKind,
+}: {
+  url: string | null
+  alt: string
+  priority: boolean
+  heroMediaKind: ArticleCardProps['hero_media_kind']
+}) {
   const resolved = resolveCardImageUrl(url)
   const canShow = canRenderWithNextImage(resolved)
+  const isYouTube = heroMediaKind === 'youtube'
+  const imageFitClasses = isYouTube
+    ? 'object-cover'
+    : 'object-contain bg-slate-100 dark:bg-slate-800'
 
   if (!canShow || !resolved) {
     return (
-      <div className="flex size-[72px] shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-medium text-muted dark:bg-slate-800">
+      <div
+        className={`flex ${skimThumbFrameClasses} items-center justify-center bg-slate-100 text-[10px] font-medium text-muted dark:bg-slate-800`}
+      >
         No preview
       </div>
     )
@@ -49,12 +67,12 @@ function SkimRowThumb({ url, alt, priority }: { url: string | null; alt: string;
     <Image
       src={resolved}
       alt={alt}
-      width={72}
-      height={72}
-      sizes="72px"
+      width={96}
+      height={54}
+      sizes="96px"
       priority={priority}
       unoptimized={!optimize}
-      className="size-[72px] shrink-0 rounded-lg object-cover"
+      className={`${skimThumbFrameClasses} ${imageFitClasses}`}
     />
   )
 }
@@ -71,6 +89,7 @@ export function ArticleSkimRow({ article, priority = false }: Props) {
     tag_labels,
     tag_dimensions,
     hero_alt_text,
+    hero_media_kind,
   } = article
 
   const href = `/nuggets/${id}/${slug}`
@@ -125,7 +144,12 @@ export function ArticleSkimRow({ article, priority = false }: Props) {
             ) : null}
           </div>
         </div>
-        <SkimRowThumb url={thumbUrl} alt={hero_alt_text ?? title} priority={priority} />
+        <SkimRowThumb
+          url={thumbUrl}
+          alt={hero_alt_text ?? title}
+          priority={priority}
+          heroMediaKind={hero_media_kind}
+        />
       </NuggetDetailLink>
     </article>
   )
