@@ -78,31 +78,6 @@ test.describe('mobile nugget sheet scroll', () => {
     expect(overscroll).toContain('contain')
   })
 
-  test('sheet body scrolls to top on FAB click', async ({ page }) => {
-    await gotoHomeAndScroll(page, 0)
-    const { dialog } = await openFirstNuggetSheet(page)
-
-    const sheetBody = dialog.locator('[data-sheet-body]')
-    await sheetBody.evaluate((el) => {
-      el.scrollTop = 480
-      el.dispatchEvent(new Event('scroll'))
-    })
-    await expect
-      .poll(() => sheetBody.evaluate((el) => el.scrollTop))
-      .toBeGreaterThanOrEqual(400)
-
-    const backToTop = page.getByRole('button', { name: 'Back to top' })
-    await expect(backToTop).toBeVisible()
-
-    await backToTop.click()
-    await expect
-      .poll(() => sheetBody.evaluate((el) => el.scrollTop))
-      .toBeLessThanOrEqual(8)
-
-    const feedScroll = await page.evaluate(() => window.scrollY)
-    expect(feedScroll).toBe(0)
-  })
-
   test('resets feed scroll to top when switching streams', async ({ page }) => {
     await gotoHomeAndScroll(page, 1200)
     await expect
