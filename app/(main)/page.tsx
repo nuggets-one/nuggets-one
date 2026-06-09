@@ -23,6 +23,8 @@ import { getDefaultOgImageUrl, getSiteUrl } from '@/lib/seo/site-url'
 const HOME_TITLE = 'Nuggets: The Knowledge App'
 const HOME_DESCRIPTION =
   'Hand-curated reads across technology, markets, and ideas. Standard and Market Pulse streams.'
+const HOME_OG_DESCRIPTION =
+  'Curated reads across Markets, Investments, AI & Geopolitics'
 const homeOgImage = getDefaultOgImageUrl()
 
 export const metadata: Metadata = {
@@ -32,7 +34,7 @@ export const metadata: Metadata = {
   description: HOME_DESCRIPTION,
   openGraph: {
     title: HOME_TITLE,
-    description: 'Hand-curated reads across technology, markets, and ideas.',
+    description: HOME_OG_DESCRIPTION,
     url: getSiteUrl(),
     siteName: 'Nuggets',
     type: 'website',
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: HOME_TITLE,
-    description: 'Hand-curated reads across technology, markets, and ideas.',
+    description: HOME_OG_DESCRIPTION,
     images: [homeOgImage],
   },
 }

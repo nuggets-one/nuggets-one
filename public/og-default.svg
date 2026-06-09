@@ -14,8 +14,8 @@
     <g transform="translate(0, -50) scale(0.274) translate(-256, -256)">
       <path d="M 140 110 L 210 110 L 302 340 V 110 H 372 V 402 H 302 L 210 172 V 402 H 140 Z" fill="#111827" />
     </g>
-    <text x="0" y="85" font-family="sans-serif" font-weight="700" font-size="54" fill="#111827" text-anchor="middle" letter-spacing="-0.04em">Nuggets</text>
-    <text x="0" y="135" font-family="sans-serif" font-weight="400" font-size="20" fill="#4b5563" text-anchor="middle" letter-spacing="0.1em">THE KNOWLEDGE APP</text>
+    <text x="0" y="85" font-family="Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="54" fill="#111827" text-anchor="middle" letter-spacing="-0.04em">Nuggets</text>
+    <text x="0" y="135" font-family="Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="20" fill="#4b5563" text-anchor="middle" letter-spacing="0.08em">THE KNOWLEDGE APP</text>
   </g>
 
   <rect x="40" y="40" width="1120" height="550" rx="12" fill="none" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6" />
