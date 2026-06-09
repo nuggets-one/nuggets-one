@@ -4,7 +4,11 @@ import clsx from 'clsx'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { useMobileSearchExpanded } from '@/components/layout/mobile-search-context'
-import { YOUTUBE_FEED_PLAY_EVENT } from '@/lib/ui/youtube-feed-play'
+import { fabPositionClassName } from '@/lib/ui/floating-fab-layout'
+import {
+  YOUTUBE_FEED_CLOSE_EVENT,
+  YOUTUBE_FEED_PLAY_EVENT,
+} from '@/lib/ui/youtube-feed-play'
 import {
   ensureScrollTopSentinel,
   getActiveScrollRoot,
@@ -17,6 +21,7 @@ import {
 } from '@/lib/ui/scroll-to-top'
 
 const SCROLL_SHOW_THRESHOLD_PX = 400
+const JUMP_FAB_SELECTOR = '[data-youtube-jump-fab]'
 
 function ChevronUpIcon() {
   return (
@@ -33,6 +38,11 @@ function ChevronUpIcon() {
       <path d="m18 15-6-6-6 6" />
     </svg>
   )
+}
+
+function isJumpFabVisible(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.querySelector(JUMP_FAB_SELECTOR) instanceof HTMLElement
 }
 
 export function ScrollToTopButton() {
@@ -61,32 +71,6 @@ export function ScrollToTopButton() {
   }, [])
 
   useEffect(() => {
-    syncChrome()
-
-    function onPlayerEvent() {
-      syncChrome()
-    }
-
-    window.addEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlayerEvent)
-    window.addEventListener('resize', syncChrome, { passive: true })
-
-    const bodyObserver = new MutationObserver(syncChrome)
-    bodyObserver.observe(document.body, { childList: true, subtree: false })
-    const htmlObserver = new MutationObserver(syncChrome)
-    htmlObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-sheet-open'],
-    })
-
-    return () => {
-      window.removeEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlayerEvent)
-      window.removeEventListener('resize', syncChrome)
-      bodyObserver.disconnect()
-      htmlObserver.disconnect()
-    }
-  }, [syncChrome])
-
-  useEffect(() => {
     if (!hydrated) return
 
     const scrollRoot = getActiveScrollRoot()
@@ -104,7 +88,7 @@ export function ScrollToTopButton() {
         !isSearchExpanded &&
         !isBlockingOverlayOpen()
 
-      if (!enabled) {
+      if (!enabled || isJumpFabVisible()) {
         setShowButton(false)
         return
       }
@@ -112,37 +96,63 @@ export function ScrollToTopButton() {
       setShowButton(readScrollTop() >= SCROLL_SHOW_THRESHOLD_PX)
     }
 
+    syncChrome()
+
+    function onPlayerChromeEvent() {
+      syncChrome()
+      updateVisibility()
+    }
+
+    window.addEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlayerChromeEvent)
+    window.addEventListener(YOUTUBE_FEED_CLOSE_EVENT, onPlayerChromeEvent)
+    window.addEventListener('resize', updateVisibility, { passive: true })
+
     const scrollTarget: HTMLElement | Window = scrollRoot ?? window
     scrollTarget.addEventListener('scroll', updateVisibility, { passive: true })
-    window.addEventListener('resize', updateVisibility, { passive: true })
+
+    const bodyObserver = new MutationObserver(updateVisibility)
+    bodyObserver.observe(document.body, { childList: true, subtree: true })
+
+    const htmlObserver = new MutationObserver(onPlayerChromeEvent)
+    htmlObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-sheet-open'],
+    })
+
     updateVisibility()
 
     return () => {
-      scrollTarget.removeEventListener('scroll', updateVisibility)
+      window.removeEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlayerChromeEvent)
+      window.removeEventListener(YOUTUBE_FEED_CLOSE_EVENT, onPlayerChromeEvent)
       window.removeEventListener('resize', updateVisibility)
+      scrollTarget.removeEventListener('scroll', updateVisibility)
+      bodyObserver.disconnect()
+      htmlObserver.disconnect()
     }
-  }, [hydrated, pathname, isSearchExpanded, hasSheet])
+  }, [hydrated, pathname, isSearchExpanded, hasSheet, syncChrome])
 
-  if (!hydrated || !routeEnabled || isSearchExpanded || isBlockingOverlayOpen() || !showButton) {
+  if (
+    !hydrated ||
+    !routeEnabled ||
+    isSearchExpanded ||
+    isBlockingOverlayOpen() ||
+    !showButton ||
+    isJumpFabVisible()
+  ) {
     return null
   }
 
   const scrollRoot = getActiveScrollRoot()
-  const useLeftOnDesktop = dockSide === 'right'
 
   return (
     <button
       type="button"
+      data-scroll-to-top-fab
       onClick={() => scrollToTop(scrollRoot)}
       aria-label="Back to top"
       className={clsx(
-        'fixed z-[90] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/95 text-primary shadow-panel backdrop-blur transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60',
+        fabPositionClassName({ dockSide, playerVisible }),
         isFullPageDetail && 'xl:hidden',
-        'max-lg:left-4 max-lg:right-auto',
-        useLeftOnDesktop ? 'lg:left-4 lg:right-auto' : 'lg:right-4 lg:left-auto',
-        playerVisible
-          ? 'max-lg:bottom-[calc(13rem+env(safe-area-inset-bottom))] lg:bottom-[calc(11rem+env(safe-area-inset-bottom))]'
-          : 'max-lg:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-[max(1rem,env(safe-area-inset-bottom))]',
       )}
     >
       <ChevronUpIcon />

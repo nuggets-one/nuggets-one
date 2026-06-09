@@ -7,6 +7,7 @@ import {
   postYouTubeIframeCommand,
 } from '@/lib/ui/youtube-embed'
 import {
+  dispatchYouTubeFeedClose,
   YOUTUBE_FEED_PLAY_EVENT,
   type YouTubeFeedPlayDetail,
 } from '@/lib/ui/youtube-feed-play'
@@ -141,6 +142,7 @@ export function GlobalYouTubeMiniPlayer() {
   }, [])
 
   const close = useCallback(() => {
+    dispatchYouTubeFeedClose()
     setPanel(null)
   }, [])
 

@@ -1,13 +1,18 @@
 'use client'
 
+import clsx from 'clsx'
 import { useEffect, useState } from 'react'
+import { fabPositionClassName } from '@/lib/ui/floating-fab-layout'
+import { isMiniPlayerVisible, getMiniPlayerDockSide } from '@/lib/ui/scroll-to-top'
 import {
   getYouTubeHeroScrollRoot,
   NUGGET_YOUTUBE_HERO_ID,
   scrollYouTubeHeroIntoView,
 } from '@/lib/ui/youtube-hero-scroll'
 import {
+  YOUTUBE_FEED_CLOSE_EVENT,
   YOUTUBE_FEED_PLAY_EVENT,
+  type YouTubeFeedCloseDetail,
   type YouTubeFeedPlayDetail,
 } from '@/lib/ui/youtube-feed-play'
 
@@ -18,17 +23,46 @@ type Props = {
 export function YouTubeJumpToHero({ articleId }: Props) {
   const [activeArticleId, setActiveArticleId] = useState<string | null>(null)
   const [heroOffScreen, setHeroOffScreen] = useState(false)
+  const [playerVisible, setPlayerVisible] = useState(false)
+  const [dockSide, setDockSide] = useState<'left' | 'right' | 'center' | null>(null)
 
   useEffect(() => {
+    function syncPlayer() {
+      setPlayerVisible(isMiniPlayerVisible())
+      setDockSide(getMiniPlayerDockSide())
+    }
+
     function onPlay(e: Event) {
       const d = (e as CustomEvent<YouTubeFeedPlayDetail>).detail
       if (!d?.articleId || d.articleId !== articleId) return
       if (d.startSeconds > 0) {
         setActiveArticleId(articleId)
       }
+      syncPlayer()
     }
+
+    function onClose(e: Event) {
+      const d = (e as CustomEvent<YouTubeFeedCloseDetail>).detail
+      if (d?.articleId && d.articleId !== articleId) return
+      setActiveArticleId(null)
+      setHeroOffScreen(false)
+      syncPlayer()
+    }
+
+    syncPlayer()
     window.addEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlay)
-    return () => window.removeEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlay)
+    window.addEventListener(YOUTUBE_FEED_CLOSE_EVENT, onClose)
+    window.addEventListener('resize', syncPlayer, { passive: true })
+
+    const observer = new MutationObserver(syncPlayer)
+    observer.observe(document.body, { childList: true, subtree: false })
+
+    return () => {
+      window.removeEventListener(YOUTUBE_FEED_PLAY_EVENT, onPlay)
+      window.removeEventListener(YOUTUBE_FEED_CLOSE_EVENT, onClose)
+      window.removeEventListener('resize', syncPlayer)
+      observer.disconnect()
+    }
   }, [articleId])
 
   useEffect(() => {
@@ -51,15 +85,17 @@ export function YouTubeJumpToHero({ articleId }: Props) {
     return () => observer.disconnect()
   }, [activeArticleId, articleId])
 
-  const showJump = activeArticleId === articleId && heroOffScreen
+  const showJump =
+    activeArticleId === articleId && heroOffScreen && playerVisible
   if (!showJump) return null
 
   return (
     <button
       type="button"
+      data-youtube-jump-fab
       onClick={() => scrollYouTubeHeroIntoView()}
       aria-label="Jump to video"
-      className="fixed right-4 z-[90] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/95 text-primary shadow-panel backdrop-blur transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 max-lg:bottom-[calc(13rem+env(safe-area-inset-bottom))] lg:bottom-[calc(11rem+env(safe-area-inset-bottom))]"
+      className={clsx(fabPositionClassName({ dockSide, playerVisible: true }))}
     >
       <svg
         className="h-5 w-5"

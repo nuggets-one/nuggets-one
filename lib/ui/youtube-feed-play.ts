@@ -4,11 +4,16 @@
  */
 
 export const YOUTUBE_FEED_PLAY_EVENT = 'youtube-feed-play'
+export const YOUTUBE_FEED_CLOSE_EVENT = 'youtube-feed-close'
 
 export type YouTubeFeedPlayDetail = {
   videoId: string
   title: string
   startSeconds: number
+  articleId?: string
+}
+
+export type YouTubeFeedCloseDetail = {
   articleId?: string
 }
 
@@ -23,5 +28,12 @@ export function dispatchYouTubeFeedPlay(detail: YouTubeFeedPlayDetail): void {
         articleId: detail.articleId,
       },
     }),
+  )
+}
+
+export function dispatchYouTubeFeedClose(detail: YouTubeFeedCloseDetail = {}): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent<YouTubeFeedCloseDetail>(YOUTUBE_FEED_CLOSE_EVENT, { detail }),
   )
 }
