@@ -345,7 +345,7 @@ Header → **Stream tabs** → **All + More filters** → **Active filters** (co
 
 - **Default:** **Skim** on Home mobile (`&lt; 768px`); **Grid** on tablet/desktop and on Bookmarks / Collections.
 - **Home mobile card opt-out:** `/?view=grid` switches to standard cards; segmented toggle in the feed filter rail (neutral track, white active segment — distinct from yellow filter chips).
-- **Skim row content:** Title (2 lines), 1-line plain `card_preview`, relative time + primary tag (or Pulse badge), 72×72 static thumb — no hero video, no blockquote HTML, no per-row bookmark/share.
+- **Skim row content:** Title (2 lines), 1-line plain `card_preview`, published date (`Jun 9, 2026`) + primary tag (domain tag on Pulse stream), 72×72 static thumb — no hero video, no blockquote HTML, no per-row bookmark/share.
 - **Persistence:** Skim is URL-clean (no param); card preference uses `view=grid` (nuqs) plus `localStorage` + cookie (`nuggets-feed-view-mobile`) so SSR matches opt-out on return visits.
 - **Bookmarks / Collections:** Grid only — no skim toggle.
 

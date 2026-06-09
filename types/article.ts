@@ -21,6 +21,8 @@ export type ArticleCardProps = {
   tag_slugs: string[]
   /** Display labels aligned to `tag_slugs` order: `tags.label` when present, else the slug as stored on the article. */
   tag_labels: string[]
+  /** `tags.dimension` aligned to `tag_slugs` — used for Pulse skim row domain meta. */
+  tag_dimensions: (string | null)[]
   source_url: string | null
   /**
    * Denormalized curator display name for the card chip (null → badge "N").

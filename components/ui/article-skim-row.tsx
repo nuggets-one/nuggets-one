@@ -1,6 +1,5 @@
 import Image from 'next/image'
 import { NuggetDetailLink } from '@/components/ui/nugget-detail-link'
-import { formatRelativeTime } from '@/lib/ui/relative-time'
 import { resolveSkimRowThumbUrl } from '@/lib/ui/skim-row-thumb'
 import {
   canRenderWithNextImage,
@@ -18,6 +17,17 @@ type Props = {
 function plainPreview(text: string | null): string {
   if (!text) return ''
   return text.replace(/\s+/g, ' ').trim()
+}
+
+function formatCompactDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(d)
 }
 
 function SkimRowThumb({ url, alt, priority }: { url: string | null; alt: string; priority: boolean }) {
@@ -59,23 +69,27 @@ export function ArticleSkimRow({ article, priority = false }: Props) {
     published_at,
     tag_slugs,
     tag_labels,
+    tag_dimensions,
     hero_alt_text,
   } = article
 
   const href = `/nuggets/${id}/${slug}`
   const preview = plainPreview(card_preview)
-  const relativeTime = formatRelativeTime(published_at)
+  const publishedLabel = formatCompactDate(published_at)
   const thumbUrl = resolveSkimRowThumbUrl(article)
 
   const displayTags = tag_slugs
     .map((tagSlug, index) => ({
       slug: tagSlug,
       label: tag_labels[index] ?? tagSlug,
+      dimension: tag_dimensions[index] ?? null,
     }))
     .filter((tag) => tag.slug !== 'nuggets' && tag.slug !== 'pulse')
 
-  const primaryTag = displayTags[0]
-  const streamBadge = content_stream === 'pulse' ? 'Pulse' : null
+  const metaTag =
+    content_stream === 'pulse'
+      ? (displayTags.find((tag) => tag.dimension === 'domain') ?? displayTags[0])
+      : displayTags[0]
 
   return (
     <article
@@ -94,24 +108,19 @@ export function ArticleSkimRow({ article, priority = false }: Props) {
             <p className="line-clamp-1 text-xs leading-4 text-muted">{preview}</p>
           ) : null}
           <div className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted">
-            {relativeTime ? <time dateTime={published_at}>{relativeTime}</time> : null}
-            {streamBadge ? (
+            {publishedLabel ? (
+              <time className="tabular-nums" dateTime={published_at}>
+                {publishedLabel}
+              </time>
+            ) : null}
+            {metaTag ? (
               <>
-                {relativeTime ? (
+                {publishedLabel ? (
                   <span className="text-muted/70" aria-hidden="true">
                     ·
                   </span>
                 ) : null}
-                <span className="font-medium text-primary">{streamBadge}</span>
-              </>
-            ) : primaryTag ? (
-              <>
-                {relativeTime ? (
-                  <span className="text-muted/70" aria-hidden="true">
-                    ·
-                  </span>
-                ) : null}
-                <span className="truncate font-medium text-primary">{primaryTag.label}</span>
+                <span className="truncate font-medium text-primary">{metaTag.label}</span>
               </>
             ) : null}
           </div>

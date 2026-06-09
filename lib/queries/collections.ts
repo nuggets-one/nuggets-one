@@ -21,8 +21,8 @@ import {
 
 // Phase 14: collections doesn't fetch `article_media`; cards stay single-hero.
 // `images: []` is appended in the mapping step below.
-type ArticleRowWithoutImages = Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels'>
-type ArticleRowBase = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels'>
+type ArticleRowWithoutImages = Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels' | 'tag_dimensions'>
+type ArticleRowBase = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels' | 'tag_dimensions'>
 type ArticleRowWithLabels = Omit<ArticleCardProps, 'cardPreviewHtml'>
 type TaggableRow = Record<string, unknown> & { tag_slugs: string[] }
 

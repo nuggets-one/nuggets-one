@@ -10,12 +10,12 @@ import {
 
 // Phase 14: bookmarks doesn't fetch `article_media`; cards stay single-hero.
 // `images: []` is appended after normalization.
-type ArticleRowBase = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels'>
+type ArticleRowBase = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels' | 'tag_dimensions'>
 type ArticleRowWithLabels = Omit<ArticleCardProps, 'cardPreviewHtml'>
 type TaggableRow = Record<string, unknown> & { tag_slugs: string[] }
 
 type BookmarkWithArticleRow = {
-  articles: Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels'> | Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels'>[] | null
+  articles: Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels' | 'tag_dimensions'> | Omit<ArticleCardProps, 'cardPreviewHtml' | 'images' | 'tag_labels' | 'tag_dimensions'>[] | null
 }
 
 const BOOKMARK_ARTICLE_FIELDS = `

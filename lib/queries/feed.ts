@@ -15,7 +15,7 @@ import {
 } from '@/types/article'
 
 type ArticleRowWithLabels = Omit<ArticleCardProps, 'cardPreviewHtml'>
-type ArticleRowWithoutLabels = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels'>
+type ArticleRowWithoutLabels = Omit<ArticleCardProps, 'cardPreviewHtml' | 'tag_labels' | 'tag_dimensions'>
 type RawArticleRow = Omit<ArticleRowWithoutLabels, 'images'>
 type SearchRpcRow = RawArticleRow & { search_rank: number }
 type TaggableRow = Record<string, unknown> & { tag_slugs: string[] }
