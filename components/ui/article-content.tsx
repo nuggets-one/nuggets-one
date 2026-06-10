@@ -13,7 +13,6 @@ import { ArticleDetailYouTubeHero } from '@/components/ui/article-detail-youtube
 import { ConsumerDisclaimerMarkdown } from '@/components/legal/consumer-disclaimer-markdown'
 import { MarkdownPageToc } from '@/components/ui/markdown-page-toc'
 import { TimestampLinkInterceptor } from '@/components/ui/timestamp-link-interceptor'
-import { YouTubeJumpToHero } from '@/components/ui/youtube-jump-to-hero'
 import { ArticleDetailUtilityRail } from '@/components/ui/article-detail-utility-rail'
 import { ArticleDetailRelated } from '@/components/ui/article-detail-related'
 import {
@@ -426,10 +425,6 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
             {disclaimerSection}
           </div>
         </div>
-
-        {isYouTubeHero && article.hero_video_id?.trim() ? (
-          <YouTubeJumpToHero articleId={article.id} />
-        ) : null}
       </article>
     )
   }
@@ -494,10 +489,6 @@ export async function ArticleContent({ id, inSheet = false }: Props) {
           </aside>
         </div>
       </div>
-
-      {isYouTubeHero && article.hero_video_id?.trim() ? (
-        <YouTubeJumpToHero articleId={article.id} />
-      ) : null}
     </article>
   )
 }

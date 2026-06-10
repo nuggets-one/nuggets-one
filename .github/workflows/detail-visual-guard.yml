@@ -7,7 +7,6 @@ on:
       - "components/ui/sheet.tsx"
       - "components/ui/article-content.tsx"
       - "components/ui/article-body.tsx"
-      - "components/ui/youtube-jump-to-hero.tsx"
       - "components/ui/timestamp-link-interceptor.tsx"
       - "lib/ui/youtube-hero-scroll.ts"
       - "docs/ARTICLE_DETAIL_DRAWER_UI_SPEC.md"

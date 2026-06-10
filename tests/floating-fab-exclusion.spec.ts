@@ -22,6 +22,15 @@ async function scrollSheetBody(page: Page, dialog: ReturnType<Page['getByRole']>
     .toBeGreaterThanOrEqual(Math.min(scrollTop, 100))
 }
 
+async function assertNoFloatingFabs(page: Page) {
+  await expect(page.getByRole('button', { name: 'Back to top' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Jump to video' })).toHaveCount(0)
+  const jumpFabCount = await page.evaluate(
+    () => document.querySelectorAll('[data-youtube-jump-fab]').length,
+  )
+  expect(jumpFabCount).toBe(0)
+}
+
 async function openYoutubeNuggetSheet(page: Page) {
   const targetHref = process.env.DETAIL_VISUAL_YOUTUBE_URL ?? defaultYoutubeDetail
   await page.goto('/', { waitUntil: 'domcontentloaded' })
@@ -43,11 +52,12 @@ async function openYoutubeNuggetSheet(page: Page) {
 test.describe('floating FAB — desktop full page', () => {
   test.use({ viewport: { width: 1280, height: 900 } })
 
-  test('shows jump FAB after timestamp scroll; hides when player closes', async ({ page }) => {
+  test('no floating FAB after timestamp click and scroll', async ({ page }) => {
     const detailPath = process.env.DETAIL_VISUAL_YOUTUBE_URL ?? defaultYoutubeDetail
     await page.goto(detailPath, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('#nugget-youtube-hero')).toBeVisible()
 
+    await assertNoFloatingFabs(page)
     await scrollDocument(page, 900)
 
     const timestampLink = page.locator('a[href*="#yt="]').first()
@@ -60,30 +70,28 @@ test.describe('floating FAB — desktop full page', () => {
     await expect(page.getByRole('complementary')).toBeVisible()
     await scrollDocument(page, 1400)
 
-    const jumpFab = page.getByRole('button', { name: 'Jump to video' })
-    await expect(jumpFab).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByRole('button', { name: 'Back to top' })).toHaveCount(0)
+    await assertNoFloatingFabs(page)
 
     await page.getByRole('button', { name: 'Close player' }).click()
-    await expect(jumpFab).toHaveCount(0)
-    expect(await page.getByRole('button', { name: 'Jump to video' }).count()).toBe(0)
+    await assertNoFloatingFabs(page)
   })
 })
 
 test.describe('floating FAB — desktop intercepted sheet', () => {
   test.use({ viewport: { width: 1280, height: 900 } })
 
-  test('no back to top FAB before or after scroll', async ({ page }) => {
+  test('no floating FAB before or after scroll', async ({ page }) => {
     const dialog = await openYoutubeNuggetSheet(page)
     if (!dialog) {
       test.skip(true, 'Target YouTube nugget not on home feed.')
     }
 
+    await assertNoFloatingFabs(page)
     await scrollSheetBody(page, dialog!, 500)
-    await expect(page.getByRole('button', { name: 'Back to top' })).toHaveCount(0)
+    await assertNoFloatingFabs(page)
   })
 
-  test('shows jump FAB while mini player is open; hides on close', async ({ page }) => {
+  test('no floating FAB after timestamp click and scroll with mini player open', async ({ page }) => {
     const dialog = await openYoutubeNuggetSheet(page)
     if (!dialog) {
       test.skip(true, 'Target YouTube nugget not on home feed.')
@@ -105,18 +113,9 @@ test.describe('floating FAB — desktop intercepted sheet', () => {
     }
 
     await scrollSheetBody(page, dialog!, 1200)
-
-    const jumpFab = page.getByRole('button', { name: 'Jump to video' })
-    await expect(jumpFab).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByRole('button', { name: 'Back to top' })).toHaveCount(0)
-
-    const jumpCount = await page.evaluate(
-      () => document.querySelectorAll('[data-youtube-jump-fab]').length,
-    )
-    expect(jumpCount).toBe(1)
+    await assertNoFloatingFabs(page)
 
     await page.getByRole('button', { name: 'Close player' }).click()
-    await expect(jumpFab).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Back to top' })).toHaveCount(0)
+    await assertNoFloatingFabs(page)
   })
 })
