@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import type { MarkdownTocItem } from '@/lib/markdown/extract-markdown-toc'
 import { useActiveHeading } from '@/lib/ui/use-active-heading'
@@ -142,6 +143,15 @@ export function ArticleDetailUtilityRail({
             </div>
             {activeLabel ? <p className="mt-2 text-xs leading-snug text-muted">{activeLabel}</p> : null}
           </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-surface px-4 py-4">
+          <Link
+            href="/"
+            className="text-sm font-medium text-primary underline underline-offset-2 transition-opacity hover:opacity-90"
+          >
+            Back to home
+          </Link>
         </section>
       </div>
       <BookmarkBatchHydrator articleIds={[articleId]} />

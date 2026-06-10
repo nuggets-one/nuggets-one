@@ -17,10 +17,10 @@ export function ArticleDetailRelated({ items }: Props) {
   if (items.length === 0) return null
 
   return (
-    <section aria-labelledby="related-nuggets-heading" className="border-t border-border pt-10 sm:pt-12">
+    <section aria-labelledby="more-nuggets-heading" className="border-t border-border pt-10 sm:pt-12">
       <div className="space-y-4">
-        <h2 id="related-nuggets-heading" className="text-lg font-semibold tracking-tight text-primary">
-          Related nuggets
+        <h2 id="more-nuggets-heading" className="text-lg font-semibold tracking-tight text-primary">
+          More nuggets
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {items.map((item) => (
