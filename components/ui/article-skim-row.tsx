@@ -126,20 +126,28 @@ export function ArticleSkimRow({ article, priority = false }: Props) {
           {preview ? (
             <p className="line-clamp-1 text-xs leading-4 text-muted">{preview}</p>
           ) : null}
-          <div className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted">
+          <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[11px] leading-4 text-muted">
             {publishedLabel ? (
-              <time className="tabular-nums" dateTime={published_at}>
+              <time
+                className="shrink-0 whitespace-nowrap tabular-nums"
+                dateTime={published_at}
+              >
                 {publishedLabel}
               </time>
             ) : null}
             {metaTag ? (
               <>
                 {publishedLabel ? (
-                  <span className="text-muted/70" aria-hidden="true">
+                  <span className="shrink-0 text-muted/70" aria-hidden="true">
                     ·
                   </span>
                 ) : null}
-                <span className="truncate font-medium text-primary">{metaTag.label}</span>
+                <span
+                  className="min-w-0 flex-1 truncate font-medium text-primary"
+                  title={metaTag.label}
+                >
+                  {metaTag.label}
+                </span>
               </>
             ) : null}
           </div>
