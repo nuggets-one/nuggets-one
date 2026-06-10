@@ -30,7 +30,7 @@ Broadcast push uses FCM topics and the Supabase Edge Function `push-topic-outbox
 
 ### Digest interval interaction (site setting: 1 / 2 / 3 hours)
 
-The digest interval controls when `push_digest_buffer` windows close. Buffers flush when the sender or manual compatibility drain runs after the window closes.
+The digest interval controls when `push_digest_buffer` windows close. **Buffer flush is owned by the Supabase Edge Function** `push-topic-outbox`: each cron invocation promotes closed windows into `push_topic_outbox` before sending FCM messages. The Next.js compatibility drain (`POST /api/admin/notifications/drain` with `push`) performs the same flush for legacy per-token outboxes only — it is not required for normal digest delivery.
 
 With the Supabase sender scheduled every 5 minutes and a **1-hour** digest interval:
 
@@ -75,7 +75,7 @@ Also callable by an authenticated admin session (no secret) from the browser for
 Targets:
 
 - `fanout` — drain `pending_fanout` (above-cap in-app)
-- `push` — compatibility drain for topic rows and legacy push outboxes
+- `push` — compatibility drain for legacy per-token push outboxes (not the primary topic broadcast path)
 
 ## Throughput caps (application code)
 

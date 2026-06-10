@@ -27,9 +27,8 @@ Device registration syncs topic membership from `notification_preferences`:
 3. Server subscribes/unsubscribes the token to FCM stream topics.
 4. Admin publishes a nugget.
 5. In-app bell rows are still written to `user_notifications`.
-6. Push enqueue writes one `push_topic_outbox` row for immediate push, or one digest buffer row for batched push.
-7. Completed digest buffers write one `push_topic_outbox` row.
-8. Supabase Edge Function `push-topic-outbox` sends topic rows and writes `push_delivery_attempts`.
+6. Push enqueue writes one `push_topic_outbox` row for immediate push, or accumulates a `push_digest_buffer` row for batched push.
+7. On each sender run, the Supabase Edge Function `push-topic-outbox` promotes **closed** digest buffers into one `push_topic_outbox` row per window, then sends unsent topic rows via FCM and writes `push_delivery_attempts`.
 
 ## Frequency Guardrails
 
@@ -63,10 +62,10 @@ curl -X POST "https://<project>.supabase.co/functions/v1/push-topic-outbox" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Run it every 1-5 minutes for near-real-time push. Each run processes up to 25 topic rows. At the planned 12-15 nuggets/day, backlog should normally stay at zero.
+Run it every 1-5 minutes for near-real-time push. Each run flushes completed digest buffers, then processes up to 25 topic rows. At the planned 12-15 nuggets/day, backlog should normally stay at zero.
 
 ## Compatibility
 
-The existing Next route `GET /api/cron/push-outbox` still drains legacy per-token outboxes and can also drain topic rows manually. It is not scheduled in `vercel.json`; use it only as a fallback or for old rows.
+The existing Next route `GET /api/cron/push-outbox` drains legacy per-token outboxes and can flush digest buffers as a fallback. It is not scheduled in `vercel.json`; normal digest delivery does not depend on it — the Edge Function owns buffer flush and topic send.
 
 Future iOS apps can use the same backend path by registering iOS FCM tokens. Configure APNs credentials in Firebase, and FCM will route iOS delivery through APNs.
