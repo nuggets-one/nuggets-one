@@ -4,6 +4,8 @@ type ServiceAccountJson = {
   private_key: string
 }
 
+type DigestStream = 'standard' | 'pulse'
+
 type TopicOutboxRow = {
   id: string
   topic: string
@@ -13,13 +15,47 @@ type TopicOutboxRow = {
   body: string
   slug: string | null
   batch_key: string | null
-  content_stream: 'standard' | 'pulse'
+  content_stream: DigestStream
   data: Record<string, unknown> | null
   attempts: number
 }
 
+type DigestBufferRow = {
+  batch_key: string
+  content_stream: DigestStream
+  article_count: number
+  interval_hours: number
+}
+
 const MAX_ROWS = 25
 const MAX_ATTEMPTS = 15
+
+const PUSH_TOPIC_BY_STREAM: Record<DigestStream, string> = {
+  standard: 'nuggets-stream-standard',
+  pulse: 'nuggets-stream-pulse',
+}
+
+function topicForStream(stream: DigestStream): string {
+  return PUSH_TOPIC_BY_STREAM[stream]
+}
+
+function streamPushLabel(stream: DigestStream): string {
+  return stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+}
+
+function digestBodyForCount(stream: DigestStream, count: number): string {
+  const label = streamPushLabel(stream)
+  if (count === 1) return `1 new ${label} update`
+  return `${count} new ${label} updates`
+}
+
+function parseBatchKeyWindowEnd(batchKey: string, intervalHours: number): Date | null {
+  const match = batchKey.match(/^(standard|pulse):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/)
+  if (!match) return null
+  const [, , y, mo, d, hh] = match
+  const start = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(hh), 0, 0, 0)
+  return new Date(start + intervalHours * 60 * 60 * 1000)
+}
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -148,6 +184,103 @@ function supabaseHeaders(serviceRoleKey: string): HeadersInit {
     Authorization: `Bearer ${serviceRoleKey}`,
     'Content-Type': 'application/json',
   }
+}
+
+async function fetchDigestBuffers(
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<DigestBufferRow[]> {
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/push_digest_buffer?select=batch_key,content_stream,article_count,interval_hours`,
+    { headers: supabaseHeaders(serviceRoleKey) }
+  )
+
+  if (!res.ok) {
+    throw new Error(`push_digest_buffer fetch failed: ${res.status} ${await res.text()}`)
+  }
+
+  return (await res.json()) as DigestBufferRow[]
+}
+
+async function enqueueDigestTopicPush(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  input: { batchKey: string; stream: DigestStream; count: number }
+): Promise<boolean> {
+  const res = await fetch(`${supabaseUrl}/rest/v1/push_topic_outbox`, {
+    method: 'POST',
+    headers: {
+      ...supabaseHeaders(serviceRoleKey),
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({
+      topic: topicForStream(input.stream),
+      kind: 'digest',
+      article_id: null,
+      title: streamPushLabel(input.stream),
+      body: digestBodyForCount(input.stream, input.count),
+      slug: null,
+      batch_key: input.batchKey,
+      content_stream: input.stream,
+      data: { stream: input.stream, batchKey: input.batchKey, count: input.count },
+    }),
+  })
+
+  if (res.status === 409) return false
+
+  if (!res.ok) {
+    throw new Error(`enqueueDigestTopicPush failed: ${res.status} ${await res.text()}`)
+  }
+
+  return true
+}
+
+async function deleteDigestBuffer(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  batchKey: string
+): Promise<void> {
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/push_digest_buffer?batch_key=eq.${encodeURIComponent(batchKey)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        ...supabaseHeaders(serviceRoleKey),
+        Prefer: 'return=minimal',
+      },
+    }
+  )
+
+  if (!res.ok) {
+    throw new Error(`deleteDigestBuffer failed: ${res.status} ${await res.text()}`)
+  }
+}
+
+/** Promote closed digest windows from push_digest_buffer into push_topic_outbox. */
+async function flushCompletedDigestBuffers(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  now = new Date()
+): Promise<number> {
+  const buffers = await fetchDigestBuffers(supabaseUrl, serviceRoleKey)
+  let flushed = 0
+
+  for (const buffer of buffers) {
+    const batchKey = buffer.batch_key
+    const stream = buffer.content_stream
+    const intervalHours = Number(buffer.interval_hours ?? 1)
+    const count = Number(buffer.article_count ?? 0)
+    if (count <= 0) continue
+
+    const windowEnd = parseBatchKeyWindowEnd(batchKey, intervalHours)
+    if (!windowEnd || now < windowEnd) continue
+
+    await enqueueDigestTopicPush(supabaseUrl, serviceRoleKey, { batchKey, stream, count })
+    await deleteDigestBuffer(supabaseUrl, serviceRoleKey, batchKey)
+    flushed += 1
+  }
+
+  return flushed
 }
 
 async function fetchRows(supabaseUrl: string, serviceRoleKey: string): Promise<TopicOutboxRow[]> {
@@ -346,6 +479,10 @@ Deno.serve(async (req) => {
   try {
     const serviceAccount = parseServiceAccount()
     const accessToken = await getAccessToken(serviceAccount)
+    const digestBuffersFlushed = await flushCompletedDigestBuffers(
+      supabaseUrl,
+      serviceRoleKey
+    )
     const rows = await fetchRows(supabaseUrl, serviceRoleKey)
 
     let sent = 0
@@ -381,7 +518,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    return jsonResponse({ ok: true, processed: rows.length, sent, failed })
+    return jsonResponse({
+      ok: true,
+      digestBuffersFlushed,
+      processed: rows.length,
+      sent,
+      failed,
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return jsonResponse({ error: message }, 500)
