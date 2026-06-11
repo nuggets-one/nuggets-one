@@ -3,6 +3,13 @@ import 'server-only'
 import * as admin from 'firebase-admin'
 import { listTokensForUsers, pruneInvalidTokens } from '@/lib/queries/push-tokens'
 import { streamPushLabel } from '@/lib/notifications/push-digest'
+import {
+  topicPushAndroidTag,
+  topicPushApnsCollapseId,
+  topicPushCollapseKey,
+  topicPushWebTopic,
+  WEB_PUSH_NOTIFICATION,
+} from '@/lib/notifications/push-fcm-payload'
 import type { DigestOutboxRow, ImmediateOutboxRow } from '@/lib/notifications/push-immediate-outbox'
 import { getAdminClient } from '@/lib/supabase/admin'
 
@@ -212,6 +219,16 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
     }
   }
 
+  const rowRef = {
+    kind: row.kind,
+    article_id: row.article_id,
+    batch_key: row.batch_key,
+  }
+  const androidTag = topicPushAndroidTag(rowRef)
+  const collapseKey = topicPushCollapseKey(rowRef)
+  const webTopic = topicPushWebTopic(rowRef)
+  const apnsCollapseId = topicPushApnsCollapseId(rowRef)
+
   try {
     const providerMessageId = await admin.messaging(app).send({
       topic: row.topic,
@@ -223,9 +240,9 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
       data,
       android: {
         priority: row.kind === 'immediate' ? 'high' : 'normal',
-        collapseKey: row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+        ...(collapseKey ? { collapseKey } : {}),
         notification: {
-          tag: row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+          ...(androidTag ? { tag: androidTag } : {}),
           icon: ANDROID_PUSH_NOTIFICATION.icon,
           color: ANDROID_PUSH_NOTIFICATION.color,
           ...(imageUrl ? { imageUrl } : {}),
@@ -234,12 +251,7 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
       apns: {
         headers: {
           'apns-priority': row.kind === 'immediate' ? '10' : '5',
-          ...(row.kind === 'immediate' && row.article_id
-            ? { 'apns-collapse-id': `article:${row.article_id}` }
-            : {}),
-          ...(row.kind === 'digest' && row.batch_key
-            ? { 'apns-collapse-id': `digest:${row.batch_key}` }
-            : {}),
+          ...(apnsCollapseId ? { 'apns-collapse-id': apnsCollapseId } : {}),
         },
         payload: {
           aps: {
@@ -253,9 +265,13 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
         headers: {
           TTL: row.kind === 'immediate' ? '86400' : '43200',
           Urgency: row.kind === 'immediate' ? 'high' : 'normal',
-          Topic: row.kind === 'immediate' ? `article-${row.article_id}` : `digest-${row.batch_key}`,
+          ...(webTopic ? { Topic: webTopic } : {}),
         },
-        ...(imageUrl ? { notification: { image: imageUrl } } : {}),
+        notification: {
+          icon: WEB_PUSH_NOTIFICATION.icon,
+          badge: WEB_PUSH_NOTIFICATION.badge,
+          ...(imageUrl ? { image: imageUrl } : {}),
+        },
       },
     })
 

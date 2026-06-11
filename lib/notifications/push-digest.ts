@@ -2,53 +2,59 @@ import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getPushDigestIntervalHours } from '@/lib/queries/site-settings'
-import { enqueueDigestTopicPush } from '@/lib/notifications/push-topic-outbox'
+import {
+  buildDigestBatchKey,
+  isDigestWindowClosed,
+  type DigestStream,
+} from '@/lib/notifications/push-digest-keys'
+import { enqueueDigestArticleTopicPushes } from '@/lib/notifications/push-topic-outbox'
 
-export type DigestStream = 'standard' | 'pulse'
-
-export function buildDigestBatchKey(
-  stream: DigestStream,
-  now: Date = new Date(),
-  intervalHours: number
-): string {
-  const y = now.getUTCFullYear()
-  const mo = String(now.getUTCMonth() + 1).padStart(2, '0')
-  const d = String(now.getUTCDate()).padStart(2, '0')
-  const h = now.getUTCHours()
-  const windowStart = Math.floor(h / intervalHours) * intervalHours
-  const hh = String(windowStart).padStart(2, '0')
-  return `${stream}:${y}-${mo}-${d} ${hh}:00`
-}
-
-function parseBatchKeyWindowEnd(batchKey: string, intervalHours: number): Date | null {
-  const match = batchKey.match(/^(standard|pulse):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/)
-  if (!match) return null
-  const [, , y, mo, d, hh] = match
-  const start = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(hh), 0, 0, 0)
-  return new Date(start + intervalHours * 60 * 60 * 1000)
-}
-
-export function streamPushLabel(stream: DigestStream): string {
-  return stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
-}
-
-export function digestBodyForCount(stream: DigestStream, count: number): string {
-  const label = streamPushLabel(stream)
-  if (count === 1) return `1 new ${label} update`
-  return `${count} new ${label} updates`
-}
+export type { DigestStream } from '@/lib/notifications/push-digest-keys'
+export {
+  buildDigestBatchKey,
+  isDigestWindowClosed,
+  parseBatchKeyWindowEnd,
+  streamPushLabel,
+} from '@/lib/notifications/push-digest-keys'
 
 export async function accumulateDigestBuffer({
   stream,
+  articleId,
   title,
+  slug,
+  imageUrl,
   intervalHours,
 }: {
   stream: DigestStream
+  articleId: string
   title: string
+  slug: string
+  imageUrl?: string | null
   intervalHours: number
 }): Promise<void> {
   const adminClient = getAdminClient()
   const batchKey = buildDigestBatchKey(stream, new Date(), intervalHours)
+
+  const { data: existingArticle } = await adminClient
+    .from('push_digest_buffer_articles')
+    .select('article_id')
+    .eq('batch_key', batchKey)
+    .eq('article_id', articleId)
+    .maybeSingle()
+
+  if (existingArticle) {
+    const { error } = await adminClient
+      .from('push_digest_buffer_articles')
+      .update({
+        title,
+        slug,
+        image_url: imageUrl ?? null,
+      })
+      .eq('batch_key', batchKey)
+      .eq('article_id', articleId)
+    if (error) console.warn('[accumulateDigestBuffer] article update error:', error.message)
+    return
+  }
 
   const { data: existing } = await adminClient
     .from('push_digest_buffer')
@@ -66,17 +72,28 @@ export async function accumulateDigestBuffer({
       })
       .eq('batch_key', batchKey)
     if (error) console.warn('[accumulateDigestBuffer] update error:', error.message)
-    return
+  } else {
+    const { error } = await adminClient.from('push_digest_buffer').insert({
+      batch_key: batchKey,
+      content_stream: stream,
+      article_count: 1,
+      sample_title: title,
+      interval_hours: intervalHours,
+    })
+    if (error) console.warn('[accumulateDigestBuffer] insert error:', error.message)
   }
 
-  const { error } = await adminClient.from('push_digest_buffer').insert({
+  const { error: articleError } = await adminClient.from('push_digest_buffer_articles').insert({
     batch_key: batchKey,
-    content_stream: stream,
-    article_count: 1,
-    sample_title: title,
-    interval_hours: intervalHours,
+    article_id: articleId,
+    title,
+    slug,
+    image_url: imageUrl ?? null,
   })
-  if (error) console.warn('[accumulateDigestBuffer] insert error:', error.message)
+
+  if (articleError) {
+    console.warn('[accumulateDigestBuffer] article insert error:', articleError.message)
+  }
 }
 
 export async function flushCompletedDigestBuffers(now = new Date()): Promise<number> {
@@ -97,10 +114,35 @@ export async function flushCompletedDigestBuffers(now = new Date()): Promise<num
     const count = Number(buffer.article_count ?? 0)
     if (count <= 0) continue
 
-    const windowEnd = parseBatchKeyWindowEnd(batchKey, intervalHours)
-    if (!windowEnd || now < windowEnd) continue
+    if (!isDigestWindowClosed(batchKey, intervalHours, now)) continue
 
-    await enqueueDigestTopicPush({ batchKey, stream, count })
+    const { data: articles, error: articlesError } = await adminClient
+      .from('push_digest_buffer_articles')
+      .select('article_id, title, slug, image_url')
+      .eq('batch_key', batchKey)
+      .order('created_at', { ascending: true })
+
+    if (articlesError) {
+      console.warn('[flushCompletedDigestBuffers] articles fetch error:', articlesError.message)
+      continue
+    }
+
+    if (!articles?.length) {
+      console.warn('[flushCompletedDigestBuffers] no articles for batch:', batchKey)
+      await adminClient.from('push_digest_buffer').delete().eq('batch_key', batchKey)
+      continue
+    }
+
+    await enqueueDigestArticleTopicPushes({
+      batchKey,
+      stream,
+      articles: articles.map((row) => ({
+        articleId: row.article_id as string,
+        title: row.title as string,
+        slug: row.slug as string,
+        imageUrl: (row.image_url as string | null) ?? null,
+      })),
+    })
 
     await adminClient.from('push_digest_buffer').delete().eq('batch_key', batchKey)
     flushed += 1

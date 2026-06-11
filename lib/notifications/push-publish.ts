@@ -53,12 +53,26 @@ export async function enqueuePushOnPublish({
       }
 
       const intervalHours = await getDigestIntervalForPublish()
-      await accumulateDigestBuffer({ stream, title, intervalHours })
+      await accumulateDigestBuffer({
+        stream,
+        articleId,
+        title,
+        slug,
+        imageUrl,
+        intervalHours,
+      })
       return
     }
 
     const intervalHours = await getDigestIntervalForPublish()
-    await accumulateDigestBuffer({ stream, title, intervalHours })
+    await accumulateDigestBuffer({
+      stream,
+      articleId,
+      title,
+      slug,
+      imageUrl,
+      intervalHours,
+    })
   } catch (err) {
     console.warn('[enqueuePushOnPublish] error:', err)
   }

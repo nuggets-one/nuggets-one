@@ -1,11 +1,18 @@
 import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
-import { digestBodyForCount, streamPushLabel } from '@/lib/notifications/push-digest'
+import { streamPushLabel } from '@/lib/notifications/push-digest'
 import { topicForStream, type PushStream } from '@/lib/notifications/push-topics'
 import type { PushTopicOutboxRow } from '@/lib/notifications/push-send'
 
 const MAX_TOPIC_ATTEMPTS = 15
+
+export type DigestArticlePushInput = {
+  articleId: string
+  title: string
+  slug: string
+  imageUrl?: string | null
+}
 
 export async function enqueueImmediateTopicPush({
   articleId,
@@ -48,35 +55,50 @@ export async function enqueueImmediateTopicPush({
   return 1
 }
 
-export async function enqueueDigestTopicPush({
+export async function enqueueDigestArticleTopicPushes({
   batchKey,
   stream,
-  count,
+  articles,
 }: {
   batchKey: string
   stream: PushStream
-  count: number
+  articles: DigestArticlePushInput[]
 }): Promise<number> {
+  if (articles.length === 0) return 0
+
   const adminClient = getAdminClient()
-  const { error } = await adminClient.from('push_topic_outbox').insert({
-    topic: topicForStream(stream),
-    kind: 'digest',
-    article_id: null,
-    title: streamPushLabel(stream),
-    body: digestBodyForCount(stream, count),
-    slug: null,
-    batch_key: batchKey,
-    content_stream: stream,
-    data: { stream, batchKey, count },
-  })
+  let enqueued = 0
 
-  if (error?.code === '23505') return 0
+  for (const article of articles) {
+    const { error } = await adminClient.from('push_topic_outbox').insert({
+      topic: topicForStream(stream),
+      kind: 'digest',
+      article_id: article.articleId,
+      title: streamPushLabel(stream),
+      body: article.title,
+      slug: article.slug,
+      batch_key: batchKey,
+      content_stream: stream,
+      data: {
+        stream,
+        batchKey,
+        articleId: article.articleId,
+        slug: article.slug,
+        groupKey: `nuggets-${stream}`,
+        ...(article.imageUrl ? { imageUrl: article.imageUrl } : {}),
+      },
+    })
 
-  if (error) {
-    throw new Error(`enqueueDigestTopicPush: ${error.message}`)
+    if (error?.code === '23505') continue
+
+    if (error) {
+      throw new Error(`enqueueDigestArticleTopicPushes: ${error.message}`)
+    }
+
+    enqueued += 1
   }
 
-  return 1
+  return enqueued
 }
 
 export async function fetchUnsentTopicRows(limit: number): Promise<PushTopicOutboxRow[]> {

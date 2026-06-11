@@ -53,6 +53,12 @@ const MIGRATIONS = [
     file: 'supabase/migrations/20240001000022_push_topic_architecture.sql',
     verifyTable: 'push_topic_outbox',
   },
+  {
+    version: '20240001000024',
+    name: 'push_digest_buffer_articles',
+    file: 'supabase/migrations/20240001000024_push_digest_buffer_articles.sql',
+    verifyTable: 'push_digest_buffer_articles',
+  },
 ]
 
 const client = new pg.Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } })

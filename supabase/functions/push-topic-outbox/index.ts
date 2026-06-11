@@ -4,6 +4,11 @@ type ServiceAccountJson = {
   private_key: string
 }
 
+const WEB_PUSH_NOTIFICATION = {
+  icon: 'https://nuggets.one/icons/icon-192.png',
+  badge: 'https://nuggets.one/icons/badge-72.png',
+} as const
+
 type DigestStream = 'standard' | 'pulse'
 
 type TopicOutboxRow = {
@@ -27,6 +32,13 @@ type DigestBufferRow = {
   interval_hours: number
 }
 
+type DigestBufferArticleRow = {
+  article_id: string
+  title: string
+  slug: string
+  image_url: string | null
+}
+
 const MAX_ROWS = 25
 const MAX_ATTEMPTS = 15
 
@@ -43,18 +55,33 @@ function streamPushLabel(stream: DigestStream): string {
   return stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
 }
 
-function digestBodyForCount(stream: DigestStream, count: number): string {
-  const label = streamPushLabel(stream)
-  if (count === 1) return `1 new ${label} update`
-  return `${count} new ${label} updates`
-}
-
 function parseBatchKeyWindowEnd(batchKey: string, intervalHours: number): Date | null {
   const match = batchKey.match(/^(standard|pulse):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/)
   if (!match) return null
   const [, , y, mo, d, hh] = match
   const start = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(hh), 0, 0, 0)
   return new Date(start + intervalHours * 60 * 60 * 1000)
+}
+
+function isDigestWindowClosed(batchKey: string, intervalHours: number, now: Date): boolean {
+  const windowEnd = parseBatchKeyWindowEnd(batchKey, intervalHours)
+  return windowEnd != null && now >= windowEnd
+}
+
+function topicPushAndroidTag(row: TopicOutboxRow): string | undefined {
+  if (row.article_id) return `article:${row.article_id}`
+  if (row.kind === 'digest' && row.batch_key) return `digest:${row.batch_key}`
+  return undefined
+}
+
+function topicPushCollapseKey(row: TopicOutboxRow): string | undefined {
+  return topicPushAndroidTag(row)
+}
+
+function topicPushWebTopic(row: TopicOutboxRow): string | undefined {
+  if (row.article_id) return `article-${row.article_id}`
+  if (row.batch_key) return `digest-${row.batch_key}`
+  return undefined
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
@@ -202,37 +229,78 @@ async function fetchDigestBuffers(
   return (await res.json()) as DigestBufferRow[]
 }
 
-async function enqueueDigestTopicPush(
+async function fetchDigestBufferArticles(
   supabaseUrl: string,
   serviceRoleKey: string,
-  input: { batchKey: string; stream: DigestStream; count: number }
-): Promise<boolean> {
-  const res = await fetch(`${supabaseUrl}/rest/v1/push_topic_outbox`, {
-    method: 'POST',
-    headers: {
-      ...supabaseHeaders(serviceRoleKey),
-      Prefer: 'return=minimal',
-    },
-    body: JSON.stringify({
-      topic: topicForStream(input.stream),
-      kind: 'digest',
-      article_id: null,
-      title: streamPushLabel(input.stream),
-      body: digestBodyForCount(input.stream, input.count),
-      slug: null,
-      batch_key: input.batchKey,
-      content_stream: input.stream,
-      data: { stream: input.stream, batchKey: input.batchKey, count: input.count },
-    }),
+  batchKey: string
+): Promise<DigestBufferArticleRow[]> {
+  const params = new URLSearchParams({
+    select: 'article_id,title,slug,image_url',
+    order: 'created_at.asc',
   })
 
-  if (res.status === 409) return false
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/push_digest_buffer_articles?${params}&batch_key=eq.${encodeURIComponent(batchKey)}`,
+    { headers: supabaseHeaders(serviceRoleKey) }
+  )
 
   if (!res.ok) {
-    throw new Error(`enqueueDigestTopicPush failed: ${res.status} ${await res.text()}`)
+    throw new Error(`push_digest_buffer_articles fetch failed: ${res.status} ${await res.text()}`)
   }
 
-  return true
+  return (await res.json()) as DigestBufferArticleRow[]
+}
+
+async function enqueueDigestArticleTopicPushes(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  input: {
+    batchKey: string
+    stream: DigestStream
+    articles: DigestBufferArticleRow[]
+  }
+): Promise<number> {
+  let enqueued = 0
+
+  for (const article of input.articles) {
+    const data: Record<string, string> = {
+      stream: input.stream,
+      batchKey: input.batchKey,
+      articleId: article.article_id,
+      slug: article.slug,
+      groupKey: `nuggets-${input.stream}`,
+    }
+    if (article.image_url?.trim()) data.imageUrl = article.image_url.trim()
+
+    const res = await fetch(`${supabaseUrl}/rest/v1/push_topic_outbox`, {
+      method: 'POST',
+      headers: {
+        ...supabaseHeaders(serviceRoleKey),
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        topic: topicForStream(input.stream),
+        kind: 'digest',
+        article_id: article.article_id,
+        title: streamPushLabel(input.stream),
+        body: article.title,
+        slug: article.slug,
+        batch_key: input.batchKey,
+        content_stream: input.stream,
+        data,
+      }),
+    })
+
+    if (res.status === 409) continue
+
+    if (!res.ok) {
+      throw new Error(`enqueueDigestArticleTopicPushes failed: ${res.status} ${await res.text()}`)
+    }
+
+    enqueued += 1
+  }
+
+  return enqueued
 }
 
 async function deleteDigestBuffer(
@@ -272,10 +340,19 @@ async function flushCompletedDigestBuffers(
     const count = Number(buffer.article_count ?? 0)
     if (count <= 0) continue
 
-    const windowEnd = parseBatchKeyWindowEnd(batchKey, intervalHours)
-    if (!windowEnd || now < windowEnd) continue
+    if (!isDigestWindowClosed(batchKey, intervalHours, now)) continue
 
-    await enqueueDigestTopicPush(supabaseUrl, serviceRoleKey, { batchKey, stream, count })
+    const articles = await fetchDigestBufferArticles(supabaseUrl, serviceRoleKey, batchKey)
+    if (articles.length === 0) {
+      await deleteDigestBuffer(supabaseUrl, serviceRoleKey, batchKey)
+      continue
+    }
+
+    await enqueueDigestArticleTopicPushes(supabaseUrl, serviceRoleKey, {
+      batchKey,
+      stream,
+      articles,
+    })
     await deleteDigestBuffer(supabaseUrl, serviceRoleKey, batchKey)
     flushed += 1
   }
@@ -327,6 +404,10 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
     if (value != null && typeof value !== 'object') data[key] = String(value)
   }
 
+  const androidTag = topicPushAndroidTag(row)
+  const collapseKey = topicPushCollapseKey(row)
+  const webTopic = topicPushWebTopic(row)
+
   return {
     message: {
       topic: row.topic,
@@ -338,10 +419,9 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
       data,
       android: {
         priority: row.kind === 'immediate' ? 'high' : 'normal',
-        collapse_key:
-          row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+        ...(collapseKey ? { collapse_key: collapseKey } : {}),
         notification: {
-          tag: row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+          ...(androidTag ? { tag: androidTag } : {}),
           icon: 'ic_stat_notification',
           color: '#facc15',
           ...(imageUrl ? { image: imageUrl } : {}),
@@ -350,8 +430,7 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
       apns: {
         headers: {
           'apns-priority': row.kind === 'immediate' ? '10' : '5',
-          'apns-collapse-id':
-            row.kind === 'immediate' ? `article:${row.article_id}` : `digest:${row.batch_key}`,
+          ...(collapseKey ? { 'apns-collapse-id': collapseKey } : {}),
         },
         payload: {
           aps: {
@@ -364,9 +443,13 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
         headers: {
           TTL: row.kind === 'immediate' ? '86400' : '43200',
           Urgency: row.kind === 'immediate' ? 'high' : 'normal',
-          Topic: row.kind === 'immediate' ? `article-${row.article_id}` : `digest-${row.batch_key}`,
+          ...(webTopic ? { Topic: webTopic } : {}),
         },
-        ...(imageUrl ? { notification: { image: imageUrl } } : {}),
+        notification: {
+          icon: WEB_PUSH_NOTIFICATION.icon,
+          badge: WEB_PUSH_NOTIFICATION.badge,
+          ...(imageUrl ? { image: imageUrl } : {}),
+        },
       },
     },
   }
