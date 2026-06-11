@@ -18,32 +18,35 @@ import { FeedEmpty } from '@/components/feed/feed-empty'
 import { FeedTopBar } from '@/components/feed/feed-top-bar'
 import { DEFAULT_STREAM } from '@/types/article'
 import type { ContentStream } from '@/types/article'
+import { HOME_METADATA } from '@/lib/copy/streams'
 import { getDefaultOgImageUrl, getSiteUrl } from '@/lib/seo/site-url'
 
-const HOME_TITLE = 'Nuggets: The Knowledge App'
-const HOME_DESCRIPTION =
-  'Hand-curated reads across technology, markets, and ideas. Standard and Market Pulse streams.'
-const HOME_OG_DESCRIPTION =
-  'Curated reads across Markets, Investments, AI & Geopolitics'
 const homeOgImage = getDefaultOgImageUrl()
 
 export const metadata: Metadata = {
   title: {
-    absolute: HOME_TITLE,
+    absolute: HOME_METADATA.title,
   },
-  description: HOME_DESCRIPTION,
+  description: HOME_METADATA.description,
   openGraph: {
-    title: HOME_TITLE,
-    description: HOME_OG_DESCRIPTION,
+    title: HOME_METADATA.title,
+    description: HOME_METADATA.ogDescription,
     url: getSiteUrl(),
     siteName: 'Nuggets',
     type: 'website',
-    images: [{ url: homeOgImage, width: 1200, height: 630, alt: HOME_TITLE }],
+    images: [
+      {
+        url: homeOgImage,
+        width: 1200,
+        height: 630,
+        alt: HOME_METADATA.title,
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: HOME_TITLE,
-    description: HOME_OG_DESCRIPTION,
+    title: HOME_METADATA.title,
+    description: HOME_METADATA.ogDescription,
     images: [homeOgImage],
   },
 }

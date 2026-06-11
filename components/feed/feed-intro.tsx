@@ -1,25 +1,13 @@
+import type { ReactNode } from 'react'
+import { STREAM_INTRO_COPY } from '@/lib/copy/streams'
 import type { ContentStream } from '@/types/article'
-
-/** Visible intro aligned with `metadata` on `/` for Nuggets; Market Pulse is stream-specific. */
-const INTRO_COPY: Record<ContentStream, { title: string; tagline: string }> = {
-  standard: {
-    title: 'Nuggets | Curated insights across markets, macros, AI, tech & geopolitics',
-    tagline:
-      'Distilling high-signal intelligence into digestible insights.',
-  },
-  pulse: {
-    title: 'Market Pulse | High-signal updates for investors and operators',
-    tagline:
-      'Daily stream of high-signal market updates and intelligence. Refreshed every day.',
-  },
-}
 
 type Props = {
   stream: ContentStream
   streamLabel: string
   shownCount: number
   totalCount?: number
-  /** Skim mode: single-line count only (mobile). */
+  /** Skim mode: condensed intro on mobile. */
   compact?: boolean
 }
 
@@ -27,8 +15,48 @@ const numberFmt = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 0,
 })
 
-export function FeedIntro({ stream, streamLabel, shownCount, totalCount, compact = false }: Props) {
-  const { title, tagline } = INTRO_COPY[stream]
+const introDivider = (
+  <span className="mx-1 text-muted/80" aria-hidden="true">
+    {'\u2009|\u2009'}
+  </span>
+)
+
+const labelDot = (
+  <span className="mx-1 text-muted/80" aria-hidden="true">
+    {'\u2009\u00b7\u2009'}
+  </span>
+)
+
+function SummaryWithCount({
+  streamLabel,
+  summary,
+  countLine,
+  className,
+}: {
+  streamLabel: string
+  summary: string
+  countLine: ReactNode
+  className?: string
+}) {
+  return (
+    <p className={className}>
+      <span className="font-medium text-primary">{streamLabel}</span>
+      {labelDot}
+      <span>{summary}</span>
+      {introDivider}
+      {countLine}
+    </p>
+  )
+}
+
+export function FeedIntro({
+  stream,
+  streamLabel,
+  shownCount,
+  totalCount,
+  compact = false,
+}: Props) {
+  const { title, tagline, mobileSummary } = STREAM_INTRO_COPY[stream]
   const shown = numberFmt.format(shownCount)
   const hasExactTotal = typeof totalCount === 'number'
   const total = hasExactTotal ? numberFmt.format(totalCount) : null
@@ -39,25 +67,25 @@ export function FeedIntro({ stream, streamLabel, shownCount, totalCount, compact
     <span>Showing {shown} results</span>
   )
 
+  const summaryLineClass =
+    'line-clamp-2 text-[11.5px] leading-4 text-muted sm:text-xs'
+
   if (compact) {
     return (
-      <>
-        <section
-          className="mb-0.5 px-4 pb-0.5 pt-2 md:hidden lg:px-6"
-          aria-label="Homepage intro"
-        >
-          <p className="text-[11.5px] leading-4 text-muted sm:text-xs">
-            <span className="font-medium text-primary">{streamLabel}</span>
-            <span className="mx-1 text-muted/80" aria-hidden="true">
-              {'\u2009\u00b7\u2009'}
-            </span>
-            {countLine}
-          </p>
-        </section>
-        <section
-          className="mb-0.5 hidden px-4 pb-0.5 pt-2 md:block lg:px-6"
-          aria-label="Homepage intro"
-        >
+      <section
+        className="mb-0.5 px-4 pb-0.5 pt-2 lg:px-6"
+        aria-label="Homepage intro"
+      >
+        <div className="md:hidden">
+          <h1 className="sr-only">{title}</h1>
+          <SummaryWithCount
+            streamLabel={streamLabel}
+            summary={mobileSummary}
+            countLine={countLine}
+            className={summaryLineClass}
+          />
+        </div>
+        <div className="hidden md:block">
           <h1 className="max-w-[62ch] text-[15px] font-medium leading-5 tracking-tight text-primary sm:text-base lg:max-w-none">
             {title}
           </h1>
@@ -66,13 +94,11 @@ export function FeedIntro({ stream, streamLabel, shownCount, totalCount, compact
           </p>
           <p className="mt-1.5 text-[11.5px] leading-4 text-muted sm:text-xs">
             <span className="font-medium text-primary">{streamLabel}</span>
-            <span className="mx-1 text-muted/80" aria-hidden="true">
-              {'\u2009\u00b7\u2009'}
-            </span>
+            {labelDot}
             {countLine}
           </p>
-        </section>
-      </>
+        </div>
+      </section>
     )
   }
 
@@ -89,9 +115,7 @@ export function FeedIntro({ stream, streamLabel, shownCount, totalCount, compact
       </p>
       <p className="mt-1.5 text-[11.5px] leading-4 text-muted sm:text-xs">
         <span className="font-medium text-primary">{streamLabel}</span>
-        <span className="mx-1 text-muted/80" aria-hidden="true">
-          {'\u2009\u00b7\u2009'}
-        </span>
+        {labelDot}
         {countLine}
       </p>
     </section>
