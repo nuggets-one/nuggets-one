@@ -11,6 +11,7 @@ import {
   topicPushCollapseKey,
   topicPushWebTopic,
   WEB_PUSH_NOTIFICATION,
+  buildTopicWebpushBlock,
 } from '../../../lib/notifications/push-fcm-payload'
 
 test('buildDigestBatchKey aligns to interval window start', () => {
@@ -62,4 +63,19 @@ test('immediate topic push uses per-article android tag', () => {
 test('WEB_PUSH_NOTIFICATION uses production icon and badge URLs', () => {
   assert.equal(WEB_PUSH_NOTIFICATION.icon, 'https://nuggets.one/icons/icon-192.png')
   assert.equal(WEB_PUSH_NOTIFICATION.badge, 'https://nuggets.one/icons/badge-72.png')
+})
+
+test('buildTopicWebpushBlock includes title, body, and deep link', () => {
+  const block = buildTopicWebpushBlock({
+    title: 'Nuggets',
+    body: 'Test headline',
+    kind: 'immediate',
+    article_id: 'abc-123',
+    batch_key: null,
+    slug: 'test-slug',
+    content_stream: 'standard',
+  })
+  assert.equal(block.notification.title, 'Nuggets')
+  assert.equal(block.notification.body, 'Test headline')
+  assert.equal(block.fcm_options.link, 'https://www.nuggets.one/nuggets/abc-123/test-slug')
 })

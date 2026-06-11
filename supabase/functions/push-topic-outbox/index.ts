@@ -7,7 +7,45 @@ type ServiceAccountJson = {
 const WEB_PUSH_NOTIFICATION = {
   icon: 'https://nuggets.one/icons/icon-192.png',
   badge: 'https://nuggets.one/icons/badge-72.png',
+  siteUrl: 'https://www.nuggets.one',
 } as const
+
+function topicPushWebTopic(row: { article_id: string | null; batch_key: string | null; kind: string }): string | undefined {
+  if (row.article_id) return `article-${row.article_id}`
+  if (row.batch_key) return `digest-${row.batch_key}`
+  return undefined
+}
+
+function topicPushWebDeepLink(
+  articleId: string | null,
+  slug: string | null,
+  stream: string
+): string {
+  const base = WEB_PUSH_NOTIFICATION.siteUrl.replace(/\/$/, '')
+  if (articleId && slug) return `${base}/nuggets/${articleId}/${slug}`
+  if (stream === 'standard' || stream === 'pulse') return `${base}/?stream=${stream}`
+  return base
+}
+
+function buildTopicWebpushBlock(row: TopicOutboxRow, imageUrl?: string) {
+  const webTopic = topicPushWebTopic(row)
+  const link = topicPushWebDeepLink(row.article_id, row.slug, row.content_stream)
+  return {
+    headers: {
+      TTL: row.kind === 'immediate' ? '86400' : '43200',
+      Urgency: row.kind === 'immediate' ? 'high' : 'normal',
+      ...(webTopic ? { Topic: webTopic } : {}),
+    },
+    notification: {
+      title: row.title,
+      body: row.body,
+      icon: WEB_PUSH_NOTIFICATION.icon,
+      badge: WEB_PUSH_NOTIFICATION.badge,
+      ...(imageUrl ? { image: imageUrl } : {}),
+    },
+    fcm_options: { link },
+  }
+}
 
 type DigestStream = 'standard' | 'pulse'
 
@@ -406,7 +444,7 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
 
   const androidTag = topicPushAndroidTag(row)
   const collapseKey = topicPushCollapseKey(row)
-  const webTopic = topicPushWebTopic(row)
+  const webpush = buildTopicWebpushBlock(row, imageUrl)
 
   return {
     message: {
@@ -439,18 +477,7 @@ function buildMessage(row: TopicOutboxRow): Record<string, unknown> {
         },
         ...(imageUrl ? { fcm_options: { image: imageUrl } } : {}),
       },
-      webpush: {
-        headers: {
-          TTL: row.kind === 'immediate' ? '86400' : '43200',
-          Urgency: row.kind === 'immediate' ? 'high' : 'normal',
-          ...(webTopic ? { Topic: webTopic } : {}),
-        },
-        notification: {
-          icon: WEB_PUSH_NOTIFICATION.icon,
-          badge: WEB_PUSH_NOTIFICATION.badge,
-          ...(imageUrl ? { image: imageUrl } : {}),
-        },
-      },
+      webpush,
     },
   }
 }

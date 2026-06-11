@@ -7,8 +7,7 @@ import {
   topicPushAndroidTag,
   topicPushApnsCollapseId,
   topicPushCollapseKey,
-  topicPushWebTopic,
-  WEB_PUSH_NOTIFICATION,
+  buildTopicWebpushBlock,
 } from '@/lib/notifications/push-fcm-payload'
 import type { DigestOutboxRow, ImmediateOutboxRow } from '@/lib/notifications/push-immediate-outbox'
 import { getAdminClient } from '@/lib/supabase/admin'
@@ -226,8 +225,17 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
   }
   const androidTag = topicPushAndroidTag(rowRef)
   const collapseKey = topicPushCollapseKey(rowRef)
-  const webTopic = topicPushWebTopic(rowRef)
   const apnsCollapseId = topicPushApnsCollapseId(rowRef)
+  const webpush = buildTopicWebpushBlock({
+    title: row.title,
+    body: row.body,
+    kind: row.kind,
+    article_id: row.article_id,
+    batch_key: row.batch_key,
+    slug: row.slug,
+    content_stream: row.content_stream,
+    imageUrl,
+  })
 
   try {
     const providerMessageId = await admin.messaging(app).send({
@@ -261,18 +269,7 @@ export async function sendPushForTopicRow(row: PushTopicOutboxRow): Promise<stri
         },
         ...(imageUrl ? { fcmOptions: { imageUrl } } : {}),
       },
-      webpush: {
-        headers: {
-          TTL: row.kind === 'immediate' ? '86400' : '43200',
-          Urgency: row.kind === 'immediate' ? 'high' : 'normal',
-          ...(webTopic ? { Topic: webTopic } : {}),
-        },
-        notification: {
-          icon: WEB_PUSH_NOTIFICATION.icon,
-          badge: WEB_PUSH_NOTIFICATION.badge,
-          ...(imageUrl ? { image: imageUrl } : {}),
-        },
-      },
+      webpush,
     })
 
     await recordPushAttempt({
