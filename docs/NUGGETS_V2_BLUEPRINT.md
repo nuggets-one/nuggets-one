@@ -84,7 +84,7 @@ These are **closed decisions** added in this revision. They override any conflic
 | **Priority image loading** | `priority={true}` for the **first card only** (`index === 0`) — **not** the first row's worth (1–3 cards). Single LCP candidate. All other cards lazy. Override `LCP` rule in §9. |
 | **Client state libraries** | **None beyond `nuqs` + React local state.** **Forbidden in PMF:** Redux, Zustand, Jotai, Recoil, MobX, Valtio, XState. URL state via `nuqs`; ephemeral UI state via `useState`/`useReducer`; cross-route persistence via Supabase. |
 | **Date / formatting libraries** | **None.** Use `Intl.RelativeTimeFormat` and `Intl.DateTimeFormat` directly. **Forbidden:** `moment`, `date-fns`, `dayjs`, `luxon` PMF. |
-| **Service worker** | **None.** Drop legacy `serviceWorkerRegistration.ts` pattern entirely. **No** offline mode, no PWA install prompt, no push registration PMF. |
+| **Service worker** | **FCM only** for browser push (`public/firebase-messaging-sw.js`). **No** offline mode, no PWA install prompt, no legacy `serviceWorkerRegistration.ts`. |
 | **CSS / styling** | **Tailwind v3 only** (JIT). **Forbidden runtime CSS-in-JS:** `styled-components`, `emotion` (runtime), `stitches`. Inline `style` allowed for dynamic values; everything static is Tailwind. |
 | **Bundle budget — CI gate** | PMF launch must include CI check enforcing **§5.4** transfer ceilings on Home and detail (replicate spirit of v1 `scripts/check-bundle-budget.mjs` against Next build output). PR fails if breached without an explicit waiver line in PR description. |
 | **`react-hook-form`** | **ALLOWED** in `app/admin/**` only. **Banned** in any non-admin route. Public forms (login, contact) use native `<form>` + Server Action + server-side Zod parse. |
@@ -107,7 +107,7 @@ These are **closed decisions** added in this revision. They override any conflic
 | **URL state** | `nuqs` on **`/`**: **`stream`**, **`tags`**, **`q`** — all URL-owned per §6.2 |
 | **Fonts** | System UI stack via Tailwind `font-sans` — never a `<link>` tag for the primary sans font |
 
-**Not in v2 core:** Express API as user-facing surface, MongoDB as system of record, Redis/BullMQ for feed paths, JWT cookie stack parity with v1, TanStack Query on public feed, bookmark folders, editorial curated bundles, **push notifications** (mobile/web push — deferred). **In-app notifications** (sticky header bell) **are in PMF** — §6.6.
+**Not in v2 core:** Express API as user-facing surface, MongoDB as system of record, Redis/BullMQ for feed paths, JWT cookie stack parity with v1, TanStack Query on public feed, bookmark folders, editorial curated bundles. **Push notifications** (FCM topic broadcast for Android app + browser opt-in) and **in-app notifications** (sticky header bell) **are in PMF** — §6.6 / `docs/PUSH_NOTIFICATIONS_ARCHITECTURE.md`.
 
 ---
 

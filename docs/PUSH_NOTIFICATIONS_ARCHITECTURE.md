@@ -27,8 +27,21 @@ Device registration syncs topic membership from `notification_preferences`:
 3. Server subscribes/unsubscribes the token to FCM stream topics.
 4. Admin publishes a nugget.
 5. In-app bell rows are still written to `user_notifications`.
-6. Push enqueue writes one `push_topic_outbox` row for immediate push, or accumulates a `push_digest_buffer` row for batched push.
-7. On each sender run, the Supabase Edge Function `push-topic-outbox` promotes **closed** digest buffers into one `push_topic_outbox` row per window, then sends unsent topic rows via FCM and writes `push_delivery_attempts`.
+6. Push enqueue writes one `push_topic_outbox` row for immediate push, or accumulates articles in `push_digest_buffer` + `push_digest_buffer_articles` for batched push.
+7. On each sender run, the Supabase Edge Function `push-topic-outbox` promotes **closed** digest buffers into **one `push_topic_outbox` row per article** (headline as body, same format as immediate push), then sends unsent topic rows via FCM and writes `push_delivery_attempts`.
+
+### Digest vs immediate notification shape
+
+Both paths use the same visible format on device:
+
+| Field | Value |
+| --- | --- |
+| `notification.title` | `Nuggets` or `Market Pulse` |
+| `notification.body` | Article headline |
+| `data.articleId` / `data.slug` | Deep-link to `/nuggets/[id]/[slug]` |
+| `android.notification.tag` | `article:{articleId}` (per-article; notifications stack instead of replacing) |
+
+Digest batching only changes **when** pushes send (digest window close), not **what** they display.
 
 ## Frequency Guardrails
 
@@ -64,8 +77,65 @@ curl -X POST "https://<project>.supabase.co/functions/v1/push-topic-outbox" \
 
 Run it every 1-5 minutes for near-real-time push. Each run flushes completed digest buffers, then processes up to 25 topic rows. At the planned 12-15 nuggets/day, backlog should normally stay at zero.
 
+Apply the digest-articles migration before deploying the updated function:
+
+```bash
+npm run db:apply-push-migration
+```
+
 ## Compatibility
 
 The existing Next route `GET /api/cron/push-outbox` drains legacy per-token outboxes and can flush digest buffers as a fallback. It is not scheduled in `vercel.json`; normal digest delivery does not depend on it — the Edge Function owns buffer flush and topic send.
 
 Future iOS apps can use the same backend path by registering iOS FCM tokens. Configure APNs credentials in Firebase, and FCM will route iOS delivery through APNs.
+
+## Web browser push
+
+Browser push reuses the same FCM topic broadcast path as Android. Signed-in users opt in from **Account** or the bell **preferences** panel — there is no auto-prompt on page load.
+
+### Client stack
+
+| Piece | Path |
+| --- | --- |
+| Service worker | `public/firebase-messaging-sw.js` |
+| SW Firebase config | `public/firebase-messaging-config.js` (generated at build) |
+| Registration lifecycle | `components/push/web-push-registration.tsx` |
+| Enable/disable API | `lib/push/web-push.ts` |
+| FCM web token | `lib/push/get-fcm-web-token.ts` |
+
+### Registration flow
+
+1. User clicks **Enable browser notifications** (must be signed in).
+2. Browser registers `/firebase-messaging-sw.js`.
+3. Firebase Web SDK obtains an FCM token via `getToken()` + VAPID key.
+4. `POST /api/push/register` with `platform: 'web'` stores the token in `push_device_tokens`.
+5. `syncPushTopicsForToken` subscribes/unsubscribes stream topics from `notification_preferences` (same as Android).
+
+On logout, the web client unregisters the token (guest browser push is deferred).
+
+### Required env vars (Vercel)
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web app config |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase web app config |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase web app config |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase web app config |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase web app config |
+| `NEXT_PUBLIC_FIREBASE_VAPID_KEY` | Web Push certificate public key |
+
+Setup helper: `npm run setup:web-push`
+
+Build generates `public/firebase-messaging-config.js` via `npm run generate:firebase-config`.
+
+### Platform notes
+
+- **Chrome / Edge / Firefox (desktop)** and **Chrome Android (browser tab)**: full support.
+- **Safari macOS 13+**: supported.
+- **Safari iOS**: web push only when the site is installed as a Home Screen PWA (iOS 16.4+); regular Safari tabs do not receive push.
+- **HTTPS required** for service worker registration (use staging/production or `next dev --experimental-https` locally).
+
+### Explicitly not used
+
+- `web-push` npm package / raw VAPID `PushSubscription` management — FCM Web SDK handles subscriptions.
+- Separate push preference columns — stream/mute toggles control both in-app bell rows and FCM topic membership.

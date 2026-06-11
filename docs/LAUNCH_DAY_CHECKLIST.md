@@ -83,7 +83,15 @@ Set/verify:
 - `NEXT_PUBLIC_GA_ID`
 - `NEXT_PUBLIC_SITE_URL=https://nuggets.one`
 - `CRON_SECRET`
-- `FCM_SERVICE_ACCOUNT_JSON` (required for Android push; base64 or raw JSON)
+- `FCM_SERVICE_ACCOUNT_JSON` (required for Android + browser push; base64 or raw JSON)
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_FIREBASE_VAPID_KEY` (Web Push certificate public key from Firebase Console)
+
+Browser push also requires `public/firebase-messaging-config.js` — generated at build via `npm run generate:firebase-config`. Run `npm run setup:web-push` after setting env vars locally.
 
 Notes:
 

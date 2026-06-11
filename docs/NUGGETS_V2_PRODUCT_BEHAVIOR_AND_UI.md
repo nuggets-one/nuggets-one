@@ -791,7 +791,8 @@ Changing `stream` (Nuggets ↔ Market Pulse) **clears `tags` and `q`** — diffe
 - In-feed **YouTube iframe**
 - **Bookmark folders**
 - **Related nuggets** rail on detail
-- **Push / OS notification** subscription UX (device/browser push — `BLUEPRINT` §6.6 in-app bell ships PMF)
+- **Browser push notifications** — signed-in opt-in from Account + bell prefs (`docs/PUSH_NOTIFICATIONS_ARCHITECTURE.md`); FCM service worker only; no feed auto-prompt
+- **Native mobile push banners** on homepage (Android uses Capacitor registration; no promotional feed banners)
 - **A/B hero** experiments on homepage
 - Full **keyboard shortcuts** palette
 - **Read-tracking / "seen" state** on detail page (no `readBy` map; no progress indicators)
