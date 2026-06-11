@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser()
 
   try {
-    await upsertPushDeviceToken({
+    const topicSynced = await upsertPushDeviceToken({
       installId: parsed.data.install_id,
       token: parsed.data.token,
       platform: parsed.data.platform,
@@ -47,11 +47,11 @@ export async function POST(req: NextRequest) {
       notificationsEnabled: parsed.data.notifications_enabled,
       userId: user?.id ?? null,
     })
+
+    return NextResponse.json({ ok: true, linked: !!user, topic_synced: topicSynced })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[push/register]', message)
     return NextResponse.json({ error: 'Failed to register token' }, { status: 500 })
   }
-
-  return NextResponse.json({ ok: true, linked: !!user })
 }

@@ -29,6 +29,10 @@ export async function registerPushToken({
     console.warn('[push] register API failed', res.status)
     return false
   }
+  const json = (await res.json()) as { topic_synced?: boolean }
+  if (json.topic_synced === false) {
+    console.warn('[push] FCM topic sync failed — stream notifications may not arrive')
+  }
   return true
 }
 

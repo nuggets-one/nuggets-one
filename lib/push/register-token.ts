@@ -14,7 +14,7 @@ export type RegisterPushTokenInput = {
   userId?: string | null
 }
 
-export async function upsertPushDeviceToken(input: RegisterPushTokenInput): Promise<void> {
+export async function upsertPushDeviceToken(input: RegisterPushTokenInput): Promise<boolean> {
   const adminClient = getAdminClient()
   const now = new Date().toISOString()
 
@@ -39,12 +39,11 @@ export async function upsertPushDeviceToken(input: RegisterPushTokenInput): Prom
   if (existingByToken) {
     const { error } = await adminClient.from('push_device_tokens').update(row).eq('token', input.token)
     if (error) throw new Error(`upsertPushDeviceToken: ${error.message}`)
-    await syncPushTopicsForToken({
+    return syncPushTopicsForToken({
       token: input.token,
       userId: input.userId,
       notificationsEnabled: input.notificationsEnabled ?? true,
     })
-    return
   }
 
   const { error } = await adminClient.from('push_device_tokens').upsert(row, { onConflict: 'install_id' })
@@ -53,7 +52,7 @@ export async function upsertPushDeviceToken(input: RegisterPushTokenInput): Prom
     throw new Error(`upsertPushDeviceToken: ${error.message}`)
   }
 
-  await syncPushTopicsForToken({
+  return syncPushTopicsForToken({
     token: input.token,
     userId: input.userId,
     notificationsEnabled: input.notificationsEnabled ?? true,

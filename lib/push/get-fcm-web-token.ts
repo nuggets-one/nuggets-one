@@ -132,13 +132,18 @@ export function showForegroundWebPushNotification(
   }
 }
 
+let foregroundUnsubscribe: (() => void) | null = null
+
 /** Subscribe to FCM messages while the tab is in the foreground. Returns unsubscribe. */
 export async function subscribeForegroundWebPushMessages(): Promise<(() => void) | null> {
+  if (foregroundUnsubscribe) return foregroundUnsubscribe
+
   const messaging = await getMessagingInstance()
   if (!messaging) return null
 
   const { onMessage } = await import('firebase/messaging')
-  return onMessage(messaging, (payload) => {
+  foregroundUnsubscribe = onMessage(messaging, (payload) => {
     showForegroundWebPushNotification(payload)
   })
+  return foregroundUnsubscribe
 }

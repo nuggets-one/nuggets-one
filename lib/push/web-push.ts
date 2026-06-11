@@ -4,6 +4,7 @@ import {
   deleteFcmWebToken,
   getFcmWebToken,
   isBrowserPushEnvironmentSupported,
+  subscribeForegroundWebPushMessages,
 } from '@/lib/push/get-fcm-web-token'
 import { registerPushToken, unregisterPushToken } from '@/lib/push/register-push-token'
 
@@ -114,6 +115,9 @@ export async function enableWebPush(): Promise<{ ok: boolean; reason?: string }>
     return { ok: false, reason: 'register_failed' }
   }
 
+  await fetch('/api/push/sync-topics', { method: 'POST' })
+  await subscribeForegroundWebPushMessages()
+
   writeStoredToken(token)
   writeEnabledFlag(true)
   notifyStateListeners()
@@ -149,6 +153,7 @@ export async function refreshWebPushRegistration(): Promise<void> {
     platform: 'web',
     notificationsEnabled: true,
   })
+  await fetch('/api/push/sync-topics', { method: 'POST' })
   notifyStateListeners()
 }
 
