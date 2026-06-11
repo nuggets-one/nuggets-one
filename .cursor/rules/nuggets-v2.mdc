@@ -177,7 +177,7 @@ auto-animate, @vercel/og, @sentry/react, @sentry/nextjs
 - In-product draft preview (admins use Supabase Studio)
 - Scheduled publish (scheduled_for column)
 - Approval workflow
-- Push notifications / service worker / PWA
+- PWA install prompt / offline mode (FCM service worker for browser push is in scope)
 - Sentry (Vercel logs only at launch)
 - Dynamic OG images (@vercel/og)
 - Public user profiles

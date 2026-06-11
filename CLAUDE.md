@@ -131,7 +131,7 @@ react-modal, react-spring, auto-animate, @vercel/og,
 ## DEFERRED — do not implement
 - In-product draft preview
 - scheduled_for / approval workflow
-- Push notifications / PWA / service worker
+- Push notifications / PWA install prompt / offline mode (FCM service worker for browser push is in scope — see `docs/PUSH_NOTIFICATIONS_ARCHITECTURE.md`)
 - Sentry
 - @vercel/og dynamic OG
 - Public user profiles / avatar upload / account deletion
