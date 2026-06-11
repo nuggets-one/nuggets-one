@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { isFirebaseWebPushConfigured } from '@/lib/push/firebase-web-config'
 import {
   disableWebPush,
   enableWebPush,
@@ -23,6 +24,19 @@ export function BrowserPushToggle({ variant = 'compact', disabled = false }: Pro
   useEffect(() => subscribeWebPushState(setState), [])
 
   if (state === 'unsupported') {
+    const hasBrowserApis =
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      'serviceWorker' in navigator
+
+    if (hasBrowserApis && !isFirebaseWebPushConfigured()) {
+      return (
+        <p className="text-xs text-muted">
+          Browser push is not configured on this environment (missing Firebase web env).
+        </p>
+      )
+    }
+
     return null
   }
 

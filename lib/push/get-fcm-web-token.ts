@@ -90,3 +90,55 @@ export function isBrowserPushEnvironmentSupported(): boolean {
     isFirebaseWebPushConfigured()
   )
 }
+
+function resolveNotificationUrl(data: Record<string, unknown> | undefined): string {
+  const articleId = data?.articleId ?? data?.article_id
+  const slug = data?.slug
+  if (typeof articleId === 'string' && typeof slug === 'string') {
+    return `/nuggets/${articleId}/${slug}`
+  }
+  if (data?.stream === 'standard' || data?.stream === 'pulse') {
+    return `/?stream=${data.stream}`
+  }
+  return '/'
+}
+
+/** FCM delivers to the page (not the SW) when the tab is focused — show a system notification. */
+export function showForegroundWebPushNotification(
+  payload: import('firebase/messaging').MessagePayload,
+): void {
+  if (Notification.permission !== 'granted') return
+
+  const title = payload.notification?.title ?? payload.data?.title ?? 'Nuggets'
+  const body = payload.notification?.body ?? payload.data?.body ?? ''
+  const data = payload.data as Record<string, unknown> | undefined
+  const targetUrl = resolveNotificationUrl(data)
+
+  const notification = new Notification(title, {
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/badge-72.png',
+    tag:
+      typeof data?.articleId === 'string'
+        ? `article:${data.articleId}`
+        : undefined,
+    data: { ...data, targetUrl },
+  })
+
+  notification.onclick = () => {
+    notification.close()
+    window.focus()
+    window.location.assign(targetUrl)
+  }
+}
+
+/** Subscribe to FCM messages while the tab is in the foreground. Returns unsubscribe. */
+export async function subscribeForegroundWebPushMessages(): Promise<(() => void) | null> {
+  const messaging = await getMessagingInstance()
+  if (!messaging) return null
+
+  const { onMessage } = await import('firebase/messaging')
+  return onMessage(messaging, (payload) => {
+    showForegroundWebPushNotification(payload)
+  })
+}

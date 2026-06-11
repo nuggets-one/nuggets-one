@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { subscribeForegroundWebPushMessages } from '@/lib/push/get-fcm-web-token'
 import {
   isWebPushCapacitorNative,
   refreshWebPushRegistration,
@@ -30,6 +31,15 @@ export function WebPushRegistration() {
     if (isWebPushCapacitorNative()) return
 
     let cancelled = false
+    let unsubscribeForeground: (() => void) | null = null
+
+    void subscribeForegroundWebPushMessages().then((unsub) => {
+      if (cancelled) {
+        unsub?.()
+        return
+      }
+      unsubscribeForeground = unsub
+    })
 
     async function onAuthMaybeChanged() {
       if (cancelled) return
@@ -62,6 +72,7 @@ export function WebPushRegistration() {
 
     return () => {
       cancelled = true
+      unsubscribeForeground?.()
       clearInterval(authPollTimer)
       window.removeEventListener('focus', onFocus)
       unsubState()
