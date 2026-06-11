@@ -218,6 +218,49 @@ function validateEnvVarsForMode(mode: ValidationMode): {
     formatValid: fcmRaw ? fcmFormatValid : true,
   };
 
+  const firebaseWebKeys = [
+    "NEXT_PUBLIC_FIREBASE_API_KEY",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    "NEXT_PUBLIC_FIREBASE_APP_ID",
+    "NEXT_PUBLIC_FIREBASE_VAPID_KEY",
+  ] as const;
+
+  const legacyFirebaseKeys = [
+    "apiKey",
+    "authDomain",
+    "projectId",
+    "messagingSenderId",
+    "appId",
+  ] as const;
+
+  const firebaseWebPresent = firebaseWebKeys.filter(
+    (key) => !!process.env[key]?.trim()
+  ).length;
+  const legacyFirebasePresent = legacyFirebaseKeys.filter(
+    (key) => !!process.env[key]?.trim()
+  ).length;
+  const firebaseWebAllPresent = firebaseWebPresent === firebaseWebKeys.length;
+  const legacyFirebaseAllPresent =
+    legacyFirebasePresent === legacyFirebaseKeys.length &&
+    !!process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim();
+
+  for (const key of firebaseWebKeys) {
+    const raw = process.env[key]?.trim() ?? "";
+    entries[key] = {
+      present: !!raw,
+      formatValid: key === "NEXT_PUBLIC_FIREBASE_VAPID_KEY"
+        ? !raw || /^B[A-Za-z0-9_-]{80,}$/.test(raw)
+        : true,
+    };
+  }
+
+  entries.NEXT_PUBLIC_FIREBASE_WEB_PUSH = {
+    present: firebaseWebAllPresent || legacyFirebaseAllPresent,
+    formatValid: firebaseWebAllPresent || legacyFirebaseAllPresent,
+  };
+
   const requiredKeys: string[] =
     mode === "build"
       ? ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]

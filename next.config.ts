@@ -1,5 +1,8 @@
 import type { NextConfig } from 'next'
 import { IMAGE_REMOTE_HOSTS } from './lib/ui/image-host-policy'
+import { resolveFirebaseWebEnv } from './lib/push/firebase-env-resolve'
+
+const firebaseWeb = resolveFirebaseWebEnv()
 
 // S11-F1: security headers per BLUEPRINT §5.6 — required PMF.
 const isProd = process.env.NODE_ENV === 'production'
@@ -21,11 +24,12 @@ const securityHeaders = [
       scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://vitals.vercel-insights.com",
+      "connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://vitals.vercel-insights.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com https://*.googleapis.com",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      "worker-src 'self'",
     ].join('; '),
   },
   {
@@ -51,6 +55,14 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_FIREBASE_API_KEY: firebaseWeb.apiKey,
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: firebaseWeb.authDomain,
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID: firebaseWeb.projectId,
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: firebaseWeb.messagingSenderId,
+    NEXT_PUBLIC_FIREBASE_APP_ID: firebaseWeb.appId,
+    NEXT_PUBLIC_FIREBASE_VAPID_KEY: firebaseWeb.vapidKey,
+  },
   images: {
     loader: 'custom',
     loaderFile: './lib/cloudinary-loader.ts',

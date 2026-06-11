@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { updatePreferencesAction } from '@/lib/actions/notifications'
+import { BrowserPushToggle } from '@/components/push/browser-push-toggle'
 
 type Prefs = {
   mute_all: boolean
@@ -53,6 +54,7 @@ export function AccountPrefsIsland({ initialPrefs }: Props) {
           className="w-4 h-4 accent-accent"
         />
       </label>
+      <BrowserPushToggle variant="section" disabled={prefs.mute_all} />
     </div>
   )
 }

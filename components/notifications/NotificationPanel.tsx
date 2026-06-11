@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import { BrowserPushToggle } from '@/components/push/browser-push-toggle'
 import {
   markNotificationReadAction,
   markBatchNotificationsReadAction,
@@ -305,6 +306,7 @@ function PreferencesSection({
           className="w-4 h-4 accent-accent"
         />
       </label>
+      <BrowserPushToggle variant="compact" disabled={prefs.mute_all} />
     </div>
   )
 }

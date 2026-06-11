@@ -20,13 +20,26 @@ export async function registerPushToken({
       install_id: installId,
       token,
       platform,
-      app_version: '1.0',
+      app_version: platform === 'web' ? 'web' : '1.0',
       timezone,
       notifications_enabled: notificationsEnabled,
     }),
   })
   if (!res.ok) {
     console.warn('[push] register API failed', res.status)
+    return false
+  }
+  return true
+}
+
+export async function unregisterPushToken(token: string): Promise<boolean> {
+  const res = await fetch('/api/push/unregister', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  })
+  if (!res.ok) {
+    console.warn('[push] unregister API failed', res.status)
     return false
   }
   return true
