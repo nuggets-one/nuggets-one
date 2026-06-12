@@ -197,12 +197,12 @@ export function ArticleFormFields({
         <textarea
           ref={bodyRef}
           name="content_markdown"
-          rows={8}
+          rows={20}
           placeholder="Share an insight, observation, or paste content..."
           value={body}
           onChange={(event) => setBody(event.target.value)}
           onPaste={handleBodyPaste}
-          className="min-h-[13rem] w-full resize-y border-0 bg-surface-raised px-4 py-4 font-mono text-sm text-primary outline-none placeholder:text-muted focus:ring-0"
+          className="min-h-[min(50vh,36rem)] max-h-[75vh] w-full resize-y overflow-y-auto border-0 bg-surface-raised px-4 py-4 font-mono text-sm text-primary outline-none placeholder:text-muted focus:ring-0"
         />
       </section>
 
