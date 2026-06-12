@@ -2,7 +2,6 @@ import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
 import { upsertNotifications } from '@/lib/notifications/fan-out'
-import { enqueuePushOnPublish } from '@/lib/notifications/push-publish'
 
 /** Max failed drain attempts before marking row drained (remaining IDs abandoned — see logs). */
 export const MAX_FANOUT_DRAIN_ATTEMPTS = 15
@@ -51,26 +50,6 @@ export async function drainPendingFanout(
         stream,
         title,
       })
-
-      const { data: article } = await adminClient
-        .from('articles')
-        .select('slug')
-        .eq('id', articleId)
-        .maybeSingle()
-
-      if (article?.slug) {
-        try {
-          await enqueuePushOnPublish({
-            articleId,
-            stream,
-            title,
-            slug: article.slug as string,
-            pushNotifyImmediately: false,
-          })
-        } catch (pushErr) {
-          console.warn('[drainPendingFanout] push enqueue error:', pushErr)
-        }
-      }
 
       await adminClient
         .from('pending_fanout')

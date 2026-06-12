@@ -52,7 +52,9 @@ export async function accumulateDigestBuffer({
       })
       .eq('batch_key', batchKey)
       .eq('article_id', articleId)
-    if (error) console.warn('[accumulateDigestBuffer] article update error:', error.message)
+    if (error) {
+      throw new Error(`accumulateDigestBuffer article update: ${error.message}`)
+    }
     return
   }
 
@@ -71,7 +73,9 @@ export async function accumulateDigestBuffer({
         updated_at: new Date().toISOString(),
       })
       .eq('batch_key', batchKey)
-    if (error) console.warn('[accumulateDigestBuffer] update error:', error.message)
+    if (error) {
+      throw new Error(`accumulateDigestBuffer buffer update: ${error.message}`)
+    }
   } else {
     const { error } = await adminClient.from('push_digest_buffer').insert({
       batch_key: batchKey,
@@ -80,7 +84,9 @@ export async function accumulateDigestBuffer({
       sample_title: title,
       interval_hours: intervalHours,
     })
-    if (error) console.warn('[accumulateDigestBuffer] insert error:', error.message)
+    if (error) {
+      throw new Error(`accumulateDigestBuffer buffer insert: ${error.message}`)
+    }
   }
 
   const { error: articleError } = await adminClient.from('push_digest_buffer_articles').insert({
@@ -92,7 +98,7 @@ export async function accumulateDigestBuffer({
   })
 
   if (articleError) {
-    console.warn('[accumulateDigestBuffer] article insert error:', articleError.message)
+    throw new Error(`accumulateDigestBuffer article insert: ${articleError.message}`)
   }
 }
 

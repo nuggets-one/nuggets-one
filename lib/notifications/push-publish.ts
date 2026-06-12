@@ -30,6 +30,12 @@ async function hasImmediatePushCapacity(stream: 'standard' | 'pulse'): Promise<b
   return (count ?? 0) < PUSH_IMMEDIATE_DAILY_CAP_PER_STREAM
 }
 
+export type PushEnqueueMode = 'immediate' | 'digest'
+
+export type PushEnqueueResult = {
+  mode: PushEnqueueMode
+}
+
 export async function enqueuePushOnPublish({
   articleId,
   stream,
@@ -44,24 +50,11 @@ export async function enqueuePushOnPublish({
   slug: string
   imageUrl?: string | null
   pushNotifyImmediately: boolean
-}): Promise<void> {
-  try {
-    if (pushNotifyImmediately) {
-      if (await hasImmediatePushCapacity(stream)) {
-        await enqueueImmediateTopicPush({ articleId, stream, title, slug, imageUrl })
-        return
-      }
-
-      const intervalHours = await getDigestIntervalForPublish()
-      await accumulateDigestBuffer({
-        stream,
-        articleId,
-        title,
-        slug,
-        imageUrl,
-        intervalHours,
-      })
-      return
+}): Promise<PushEnqueueResult> {
+  if (pushNotifyImmediately) {
+    if (await hasImmediatePushCapacity(stream)) {
+      await enqueueImmediateTopicPush({ articleId, stream, title, slug, imageUrl })
+      return { mode: 'immediate' }
     }
 
     const intervalHours = await getDigestIntervalForPublish()
@@ -73,9 +66,19 @@ export async function enqueuePushOnPublish({
       imageUrl,
       intervalHours,
     })
-  } catch (err) {
-    console.warn('[enqueuePushOnPublish] error:', err)
+    return { mode: 'digest' }
   }
+
+  const intervalHours = await getDigestIntervalForPublish()
+  await accumulateDigestBuffer({
+    stream,
+    articleId,
+    title,
+    slug,
+    imageUrl,
+    intervalHours,
+  })
+  return { mode: 'digest' }
 }
 
 /** @deprecated Legacy per-user push_outbox enqueue for in-flight rows. */

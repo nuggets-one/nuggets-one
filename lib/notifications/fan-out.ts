@@ -16,6 +16,8 @@ export const FAN_OUT_CAP = 5000
 export type FanOutResult = {
   inserted: number
   mode: 'sync' | 'queued'
+  pushError?: string
+  pushMode?: 'immediate' | 'digest'
 }
 
 /**
@@ -324,15 +326,23 @@ export async function fanOutOnPublish({
   const recipients = await getRecipients(stream)
   const batchKey = buildBatchKey(stream)
 
-  const pushEnqueue = () =>
-    enqueuePushOnPublish({
-      articleId,
-      stream,
-      title,
-      slug,
-      imageUrl,
-      pushNotifyImmediately,
-    })
+  const runPushEnqueue = async (): Promise<Pick<FanOutResult, 'pushError' | 'pushMode'>> => {
+    try {
+      const pushResult = await enqueuePushOnPublish({
+        articleId,
+        stream,
+        title,
+        slug,
+        imageUrl,
+        pushNotifyImmediately,
+      })
+      return { pushMode: pushResult.mode }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[fanOutOnPublish] push enqueue error:', message)
+      return { pushError: message }
+    }
+  }
 
   if (recipients.length <= FAN_OUT_CAP) {
     const inserted = await upsertNotifications({
@@ -341,8 +351,8 @@ export async function fanOutOnPublish({
       stream,
       title,
     })
-    await pushEnqueue()
-    return { inserted, mode: 'sync' }
+    const push = await runPushEnqueue()
+    return { inserted, mode: 'sync', ...push }
   }
 
   const syncSlice = recipients.slice(0, FAN_OUT_CAP)
@@ -352,7 +362,7 @@ export async function fanOutOnPublish({
     stream,
     title,
   })
-  await pushEnqueue()
+  const push = await runPushEnqueue()
 
   const { error: queueError } = await adminClient.from('pending_fanout').insert({
     article_id: articleId,
@@ -373,5 +383,5 @@ export async function fanOutOnPublish({
     throw new Error(`pending_fanout insert error: ${queueError.message}`)
   }
 
-  return { inserted: FAN_OUT_CAP, mode: 'queued' }
+  return { inserted: FAN_OUT_CAP, mode: 'queued', ...push }
 }

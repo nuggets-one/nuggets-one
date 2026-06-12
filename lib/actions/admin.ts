@@ -397,7 +397,10 @@ export async function publishArticleAction(formData: FormData) {
       return redirect(`/admin/articles/${id}?warning=fanout_failed`)
     }
 
-    const suffix = fanResult.mode === 'queued' ? '?notice=fanout_queued' : ''
+    const suffixParts: string[] = []
+    if (fanResult.mode === 'queued') suffixParts.push('notice=fanout_queued')
+    if (fanResult.pushError) suffixParts.push(`warning=push_failed`)
+    const suffix = suffixParts.length > 0 ? `?${suffixParts.join('&')}` : ''
     return redirect(`/admin/articles/${id}${suffix}`)
   }
 

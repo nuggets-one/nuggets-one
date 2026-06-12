@@ -31,6 +31,8 @@ const PUBLISH_ERRORS: Record<string, string> = {
 const PUBLISH_WARNINGS: Record<string, string> = {
   fanout_failed:
     'Published, but in-app notifications could not be sent. Check server logs and pending_fanout; you can republish after fixing the issue.',
+  push_failed:
+    'Published, but mobile/browser push could not be queued. In-app notifications may still have been sent. Check server logs and GET /api/health/push.',
 }
 
 const PUBLISH_NOTICES: Record<string, string> = {
