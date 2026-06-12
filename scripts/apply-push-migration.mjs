@@ -107,6 +107,7 @@ try {
       to_regclass('public.push_device_tokens') AS tokens,
       to_regclass('public.push_outbox') AS outbox,
       to_regclass('public.push_digest_buffer') AS digest_buffer,
+      to_regclass('public.push_digest_buffer_articles') AS digest_buffer_articles,
       to_regclass('public.push_digest_outbox') AS digest_outbox,
       to_regclass('public.push_immediate_outbox') AS immediate_outbox,
       to_regclass('public.push_topic_outbox') AS topic_outbox,
