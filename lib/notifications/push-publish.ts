@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { accumulateDigestBuffer, getDigestIntervalForPublish } from '@/lib/notifications/push-digest'
+import { accumulateDigestBuffer, flushCompletedDigestBuffers, getDigestIntervalForPublish } from '@/lib/notifications/push-digest'
 import { enqueueImmediateTopicPush } from '@/lib/notifications/push-topic-outbox'
 import { getAdminClient } from '@/lib/supabase/admin'
 
@@ -34,6 +34,33 @@ export type PushEnqueueMode = 'immediate' | 'digest'
 
 export type PushEnqueueResult = {
   mode: PushEnqueueMode
+  buffersFlushed?: number
+}
+
+async function accumulateAndFlushDigest({
+  stream,
+  articleId,
+  title,
+  slug,
+  imageUrl,
+  intervalHours,
+}: {
+  stream: 'standard' | 'pulse'
+  articleId: string
+  title: string
+  slug: string
+  imageUrl?: string | null
+  intervalHours: number
+}): Promise<number> {
+  await accumulateDigestBuffer({
+    stream,
+    articleId,
+    title,
+    slug,
+    imageUrl,
+    intervalHours,
+  })
+  return flushCompletedDigestBuffers()
 }
 
 export async function enqueuePushOnPublish({
@@ -58,7 +85,7 @@ export async function enqueuePushOnPublish({
     }
 
     const intervalHours = await getDigestIntervalForPublish()
-    await accumulateDigestBuffer({
+    const buffersFlushed = await accumulateAndFlushDigest({
       stream,
       articleId,
       title,
@@ -66,11 +93,11 @@ export async function enqueuePushOnPublish({
       imageUrl,
       intervalHours,
     })
-    return { mode: 'digest' }
+    return { mode: 'digest', buffersFlushed }
   }
 
   const intervalHours = await getDigestIntervalForPublish()
-  await accumulateDigestBuffer({
+  const buffersFlushed = await accumulateAndFlushDigest({
     stream,
     articleId,
     title,
@@ -78,7 +105,7 @@ export async function enqueuePushOnPublish({
     imageUrl,
     intervalHours,
   })
-  return { mode: 'digest' }
+  return { mode: 'digest', buffersFlushed }
 }
 
 /** @deprecated Legacy per-user push_outbox enqueue for in-flight rows. */

@@ -55,6 +55,11 @@ export async function enqueueImmediateTopicPush({
   return 1
 }
 
+export type DigestEnqueueResult = {
+  inserted: number
+  duplicateCount: number
+}
+
 export async function enqueueDigestArticleTopicPushes({
   batchKey,
   stream,
@@ -63,11 +68,12 @@ export async function enqueueDigestArticleTopicPushes({
   batchKey: string
   stream: PushStream
   articles: DigestArticlePushInput[]
-}): Promise<number> {
-  if (articles.length === 0) return 0
+}): Promise<DigestEnqueueResult> {
+  if (articles.length === 0) return { inserted: 0, duplicateCount: 0 }
 
   const adminClient = getAdminClient()
-  let enqueued = 0
+  let inserted = 0
+  let duplicateCount = 0
 
   for (const article of articles) {
     const { error } = await adminClient.from('push_topic_outbox').insert({
@@ -89,16 +95,19 @@ export async function enqueueDigestArticleTopicPushes({
       },
     })
 
-    if (error?.code === '23505') continue
+    if (error?.code === '23505') {
+      duplicateCount += 1
+      continue
+    }
 
     if (error) {
       throw new Error(`enqueueDigestArticleTopicPushes: ${error.message}`)
     }
 
-    enqueued += 1
+    inserted += 1
   }
 
-  return enqueued
+  return { inserted, duplicateCount }
 }
 
 export async function fetchUnsentTopicRows(limit: number): Promise<PushTopicOutboxRow[]> {

@@ -9,6 +9,7 @@ import {
   utcDayStartIso,
 } from '@/lib/notifications/daily-cap'
 import { enqueuePushOnPublish } from '@/lib/notifications/push-publish'
+import { triggerPushTopicSender } from '@/lib/notifications/push-topic-sender'
 import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
 
 export const FAN_OUT_CAP = 5000
@@ -336,6 +337,9 @@ export async function fanOutOnPublish({
         imageUrl,
         pushNotifyImmediately,
       })
+      if (pushResult.mode === 'digest') {
+        triggerPushTopicSender()
+      }
       return { pushMode: pushResult.mode }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -378,7 +382,7 @@ export async function fanOutOnPublish({
         '[fanOutOnPublish] pending_fanout table missing; remaining recipients were not queued:',
         recipients.length - FAN_OUT_CAP
       )
-      return { inserted: FAN_OUT_CAP, mode: 'sync' }
+      return { inserted: FAN_OUT_CAP, mode: 'sync', ...push }
     }
     throw new Error(`pending_fanout insert error: ${queueError.message}`)
   }

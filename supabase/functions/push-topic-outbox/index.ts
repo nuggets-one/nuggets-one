@@ -10,12 +10,6 @@ const WEB_PUSH_NOTIFICATION = {
   siteUrl: 'https://www.nuggets.one',
 } as const
 
-function topicPushWebTopic(row: { article_id: string | null; batch_key: string | null; kind: string }): string | undefined {
-  if (row.article_id) return `article-${row.article_id}`
-  if (row.batch_key) return `digest-${row.batch_key}`
-  return undefined
-}
-
 function topicPushWebDeepLink(
   articleId: string | null,
   slug: string | null,
@@ -297,8 +291,9 @@ async function enqueueDigestArticleTopicPushes(
     stream: DigestStream
     articles: DigestBufferArticleRow[]
   }
-): Promise<number> {
-  let enqueued = 0
+): Promise<{ inserted: number; duplicateCount: number }> {
+  let inserted = 0
+  let duplicateCount = 0
 
   for (const article of input.articles) {
     const data: Record<string, string> = {
@@ -329,16 +324,19 @@ async function enqueueDigestArticleTopicPushes(
       }),
     })
 
-    if (res.status === 409) continue
+    if (res.status === 409) {
+      duplicateCount += 1
+      continue
+    }
 
     if (!res.ok) {
       throw new Error(`enqueueDigestArticleTopicPushes failed: ${res.status} ${await res.text()}`)
     }
 
-    enqueued += 1
+    inserted += 1
   }
 
-  return enqueued
+  return { inserted, duplicateCount }
 }
 
 async function deleteDigestBuffer(
@@ -386,13 +384,25 @@ async function flushCompletedDigestBuffers(
       continue
     }
 
-    await enqueueDigestArticleTopicPushes(supabaseUrl, serviceRoleKey, {
-      batchKey,
-      stream,
-      articles,
-    })
-    await deleteDigestBuffer(supabaseUrl, serviceRoleKey, batchKey)
-    flushed += 1
+    const { inserted, duplicateCount } = await enqueueDigestArticleTopicPushes(
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        batchKey,
+        stream,
+        articles,
+      }
+    )
+
+    const promoted = inserted + duplicateCount
+    if (promoted === articles.length) {
+      await deleteDigestBuffer(supabaseUrl, serviceRoleKey, batchKey)
+      flushed += 1
+    } else {
+      console.warn(
+        `[flushCompletedDigestBuffers] kept buffer ${batchKey}: promoted ${promoted}/${articles.length}`
+      )
+    }
   }
 
   return flushed
@@ -586,17 +596,24 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Missing Supabase env vars' }, 500)
   }
 
+  let digestBuffersFlushed = 0
+  try {
+    digestBuffersFlushed = await flushCompletedDigestBuffers(supabaseUrl, serviceRoleKey)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[push-topic-outbox] digest flush error:', message)
+  }
+
+  let sendError: string | null = null
+  let processed = 0
+  let sent = 0
+  let failed = 0
+
   try {
     const serviceAccount = parseServiceAccount()
     const accessToken = await getAccessToken(serviceAccount)
-    const digestBuffersFlushed = await flushCompletedDigestBuffers(
-      supabaseUrl,
-      serviceRoleKey
-    )
     const rows = await fetchRows(supabaseUrl, serviceRoleKey)
-
-    let sent = 0
-    let failed = 0
+    processed = rows.length
 
     for (const row of rows) {
       try {
@@ -627,16 +644,17 @@ Deno.serve(async (req) => {
         failed += 1
       }
     }
-
-    return jsonResponse({
-      ok: true,
-      digestBuffersFlushed,
-      processed: rows.length,
-      sent,
-      failed,
-    })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return jsonResponse({ error: message }, 500)
+    sendError = err instanceof Error ? err.message : String(err)
+    console.error('[push-topic-outbox] FCM send error:', sendError)
   }
+
+  return jsonResponse({
+    ok: sendError == null,
+    digestBuffersFlushed,
+    processed,
+    sent,
+    failed,
+    ...(sendError ? { sendError } : {}),
+  })
 })

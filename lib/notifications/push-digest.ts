@@ -139,7 +139,7 @@ export async function flushCompletedDigestBuffers(now = new Date()): Promise<num
       continue
     }
 
-    await enqueueDigestArticleTopicPushes({
+    const { inserted, duplicateCount } = await enqueueDigestArticleTopicPushes({
       batchKey,
       stream,
       articles: articles.map((row) => ({
@@ -150,8 +150,15 @@ export async function flushCompletedDigestBuffers(now = new Date()): Promise<num
       })),
     })
 
-    await adminClient.from('push_digest_buffer').delete().eq('batch_key', batchKey)
-    flushed += 1
+    const promoted = inserted + duplicateCount
+    if (promoted === articles.length) {
+      await adminClient.from('push_digest_buffer').delete().eq('batch_key', batchKey)
+      flushed += 1
+    } else {
+      console.warn(
+        `[flushCompletedDigestBuffers] kept buffer ${batchKey}: promoted ${promoted}/${articles.length}`
+      )
+    }
   }
 
   return flushed
