@@ -1,5 +1,6 @@
 import 'server-only'
 import { normalizeParenTimestampsInMarkdown } from '@/lib/markdown/normalize-youtube-timestamps'
+import { stampNewTabOnExternalAnchors } from '@/lib/ui/stamp-new-tab-on-external-anchors'
 import { createHash } from 'node:crypto'
 import { unstable_cache } from 'next/cache'
 import { unified } from 'unified'
@@ -41,7 +42,7 @@ function hashKey(value: string): string {
 
 async function compile(markdown: string): Promise<string> {
   const file = await processor.process(markdown)
-  return String(file)
+  return stampNewTabOnExternalAnchors(String(file))
 }
 
 export async function renderCardPreviewMarkdown(markdown: string | null | undefined): Promise<string> {
@@ -55,7 +56,7 @@ export async function renderCardPreviewMarkdown(markdown: string | null | undefi
   const key = hashKey(normalized)
   const cached = unstable_cache(
     async () => compile(normalized),
-    ['card-preview-html', key],
+    ['card-preview-html-v2', key],
     { revalidate: 86400 }
   )
 
