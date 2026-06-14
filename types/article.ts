@@ -114,11 +114,15 @@ export type RelatedArticlePreview = {
 
 // ─── Tag types ───────────────────────────────────────────────────────
 
+export const TAG_DIMENSIONS = ['format', 'domain', 'subtopic', 'source'] as const
+
+export type TagDimension = (typeof TAG_DIMENSIONS)[number]
+
 export type TagSummary = {
   id: string
   slug: string
   label: string
-  dimension: 'format' | 'domain' | 'subtopic' | null
+  dimension: TagDimension | null
   is_official: boolean
 }
 

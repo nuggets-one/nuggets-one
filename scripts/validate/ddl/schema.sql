@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS tags (
   slug text UNIQUE NOT NULL,
   label text NOT NULL,
   dimension text CHECK (dimension IS NULL OR dimension IN 
-    ('format','domain','subtopic')),
+    ('format','domain','subtopic','source')),
   is_official boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now()
 );

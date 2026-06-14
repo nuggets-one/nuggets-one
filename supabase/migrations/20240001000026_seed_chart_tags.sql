@@ -3,9 +3,9 @@
 INSERT INTO tags (slug, label, dimension, is_official)
 VALUES
   ('chart', 'Chart', 'format', true),
-  ('goldman-sachs', 'Goldman Sachs', 'subtopic', true),
-  ('bloomberg', 'Bloomberg', 'subtopic', true),
-  ('jpmorgan', 'JPMorgan', 'subtopic', true)
+  ('goldman-sachs', 'Goldman Sachs', 'source', true),
+  ('bloomberg', 'Bloomberg', 'source', true),
+  ('jpmorgan', 'JPMorgan', 'source', true)
 ON CONFLICT (slug) DO UPDATE SET
   label = EXCLUDED.label,
   dimension = EXCLUDED.dimension,
