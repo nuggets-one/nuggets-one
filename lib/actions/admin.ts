@@ -450,7 +450,23 @@ function parseTagDimension(raw: FormDataEntryValue | null): TagDimensionInput {
   const value = typeof raw === 'string' ? raw.trim() : ''
   if (!value) return null
   if ((TAG_DIMENSIONS as readonly string[]).includes(value)) return value as TagDimension
-  throw new Error('Invalid dimension')
+  return null
+}
+
+function tagWriteErrorCode(error: { code?: string; message?: string }): string {
+  if (error.code === '23505') return 'duplicate_slug'
+  if (
+    error.code === '23514' ||
+    /tags_dimension_check/i.test(error.message ?? '')
+  ) {
+    return 'dimension_not_supported'
+  }
+  return 'save_failed'
+}
+
+function redirectTagsAdminError(code: string, tagId?: string): never {
+  const base = tagId ? `/admin/tags/${tagId}` : '/admin/tags'
+  redirect(`${base}?error=${encodeURIComponent(code)}`)
 }
 
 function parseTagSlugInput(raw: FormDataEntryValue | null): string {
@@ -467,13 +483,19 @@ export async function createTagAction(formData: FormData) {
   const db = createAdminClient()
 
   const label = (formData.get('label') as string).trim()
-  const dimension = parseTagDimension(formData.get('dimension'))
+  const dimensionRaw = formData.get('dimension')
+  const dimensionValue = typeof dimensionRaw === 'string' ? dimensionRaw.trim() : ''
+  if (dimensionValue && !parseTagDimension(dimensionRaw)) {
+    redirectTagsAdminError('invalid_dimension')
+  }
+  const dimension = parseTagDimension(dimensionRaw)
   const is_official = formData.get('is_official') === 'on'
 
-  if (!label) throw new Error('Label is required')
+  if (!label) redirectTagsAdminError('missing_label')
 
   // S6-F5: use shared slugify — same function as ETL and article slug generation
   const slug = slugify(label)
+  if (!slug) redirectTagsAdminError('invalid_slug')
 
   const { error } = await db.from('tags').insert({
     slug,
@@ -482,7 +504,7 @@ export async function createTagAction(formData: FormData) {
     is_official,
   })
 
-  if (error) throw new Error(error.message)
+  if (error) redirectTagsAdminError(tagWriteErrorCode(error))
 
   revalidateOfficialTags()
   redirect('/admin/tags')
@@ -493,14 +515,24 @@ export async function updateTagAction(formData: FormData) {
   const db = createAdminClient()
 
   const id = String(formData.get('id') ?? '').trim()
-  if (!id) throw new Error('Missing tag id')
+  if (!id) redirectTagsAdminError('missing_id')
 
   const label = (formData.get('label') as string).trim()
-  const dimension = parseTagDimension(formData.get('dimension'))
+  const dimensionRaw = formData.get('dimension')
+  const dimensionValue = typeof dimensionRaw === 'string' ? dimensionRaw.trim() : ''
+  if (dimensionValue && !parseTagDimension(dimensionRaw)) {
+    redirectTagsAdminError('invalid_dimension', id)
+  }
+  const dimension = parseTagDimension(dimensionRaw)
   const is_official = formData.get('is_official') === 'on'
-  const nextSlug = parseTagSlugInput(formData.get('slug'))
+  let nextSlug: string
+  try {
+    nextSlug = parseTagSlugInput(formData.get('slug'))
+  } catch {
+    redirectTagsAdminError('invalid_slug', id)
+  }
 
-  if (!label) throw new Error('Label is required')
+  if (!label) redirectTagsAdminError('missing_label', id)
 
   const { data: existing, error: fetchError } = await db
     .from('tags')
@@ -508,8 +540,8 @@ export async function updateTagAction(formData: FormData) {
     .eq('id', id)
     .maybeSingle()
 
-  if (fetchError) throw new Error(fetchError.message)
-  if (!existing) throw new Error('Tag not found')
+  if (fetchError) redirectTagsAdminError('save_failed', id)
+  if (!existing) redirectTagsAdminError('not_found', id)
 
   const slugChanged = existing.slug !== nextSlug
 
@@ -523,7 +555,7 @@ export async function updateTagAction(formData: FormData) {
     })
     .eq('id', id)
 
-  if (error) throw new Error(error.message)
+  if (error) redirectTagsAdminError(tagWriteErrorCode(error), id)
 
   if (slugChanged) {
     const articleIds = await articleIdsForTag(db, id)

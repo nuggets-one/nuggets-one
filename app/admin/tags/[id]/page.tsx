@@ -7,6 +7,17 @@ import { TagFormFields } from '@/app/admin/tags/_components/TagFormFields'
 
 export const dynamic = 'force-dynamic'
 
+const TAG_ERRORS: Record<string, string> = {
+  missing_label: 'Label is required.',
+  invalid_slug: 'Slug must use lowercase letters, numbers, and hyphens only.',
+  invalid_dimension: 'That dimension is not supported.',
+  duplicate_slug: 'Another tag already uses that slug.',
+  dimension_not_supported:
+    'The database does not accept the Source dimension yet. Apply migration 20240001000027_tag_dimension_source.sql, then retry.',
+  not_found: 'Tag not found.',
+  save_failed: 'Could not save the tag. Please try again.',
+}
+
 type Props = {
   params: Promise<{ id: string }>
   searchParams?: Promise<Record<string, string | string[] | undefined>>
@@ -16,6 +27,7 @@ export default async function AdminTagEditPage({ params, searchParams }: Props) 
   const { id } = await params
   const resolved = (await searchParams) ?? {}
   const saved = resolved.saved === '1'
+  const errorCode = Array.isArray(resolved.error) ? resolved.error[0] : resolved.error
 
   const tag = await getTagAdminById(id)
   if (!tag) notFound()
@@ -40,6 +52,15 @@ export default async function AdminTagEditPage({ params, searchParams }: Props) 
           Tag saved.
         </div>
       )}
+
+      {errorCode ? (
+        <div
+          role="alert"
+          className="rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger-fg"
+        >
+          {TAG_ERRORS[errorCode] ?? 'Something went wrong. Please try again.'}
+        </div>
+      ) : null}
 
       <form
         action={updateTagAction}
