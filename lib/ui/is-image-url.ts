@@ -68,5 +68,8 @@ export function isImageUrl(url: string): boolean {
   // §8 — Cloudinary-style fetch proxy paths (Substack, res.cloudinary.com, etc.)
   if (path.includes('/image/fetch/')) return true
 
+  // §9 — Adobe AEM dispatcher paths (textimage component, versioned asset suffix)
+  if (/\/textimage\//i.test(path) && /\.(png|jpe?g|gif|webp)$/i.test(path)) return true
+
   return false
 }
