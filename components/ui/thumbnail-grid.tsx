@@ -7,8 +7,7 @@ import { GalleryImageTrigger } from '@/components/ui/gallery-image-trigger'
 import {
   canRenderWithNextImage,
   resolveCardImageUrl,
-  safeHostname,
-  shouldOptimizeImage,
+  shouldUseNativeCardRaster,
 } from '@/lib/ui/card-image-host'
 import {
   cardMediaGroupClasses,
@@ -171,7 +170,7 @@ function CellImage({
       </div>
     )
   }
-  if (resolvedUrl.includes('/image/fetch/')) {
+  if (shouldUseNativeCardRaster(resolvedUrl)) {
     return (
       <CardMediaRaster
         src={resolvedUrl}
@@ -181,7 +180,6 @@ function CellImage({
       />
     )
   }
-  const host = safeHostname(resolvedUrl)
   return (
     <Image
       src={resolvedUrl}
@@ -191,7 +189,6 @@ function CellImage({
       sizes={sizes}
       quality={imageHover ? 75 : 80}
       priority={priority}
-      unoptimized={!shouldOptimizeImage(host)}
     />
   )
 }

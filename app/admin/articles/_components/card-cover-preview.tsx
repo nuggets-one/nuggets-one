@@ -31,14 +31,7 @@ export function CardCoverPreviewPanel({ preview, showCloudinaryEnvWarning = fals
         <div className="relative aspect-video w-full">
           {displayUrl ? (
             <>
-              {displayUrl.includes('/image/fetch/') ? (
-                <CardMediaRaster src={displayUrl} alt="" priority={false} />
-              ) : (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={displayUrl} alt="" className="h-full w-full object-cover" />
-                </>
-              )}
+              <CardMediaRaster src={displayUrl} alt="" priority={false} fit="cover" />
               {preview.kind === 'youtube' ? (
                 <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/30">

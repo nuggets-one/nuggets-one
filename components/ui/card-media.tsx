@@ -6,8 +6,7 @@ import { CardMediaCountBadge } from '@/components/ui/card-media-count-badge'
 import {
   canRenderWithNextImage,
   resolveCardImageUrl,
-  safeHostname,
-  shouldOptimizeImage,
+  shouldUseNativeCardRaster,
 } from '@/lib/ui/card-image-host'
 import { CardSourceBadge } from '@/components/ui/card-source-badge'
 import { GalleryImageTrigger } from '@/components/ui/gallery-image-trigger'
@@ -53,7 +52,7 @@ export function CardMedia({
   const showSource = Boolean(sourceUrl?.trim())
   const resolvedHeroUrl = resolveCardImageUrl(hero_thumb_url)
   const canShow = canRenderWithNextImage(resolvedHeroUrl)
-  const useFetchRaster = Boolean(resolvedHeroUrl?.includes('/image/fetch/'))
+  const useNativeRaster = shouldUseNativeCardRaster(resolvedHeroUrl)
   const totalCount = Math.max(imageCount, mediaImages.length, canShow ? 1 : 0)
   const extraCount = totalCount - 1
 
@@ -79,7 +78,7 @@ export function CardMedia({
               sourceHost={sourceHost}
               className={`flex h-full w-full min-h-0 items-center justify-center overflow-hidden ${cardMediaGroupClasses} cursor-zoom-in`}
             >
-              {useFetchRaster ? (
+              {useNativeRaster ? (
                 <CardMediaRaster
                   src={resolvedHeroUrl}
                   alt={hero_alt_text ?? title}
@@ -98,7 +97,6 @@ export function CardMedia({
                   quality={75}
                   priority={priority}
                   loading={priority ? 'eager' : 'lazy'}
-                  unoptimized={!shouldOptimizeImage(safeHostname(resolvedHeroUrl))}
                 />
               )}
             </GalleryImageTrigger>

@@ -15,6 +15,16 @@ type Props = {
   fit?: 'cover' | 'contain'
 }
 
+function externalPassthroughReferrerPolicy(src: string): 'no-referrer' | undefined {
+  try {
+    const host = new URL(src).hostname.toLowerCase()
+    if (host === 'res.cloudinary.com' || host === 'i.ytimg.com') return undefined
+    return 'no-referrer'
+  } catch {
+    return 'no-referrer'
+  }
+}
+
 /**
  * Plain raster for proxied Cloudinary `image/fetch` URLs — mirrors the legacy
  * Vite feed’s native `<img>` path (no `next/image` + custom loader edge cases).
@@ -44,6 +54,7 @@ export function CardMediaRaster({
     fit === 'contain'
       ? cardMediaContainImageClasses(imageHover)
       : cardMediaCoverImageClasses(imageHover)
+  const referrerPolicy = externalPassthroughReferrerPolicy(src)
 
   if (fit === 'contain') {
     return (
@@ -55,6 +66,7 @@ export function CardMediaRaster({
           className={imageClass}
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
+          referrerPolicy={referrerPolicy}
           {...(priority ? { fetchPriority: 'high' as const } : {})}
           onError={onError}
         />
@@ -72,6 +84,7 @@ export function CardMediaRaster({
         className={`absolute inset-0 h-full w-full ${imageClass}`}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
+        referrerPolicy={referrerPolicy}
         {...(priority ? { fetchPriority: 'high' as const } : {})}
         onError={onError}
       />

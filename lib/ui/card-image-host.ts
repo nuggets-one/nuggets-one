@@ -66,3 +66,15 @@ export function safeHostname(url: string): string {
     return ''
   }
 }
+
+/**
+ * Tier-1 passthrough hosts and Cloudinary `image/fetch` URLs must render via
+ * native `<img>` (CardMediaRaster). `next/image` + the custom loader can mutate
+ * third-party CDN URLs even when `unoptimized` is set.
+ */
+export function shouldUseNativeCardRaster(url: string | null): boolean {
+  if (!url) return false
+  if (url.includes('/image/fetch/')) return true
+  const host = safeHostname(url)
+  return host.length > 0 && !shouldOptimizeImage(host)
+}

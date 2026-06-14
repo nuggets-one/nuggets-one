@@ -24,18 +24,9 @@ export function AdminCardImagePreview({ url, className = 'h-full w-full object-c
     return <NoPreviewTile />
   }
 
-  if (displayUrl.includes('/image/fetch/')) {
-    return (
-      <div className="relative h-full w-full">
-        <CardMediaRaster src={displayUrl} alt="" priority={false} />
-      </div>
-    )
-  }
-
   return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={displayUrl} alt="" loading="lazy" className={className} />
-    </>
+    <div className="relative h-full w-full">
+      <CardMediaRaster src={displayUrl} alt="" priority={false} fit="cover" />
+    </div>
   )
 }

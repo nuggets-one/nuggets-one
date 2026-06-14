@@ -6,8 +6,7 @@ import { dispatchYouTubeFeedPlay } from '@/lib/ui/youtube-feed-play'
 import {
   canRenderWithNextImage,
   resolveCardImageUrl,
-  safeHostname,
-  shouldOptimizeImage,
+  shouldUseNativeCardRaster,
 } from '@/lib/ui/card-image-host'
 import { CardSourceBadge } from '@/components/ui/card-source-badge'
 import {
@@ -65,7 +64,7 @@ export function YouTubeFeedHero({
 }: Props) {
   const resolvedHeroUrl = resolveCardImageUrl(hero_thumb_url)
   const canShow = canRenderWithNextImage(resolvedHeroUrl)
-  const useFetchRaster = Boolean(resolvedHeroUrl?.includes('/image/fetch/'))
+  const useNativeRaster = shouldUseNativeCardRaster(resolvedHeroUrl)
 
   return (
     <div className="w-full rounded-t-xl px-2 pb-2 pt-2">
@@ -87,7 +86,7 @@ export function YouTubeFeedHero({
           aria-label={`Play YouTube video: ${title}`}
         >
           {canShow && resolvedHeroUrl ? (
-            useFetchRaster ? (
+            useNativeRaster ? (
               <CardMediaRaster
                 src={resolvedHeroUrl}
                 alt={hero_alt_text ?? title}
@@ -104,7 +103,6 @@ export function YouTubeFeedHero({
                 sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) calc((100vw - 3rem) / 2), (max-width: 1536px) calc((100vw - 4rem) / 4), 320px"
                 quality={75}
                 priority={priority}
-                unoptimized={!shouldOptimizeImage(safeHostname(resolvedHeroUrl))}
               />
             )
           ) : (

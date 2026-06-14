@@ -7,6 +7,7 @@ import {
   canRenderWithNextImage,
   resolveCardImageUrl,
   shouldOptimizeImage,
+  shouldUseNativeCardRaster,
 } from '../../../lib/ui/card-image-host'
 import { IMAGE_REMOTE_HOSTS } from '../../../lib/ui/image-host-policy'
 import {
@@ -147,6 +148,7 @@ test('resolveCardPreviewDisplayUrl passthroughs UBS chart CDN without Cloudinary
 
   assert.equal(canRenderWithNextImage(ubsChart), true)
   assert.equal(resolveCardPreviewDisplayUrl(ubsChart), ubsChart)
+  assert.equal(shouldUseNativeCardRaster(ubsChart), true)
 
   if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
 })
