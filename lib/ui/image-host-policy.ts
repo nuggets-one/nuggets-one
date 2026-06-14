@@ -34,6 +34,8 @@ export const IMAGE_REMOTE_HOSTS = [
   'a.storyblok.com',
   'blogger.googleusercontent.com',
   'infobeautiful4.s3.amazonaws.com',
+  'cdn.jpmorganfunds.com',
+  'am.gs.com',
 ] as const
 
 const PASSTHROUGH_HOSTS = new Set<string>(IMAGE_REMOTE_HOSTS)

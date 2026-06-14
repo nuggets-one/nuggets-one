@@ -109,6 +109,34 @@ test('resolveCardPreviewDisplayUrl passthroughs Tier-1 hosts without Cloudinary 
   if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
 })
 
+test('resolveCardPreviewDisplayUrl passthroughs JPMorgan chart CDN without Cloudinary env', () => {
+  const prev = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.CLOUDINARY_CLOUD_NAME
+
+  const jpmChart =
+    'https://cdn.jpmorganfunds.com/content/dam/jpm-am-aem/americas/us/en/insights/market-insights/wmr/chart_of_the_week.png?v=1780907738879'
+
+  assert.equal(canRenderWithNextImage(jpmChart), true)
+  assert.equal(resolveCardPreviewDisplayUrl(jpmChart), jpmChart)
+
+  if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
+})
+
+test('resolveCardPreviewDisplayUrl passthroughs Goldman Sachs chart CDN without Cloudinary env', () => {
+  const prev = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.CLOUDINARY_CLOUD_NAME
+
+  const gsChart =
+    'https://am.gs.com/cms-assets/gsam-app/images/chart-graph/english/2026/chart-of-the-week_060326_d.png'
+
+  assert.equal(canRenderWithNextImage(gsChart), true)
+  assert.equal(resolveCardPreviewDisplayUrl(gsChart), gsChart)
+
+  if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
+})
+
 test('describeCardCoverPreview proxies Contentful URLs when Cloudinary is configured', () => {
   process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'clubstorage'
   const contentful =
