@@ -78,3 +78,21 @@ test('resolveArticleHeroFields treats Goldman Sachs chart URL as image cover', (
   assert.equal(preview.kind, 'image')
   assert.equal(preview.posterUrl, gsChart)
 })
+
+test('resolveArticleHeroFields treats UBS AEM chart URL as image cover', () => {
+  const ubsChart =
+    'https://www.ubs.com/content/sites/global/en/wealthmanagement/insights/chief-investment-office/house-view/2026/weekly-key-messages/jcr:content/root/contentarea/mainpar/toplevelgrid_1825995/col_1/textimage/image.1080.png/1780928287026.png'
+
+  const resolved = resolveArticleHeroFields({
+    source_url: null,
+    hero_thumb_url: ubsChart,
+    media_urls: [ubsChart],
+  })
+
+  assert.equal(resolved.hero_media_kind, 'image')
+  assert.equal(resolved.hero_thumb_url, ubsChart)
+
+  const preview = describeCardCoverPreview(resolved)
+  assert.equal(preview.kind, 'image')
+  assert.equal(preview.posterUrl, ubsChart)
+})

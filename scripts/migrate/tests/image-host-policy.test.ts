@@ -137,6 +137,20 @@ test('resolveCardPreviewDisplayUrl passthroughs Goldman Sachs chart CDN without 
   if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
 })
 
+test('resolveCardPreviewDisplayUrl passthroughs UBS chart CDN without Cloudinary env', () => {
+  const prev = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.CLOUDINARY_CLOUD_NAME
+
+  const ubsChart =
+    'https://www.ubs.com/content/sites/global/en/wealthmanagement/insights/chief-investment-office/house-view/2026/weekly-key-messages/jcr:content/root/contentarea/mainpar/toplevelgrid_1825995/col_1/textimage/image.1080.png/1780928287026.png'
+
+  assert.equal(canRenderWithNextImage(ubsChart), true)
+  assert.equal(resolveCardPreviewDisplayUrl(ubsChart), ubsChart)
+
+  if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
+})
+
 test('describeCardCoverPreview proxies Contentful URLs when Cloudinary is configured', () => {
   process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'clubstorage'
   const contentful =
