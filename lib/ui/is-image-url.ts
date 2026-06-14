@@ -71,5 +71,8 @@ export function isImageUrl(url: string): boolean {
   // §9 — Adobe AEM dispatcher paths (textimage component, versioned asset suffix)
   if (/\/textimage\//i.test(path) && /\.(png|jpe?g|gif|webp)$/i.test(path)) return true
 
+  // §10 — Sitecore media library paths (McKinsey ~/media/, etc.)
+  if (/\/~\/media\//i.test(path)) return true
+
   return false
 }

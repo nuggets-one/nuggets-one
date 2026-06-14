@@ -37,6 +37,7 @@ export const IMAGE_REMOTE_HOSTS = [
   'cdn.jpmorganfunds.com',
   'am.gs.com',
   'www.ubs.com',
+  'www.mckinsey.com',
 ] as const
 
 const PASSTHROUGH_HOSTS = new Set<string>(IMAGE_REMOTE_HOSTS)

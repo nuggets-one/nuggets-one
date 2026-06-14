@@ -23,6 +23,7 @@ const shouldBeImage = [
   'https://cms.example.com/content/dam/site/media/images/hero-banner',
   'https://substackcdn.com/image/fetch/f_auto,q_auto/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fabc.png',
   'https://www.ubs.com/content/sites/global/en/wealthmanagement/insights/chief-investment-office/house-view/2026/weekly-key-messages/jcr:content/root/contentarea/mainpar/toplevelgrid_1825995/col_1/textimage/image.1080.png/1780928287026.png',
+  'https://www.mckinsey.com/~/media/mckinsey/featured%20insights/the%20week%20in%20charts/2026/june/exhibits/cod-chinas%20humanoid%20robot%20edge_ex2.svgz?cq=50&cpy=Center',
 ]
 
 const shouldNotBeImage = [

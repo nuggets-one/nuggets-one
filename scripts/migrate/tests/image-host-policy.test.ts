@@ -153,6 +153,21 @@ test('resolveCardPreviewDisplayUrl passthroughs UBS chart CDN without Cloudinary
   if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
 })
 
+test('resolveCardPreviewDisplayUrl passthroughs McKinsey Sitecore chart CDN without Cloudinary env', () => {
+  const prev = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.CLOUDINARY_CLOUD_NAME
+
+  const mckinseyChart =
+    'https://www.mckinsey.com/~/media/mckinsey/featured%20insights/the%20week%20in%20charts/2026/june/exhibits/cod-chinas%20humanoid%20robot%20edge_ex2.svgz?cq=50&cpy=Center'
+
+  assert.equal(canRenderWithNextImage(mckinseyChart), true)
+  assert.equal(resolveCardPreviewDisplayUrl(mckinseyChart), mckinseyChart)
+  assert.equal(shouldUseNativeCardRaster(mckinseyChart), true)
+
+  if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
+})
+
 test('describeCardCoverPreview proxies Contentful URLs when Cloudinary is configured', () => {
   process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'clubstorage'
   const contentful =

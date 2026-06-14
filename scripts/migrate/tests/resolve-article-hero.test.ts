@@ -96,3 +96,21 @@ test('resolveArticleHeroFields treats UBS AEM chart URL as image cover', () => {
   assert.equal(preview.kind, 'image')
   assert.equal(preview.posterUrl, ubsChart)
 })
+
+test('resolveArticleHeroFields treats McKinsey Sitecore chart URL as image cover', () => {
+  const mckinseyChart =
+    'https://www.mckinsey.com/~/media/mckinsey/featured%20insights/the%20week%20in%20charts/2026/june/exhibits/cod-chinas%20humanoid%20robot%20edge_ex2.svgz?cq=50&cpy=Center'
+
+  const resolved = resolveArticleHeroFields({
+    source_url: null,
+    hero_thumb_url: mckinseyChart,
+    media_urls: [mckinseyChart],
+  })
+
+  assert.equal(resolved.hero_media_kind, 'image')
+  assert.equal(resolved.hero_thumb_url, mckinseyChart)
+
+  const preview = describeCardCoverPreview(resolved)
+  assert.equal(preview.kind, 'image')
+  assert.equal(preview.posterUrl, mckinseyChart)
+})
