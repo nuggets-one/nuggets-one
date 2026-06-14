@@ -1,4 +1,5 @@
 import { unstable_cache } from 'next/cache'
+import { CACHE_TAGS } from '@/lib/cache'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
 
@@ -41,19 +42,19 @@ async function fetchTagCountsForStream(
 const cachedStandardTagCounts = unstable_cache(
   () => fetchTagCountsForStream('standard'),
   ['tag-counts', 'standard'],
-  { revalidate: 3600 }
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('standard')] }
 )
 
 const cachedPulseTagCounts = unstable_cache(
   () => fetchTagCountsForStream('pulse'),
   ['tag-counts', 'pulse'],
-  { revalidate: 3600 }
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('pulse')] }
 )
 
 const cachedChartsTagCounts = unstable_cache(
   () => fetchTagCountsForStream('charts'),
   ['tag-counts', 'charts'],
-  { revalidate: 3600 }
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('charts')] }
 )
 
 /**

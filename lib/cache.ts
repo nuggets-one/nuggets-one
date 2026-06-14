@@ -11,6 +11,8 @@ export const CACHE_TAGS = {
   feedPulse:       'feed:pulse',
   feedCharts:      'feed:charts',
   article:         (id: string) => `article:${id}`,
+  streamCounts:    'counts:streams',
+  tagCounts:       (stream: string) => `counts:tags:${stream}`,
   tags:            'tags:official',
   collectionsList: 'collections:list',
   collection:      (id: string) => `collection:${id}`,
@@ -37,6 +39,10 @@ export function revalidateArticle(id: string): void {
   revalidateTag(CACHE_TAGS.feedPulse, HARD_BUST)
   revalidateTag(CACHE_TAGS.feedCharts, HARD_BUST)
   revalidateTag(CACHE_TAGS.article(id), HARD_BUST)
+  revalidateTag(CACHE_TAGS.streamCounts, HARD_BUST)
+  revalidateTag(CACHE_TAGS.tagCounts('standard'), HARD_BUST)
+  revalidateTag(CACHE_TAGS.tagCounts('pulse'), HARD_BUST)
+  revalidateTag(CACHE_TAGS.tagCounts('charts'), HARD_BUST)
 }
 
 /**

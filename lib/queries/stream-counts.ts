@@ -1,4 +1,5 @@
 import { unstable_cache } from 'next/cache'
+import { CACHE_TAGS } from '@/lib/cache'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
 
@@ -37,7 +38,7 @@ async function fetchStreamArticleCounts(): Promise<StreamArticleCounts> {
 const cachedStreamArticleCounts = unstable_cache(
   fetchStreamArticleCounts,
   ['stream-counts'],
-  { revalidate: 3600 }
+  { revalidate: 3600, tags: [CACHE_TAGS.streamCounts] }
 )
 
 /**
