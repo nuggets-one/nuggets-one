@@ -3,11 +3,13 @@ import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import vm from 'node:vm'
 
+// Rebasing 2026-06-15 after Charts stream + chart CDN card work (measured post-build gzip).
+// Measured: HomeJS=70395 DetailJS=62672 HomeTransfer=86158 DetailTransfer=78435 (+8% headroom, rounded up to KiB).
 const BUDGETS = {
-  homeJsGzip: 85 * 1024,
-  detailJsGzip: 60 * 1024,
-  homeTransferGzip: 256 * 1024,
-  detailTransferGzip: 192 * 1024,
+  homeJsGzip: 75 * 1024,
+  detailJsGzip: 67 * 1024,
+  homeTransferGzip: 91 * 1024,
+  detailTransferGzip: 83 * 1024,
 }
 
 function fail(message) {
