@@ -34,3 +34,21 @@ test('indexOfLightboxImage maps clicked URL to index', () => {
   assert.equal(indexOfLightboxImage(images, 'https://example.com/b.jpg'), 1)
   assert.equal(indexOfLightboxImage(images, 'https://example.com/missing.jpg'), 0)
 })
+
+test('buildLightboxImages accepts Cloudinary fetch proxy for non-extension hero URLs', () => {
+  const originalCloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'demo'
+
+  try {
+    const hero = 'https://www.ft.com/content/images/chart-asset'
+    const images = buildLightboxImages(hero, [])
+    assert.equal(images.length, 1)
+    assert.match(images[0]?.url ?? '', /res\.cloudinary\.com\/demo\/image\/fetch\//)
+  } finally {
+    if (originalCloud === undefined) {
+      delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    } else {
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = originalCloud
+    }
+  }
+})

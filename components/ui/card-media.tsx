@@ -70,7 +70,7 @@ export function CardMedia({
               articleId={articleId}
               title={hero_alt_text ?? title}
               detailHref={href}
-              clickedUrl={hero_thumb_url ?? resolvedHeroUrl}
+              clickedUrl={resolvedHeroUrl}
               heroThumbUrl={hero_thumb_url}
               allImages={mediaImages}
               totalCount={totalCount}
