@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { resolveArticleHeroFields } from '../../../lib/ui/resolve-article-hero'
+import {
+  describeCardCoverPreview,
+  resolveArticleHeroFields,
+} from '../../../lib/ui/resolve-article-hero'
 
 function extractYouTubeVideoId(url: unknown): string | null {
   if (typeof url !== 'string' || !url.trim()) return null
@@ -37,4 +40,41 @@ test('resolveArticleHeroFields ignores non-image hero_thumb and falls back to me
 
   assert.equal(resolved.hero_media_kind, 'image')
   assert.equal(resolved.hero_thumb_url, twitterImage)
+})
+
+test('resolveArticleHeroFields treats JPMorgan chart URL with v= cache-buster as image cover', () => {
+  const jpmChart =
+    'https://cdn.jpmorganfunds.com/content/dam/jpm-am-aem/americas/us/en/insights/market-insights/wmr/chart_of_the_week.png?v=1780907738879'
+
+  const resolved = resolveArticleHeroFields({
+    source_url: null,
+    hero_thumb_url: null,
+    media_urls: [jpmChart],
+  })
+
+  assert.equal(resolved.hero_media_kind, 'image')
+  assert.equal(resolved.hero_thumb_url, jpmChart)
+
+  const preview = describeCardCoverPreview(resolved)
+  assert.equal(preview.kind, 'image')
+  assert.equal(preview.posterUrl, jpmChart)
+  assert.match(preview.summary, /selected image cover/)
+})
+
+test('resolveArticleHeroFields treats Goldman Sachs chart URL as image cover', () => {
+  const gsChart =
+    'https://am.gs.com/cms-assets/gsam-app/images/chart-graph/english/2026/chart-of-the-week_060326_d.png'
+
+  const resolved = resolveArticleHeroFields({
+    source_url: null,
+    hero_thumb_url: gsChart,
+    media_urls: [gsChart],
+  })
+
+  assert.equal(resolved.hero_media_kind, 'image')
+  assert.equal(resolved.hero_thumb_url, gsChart)
+
+  const preview = describeCardCoverPreview(resolved)
+  assert.equal(preview.kind, 'image')
+  assert.equal(preview.posterUrl, gsChart)
 })

@@ -1,5 +1,9 @@
 import { resolveCardPreviewDisplayUrl } from '@/lib/ui/card-preview-display-url'
-import { extractYouTubeVideoId, isCanonicalYouTubeVideoId } from '@/lib/ui/youtube-video-id'
+import {
+  extractYouTubeVideoId,
+  isCanonicalYouTubeMediaUrl,
+  isCanonicalYouTubeVideoId,
+} from '@/lib/ui/youtube-video-id'
 import { youTubePosterHqUrl } from '@/lib/ui/excerpt-card'
 import { isImageUrl } from '@/lib/ui/is-image-url'
 
@@ -59,7 +63,7 @@ export function resolveArticleHeroFields(input: {
   if (youtubeId) {
     const poster = youTubePosterHqUrl(youtubeId)
     const rasterThumb =
-      heroThumb && isImageUrl(heroThumb) && !extractYouTubeVideoId(heroThumb) ? heroThumb : null
+      heroThumb && isImageUrl(heroThumb) && !isCanonicalYouTubeMediaUrl(heroThumb) ? heroThumb : null
     return {
       hero_video_id: youtubeId,
       hero_media_kind: 'youtube',
@@ -69,10 +73,10 @@ export function resolveArticleHeroFields(input: {
   }
 
   const validImageHeroThumb =
-    heroThumb && isImageUrl(heroThumb) && !extractYouTubeVideoId(heroThumb) ? heroThumb : null
+    heroThumb && isImageUrl(heroThumb) && !isCanonicalYouTubeMediaUrl(heroThumb) ? heroThumb : null
   const defaultImageThumb =
     validImageHeroThumb ??
-    imageMediaUrls.find((url) => isImageUrl(url) && !extractYouTubeVideoId(url)) ??
+    imageMediaUrls.find((url) => isImageUrl(url) && !isCanonicalYouTubeMediaUrl(url)) ??
     null
 
   return {
@@ -102,7 +106,7 @@ export function describeCardCoverPreview(resolved: ResolvedArticleHero): CardCov
 
   const imageCoverUrl =
     resolved.hero_thumb_url ??
-    resolved.imageMediaUrls.find((url) => isImageUrl(url) && !extractYouTubeVideoId(url)) ??
+    resolved.imageMediaUrls.find((url) => isImageUrl(url) && !isCanonicalYouTubeMediaUrl(url)) ??
     null
 
   if (resolved.hero_media_kind === 'image' && imageCoverUrl) {

@@ -28,3 +28,9 @@ test('extractYouTubeVideoId from ytimg poster URL', () => {
     'dQw4w9WgXcQ',
   )
 })
+
+test('extractYouTubeVideoId ignores v= cache-buster on non-YouTube CDN hosts', () => {
+  const jpmChart =
+    'https://cdn.jpmorganfunds.com/content/dam/jpm-am-aem/americas/us/en/insights/market-insights/wmr/chart_of_the_week.png?v=1780907738879'
+  assert.equal(extractYouTubeVideoId(jpmChart), null)
+})
