@@ -10,6 +10,7 @@ import { convertClipboardHtmlToMarkdown } from '@/lib/markdown/html-clipboard-to
 import { describeCardCoverPreview, resolveArticleHeroFields } from '@/lib/ui/resolve-article-hero'
 import { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
 import { parseContentStream } from '@/lib/copy/streams'
+import type { TagDimension, TagSummary } from '@/types/article'
 
 // S1-F1: moved from new/page.tsx — page files must only export the default page
 // component plus Next.js-approved named exports (metadata, generateMetadata, etc.).
@@ -27,18 +28,14 @@ export type ArticleFormDefaults = {
   media_urls?: string[]
 }
 
-type TagOption = {
-  id: string
-  slug: string
-  label: string
-  dimension: 'format' | 'domain' | 'subtopic' | null
-}
+type TagOption = Pick<TagSummary, 'id' | 'slug' | 'label' | 'dimension'>
 
-const TAG_GROUPS = [
+const TAG_GROUPS: Array<{ key: TagDimension; label: string; color: string }> = [
   { key: 'format', label: 'FORMAT', color: 'text-blue-500' },
   { key: 'domain', label: 'DOMAIN', color: 'text-emerald-500' },
   { key: 'subtopic', label: 'SUB-TOPIC', color: 'text-amber-500' },
-] as const
+  { key: 'source', label: 'SOURCE', color: 'text-violet-500' },
+]
 
 export function ArticleFormFields({
   defaults,

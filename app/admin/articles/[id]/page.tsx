@@ -9,6 +9,7 @@ import { updateArticleAction, publishArticleAction } from '@/lib/actions/admin'
 import { DeleteArticleButton } from '../_components/DeleteArticleButton'
 import { UnpublishButton } from '../_components/UnpublishButton'
 import type { TagSummary } from '@/types/article'
+import { TAG_DIMENSIONS } from '@/types/article'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +69,7 @@ export default async function EditArticlePage({
       .from('tags')
       .select('id, slug, label, dimension, is_official')
       .eq('is_official', true)
-      .in('dimension', ['format', 'domain', 'subtopic'])
+      .in('dimension', [...TAG_DIMENSIONS])
       .order('dimension', { ascending: true, nullsFirst: false })
       .order('label', { ascending: true }),
     db

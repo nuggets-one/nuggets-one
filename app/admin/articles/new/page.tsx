@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ArticleFormFields } from '../_components/article-form-fields'
 import { ArticleFormShell } from '../_components/article-form-shell'
 import type { TagSummary } from '@/types/article'
+import { TAG_DIMENSIONS } from '@/types/article'
 
 const TAG_ERRORS: Record<string, string> = {
   unknown_tags: 'One or more tag slugs were not found. Check Tags admin and retry.',
@@ -28,7 +29,7 @@ export default async function NewArticlePage({ searchParams }: Props) {
     .from('tags')
     .select('id, slug, label, dimension, is_official')
     .eq('is_official', true)
-    .in('dimension', ['format', 'domain', 'subtopic'])
+    .in('dimension', [...TAG_DIMENSIONS])
     .order('dimension', { ascending: true, nullsFirst: false })
     .order('label', { ascending: true })
 

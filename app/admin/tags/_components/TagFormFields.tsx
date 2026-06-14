@@ -5,6 +5,7 @@ const DIMENSION_OPTIONS = [
   { value: 'format', label: 'Format — Content format' },
   { value: 'domain', label: 'Domain — Subject domain' },
   { value: 'subtopic', label: 'Subtopic' },
+  { value: 'source', label: 'Source — Chart/data provider' },
 ] as const
 
 export function TagFormFields({ tag }: { tag?: Pick<TagSummary, 'label' | 'slug' | 'dimension' | 'is_official'> }) {

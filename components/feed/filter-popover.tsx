@@ -38,6 +38,7 @@ const DEFAULT_EXPANDED: GroupVisibility = {
   format: true,
   domain: false,
   subtopic: false,
+  source: false,
   uncategorized: false,
 }
 
@@ -170,8 +171,8 @@ function FilterAccordionSection({
 }
 
 /**
- * More filters — opens a `<dialog>` with a three-column mega layout (Format /
- * Domain / Subtopic) plus optional Uncategorized row. Staged selection,
+ * More filters — opens a `<dialog>` with a four-column mega layout (Format /
+ * Domain / Subtopic / Source) plus optional Uncategorized row. Staged selection,
  * Apply commits to `tags` nuqs param.
  *
  * Tag rows are exactly `listOfficialTags()` (Supabase `tags` where
@@ -213,12 +214,14 @@ export function FilterPopover({
       format: filterList(grouped.format, needle),
       domain: filterList(grouped.domain, needle),
       subtopic: filterList(grouped.subtopic, needle),
+      source: filterList(grouped.source, needle),
       uncategorized: filterList(grouped.uncategorized, needle),
     }
     return {
       format: filterTagsVisibleInPicker(afterSearch.format, counts, localSelected),
       domain: filterTagsVisibleInPicker(afterSearch.domain, counts, localSelected),
       subtopic: filterTagsVisibleInPicker(afterSearch.subtopic, counts, localSelected),
+      source: filterTagsVisibleInPicker(afterSearch.source, counts, localSelected),
       uncategorized: filterTagsVisibleInPicker(
         afterSearch.uncategorized,
         counts,
@@ -240,6 +243,7 @@ export function FilterPopover({
       format: groupedFiltered.format.length > 0,
       domain: groupedFiltered.domain.length > 0,
       subtopic: groupedFiltered.subtopic.length > 0,
+      source: groupedFiltered.source.length > 0,
       uncategorized: groupedFiltered.uncategorized.length > 0,
     }),
     [groupedFiltered]
@@ -306,6 +310,7 @@ export function FilterPopover({
     groupedFiltered.format.length > 0 ||
     groupedFiltered.domain.length > 0 ||
     groupedFiltered.subtopic.length > 0 ||
+    groupedFiltered.source.length > 0 ||
     groupedFiltered.uncategorized.length > 0
 
   const activeCount = committed.length
@@ -431,7 +436,7 @@ export function FilterPopover({
               </p>
             ) : (
               <>
-                <div className="flex flex-col divide-y divide-border lg:grid lg:grid-cols-3 lg:divide-y-0 lg:[&>*:not(:last-child)]:border-r lg:[&>*]:border-border">
+                <div className="flex flex-col divide-y divide-border lg:grid lg:grid-cols-4 lg:divide-y-0 lg:[&>*:not(:last-child)]:border-r lg:[&>*]:border-border">
                   {FEED_DIMENSION_KEYS.map((key) => (
                     <FilterAccordionSection
                       key={key}

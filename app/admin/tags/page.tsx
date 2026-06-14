@@ -22,7 +22,8 @@ export default async function AdminTagsPage() {
         Tags power Home filters and nugget classification. Each tag has one optional dimension:{' '}
         <strong className="font-medium text-primary">Format</strong>,{' '}
         <strong className="font-medium text-primary">Domain</strong>, or{' '}
-        <strong className="font-medium text-primary">Subtopic</strong>. Official tags with a dimension
+        <strong className="font-medium text-primary">Subtopic</strong>, or{' '}
+        <strong className="font-medium text-primary">Source</strong>. Official tags with a dimension
         appear on the Home chip rail and in the article editor. Click a row to edit label, dimension,
         official status, or slug.
       </p>

@@ -18,7 +18,8 @@ import { syncArticleTags } from '@/lib/admin/sync-article-tags'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
 import { normalizePublishPayload } from '@/lib/validation/publish-article'
 import { sanitizeDeleteRedirectTo } from '@/lib/auth/can-manage-article'
-import type { ContentStream } from '@/types/article'
+import type { ContentStream, TagDimension } from '@/types/article'
+import { TAG_DIMENSIONS } from '@/types/article'
 import { ZodError } from 'zod'
 
 function isMissingCardPreviewError(message: string): boolean {
@@ -443,12 +444,12 @@ export async function deleteArticleAction(formData: FormData) {
   redirect(redirectTo)
 }
 
-type TagDimension = 'format' | 'domain' | 'subtopic' | null
+type TagDimensionInput = TagDimension | null
 
-function parseTagDimension(raw: FormDataEntryValue | null): TagDimension {
+function parseTagDimension(raw: FormDataEntryValue | null): TagDimensionInput {
   const value = typeof raw === 'string' ? raw.trim() : ''
   if (!value) return null
-  if (value === 'format' || value === 'domain' || value === 'subtopic') return value
+  if ((TAG_DIMENSIONS as readonly string[]).includes(value)) return value as TagDimension
   throw new Error('Invalid dimension')
 }
 

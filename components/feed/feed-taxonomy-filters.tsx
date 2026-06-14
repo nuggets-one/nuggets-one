@@ -45,7 +45,7 @@ const scrollArrowBtn =
   'inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-raised text-primary transition-colors hover:bg-surface-raised/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-35'
 
 /**
- * Feed filter chrome: All + scrollable dimension quick rail (format | domain | subtopic)
+ * Feed filter chrome: All + scrollable dimension quick rail (format | domain | subtopic | source)
  * + More filters dialog for full taxonomy.
  */
 export function FeedTaxonomyFilters({ tags, counts }: Props) {

@@ -22,16 +22,18 @@ const t = (
   is_official: true,
 })
 
-test('groupTagsByDimension buckets null as uncategorized', () => {
+test('groupTagsByDimension buckets null as uncategorized and source separately', () => {
   const g = groupTagsByDimension([
     t('a', 'A', 'format'),
     t('b', 'B', 'domain'),
     t('c', 'C', 'subtopic'),
+    t('s', 'S', 'source'),
     t('u', 'U', null),
   ])
   assert.equal(g.format.length, 1)
   assert.equal(g.domain.length, 1)
   assert.equal(g.subtopic.length, 1)
+  assert.equal(g.source.length, 1)
   assert.equal(g.uncategorized.length, 1)
   assert.equal(g.uncategorized[0]?.slug, 'u')
 })
@@ -76,10 +78,11 @@ test('filterTagsVisibleInPicker hides zero count unless staged', () => {
 test('sortOfficialTagsByDimensionThenLabel orders dimensions then label', () => {
   const sorted = sortOfficialTagsByDimensionThenLabel([
     t('z-dom', 'Z', 'domain'),
+    t('a-src', 'A', 'source'),
     t('a-sub', 'A', 'subtopic'),
     t('a-fmt', 'A', 'format'),
     t('b-fmt', 'B', 'format'),
     t('u', 'U', null),
   ]).map((x) => x.slug)
-  assert.deepEqual(sorted, ['a-fmt', 'b-fmt', 'z-dom', 'a-sub', 'u'])
+  assert.deepEqual(sorted, ['a-fmt', 'b-fmt', 'z-dom', 'a-sub', 'a-src', 'u'])
 })

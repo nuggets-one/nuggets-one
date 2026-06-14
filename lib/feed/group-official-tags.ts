@@ -1,7 +1,7 @@
-import type { TagSummary } from '@/types/article'
+import type { TagSummary, TagDimension } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
 
-export const FEED_DIMENSION_KEYS = ['format', 'domain', 'subtopic'] as const
+export const FEED_DIMENSION_KEYS = ['format', 'domain', 'subtopic', 'source'] as const satisfies readonly TagDimension[]
 
 export type FeedDimensionKey = (typeof FEED_DIMENSION_KEYS)[number]
 
@@ -10,12 +10,14 @@ export const FEED_DIMENSION_LABELS: Record<FeedDimensionKey, string> = {
   format: 'Content format',
   domain: 'Subject domain',
   subtopic: 'Subtopic',
+  source: 'Source',
 }
 
 export type GroupedOfficialTags = {
   format: TagSummary[]
   domain: TagSummary[]
   subtopic: TagSummary[]
+  source: TagSummary[]
   /** `tags.dimension` is null — still official; show in modal / optional band. */
   uncategorized: TagSummary[]
 }
@@ -55,12 +57,14 @@ export function groupTagsByDimension(tags: readonly TagSummary[]): GroupedOffici
     format: [],
     domain: [],
     subtopic: [],
+    source: [],
     uncategorized: [],
   }
   for (const t of tags) {
     if (t.dimension === 'format') empty.format.push(t)
     else if (t.dimension === 'domain') empty.domain.push(t)
     else if (t.dimension === 'subtopic') empty.subtopic.push(t)
+    else if (t.dimension === 'source') empty.source.push(t)
     else empty.uncategorized.push(t)
   }
   return empty
@@ -75,6 +79,7 @@ export function groupedSortedByCount(
     format: sortTagsByCountDesc(g.format, counts),
     domain: sortTagsByCountDesc(g.domain, counts),
     subtopic: sortTagsByCountDesc(g.subtopic, counts),
+    source: sortTagsByCountDesc(g.source, counts),
     uncategorized: sortTagsByCountDesc(g.uncategorized, counts),
   }
 }
@@ -95,28 +100,29 @@ export function filterTagsVisibleInPicker(
   )
 }
 
-const DIMENSION_SORT_TIER: Record<string, number> = {
+const DIMENSION_SORT_TIER: Record<TagDimension, number> = {
   format: 0,
   domain: 1,
   subtopic: 2,
+  source: 3,
 }
 
 /**
  * Stable listing order for any flat list of tags (e.g. `listOfficialTags`):
- * format → domain → subtopic → uncategorized, then label A–Z.
+ * format → domain → subtopic → source → uncategorized, then label A–Z.
  */
 export function sortOfficialTagsByDimensionThenLabel(
   tags: readonly TagSummary[]
 ): TagSummary[] {
   return [...tags].sort((a, b) => {
     const ta =
-      a.dimension === 'format' || a.dimension === 'domain' || a.dimension === 'subtopic'
+      a.dimension !== null && a.dimension in DIMENSION_SORT_TIER
         ? DIMENSION_SORT_TIER[a.dimension]
-        : 3
+        : 4
     const tb =
-      b.dimension === 'format' || b.dimension === 'domain' || b.dimension === 'subtopic'
+      b.dimension !== null && b.dimension in DIMENSION_SORT_TIER
         ? DIMENSION_SORT_TIER[b.dimension]
-        : 3
+        : 4
     if (ta !== tb) return ta - tb
     return a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
   })
