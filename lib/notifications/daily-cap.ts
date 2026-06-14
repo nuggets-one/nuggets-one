@@ -1,8 +1,11 @@
+import { getStreamLabel } from '@/lib/copy/streams'
+import type { ContentStream } from '@/types/article'
+
 /** Blueprint §6.6 — max single-article in-app rows per user per UTC day per stream. */
 export const DAILY_SINGLE_CAP = 5 as const
 
 export function buildDailyDigestBatchKey(
-  stream: 'standard' | 'pulse',
+  stream: ContentStream,
   now: Date = new Date()
 ): string {
   const y = now.getUTCFullYear()
@@ -19,10 +22,10 @@ export function utcDayStartIso(now: Date = new Date()): string {
 }
 
 export function digestTitleForOverflow(
-  stream: 'standard' | 'pulse',
+  stream: ContentStream,
   count: number
 ): string {
-  const label = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+  const label = getStreamLabel(stream)
   if (count === 1) return `1 more ${label} update`
   return `${count} more ${label} updates`
 }

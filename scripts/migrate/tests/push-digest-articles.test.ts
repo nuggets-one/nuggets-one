@@ -34,6 +34,7 @@ test('isDigestWindowClosed is true at or after window end', () => {
 test('streamPushLabel maps streams', () => {
   assert.equal(streamPushLabel('standard'), 'Nuggets')
   assert.equal(streamPushLabel('pulse'), 'Market Pulse')
+  assert.equal(streamPushLabel('charts'), 'Charts of the Week')
 })
 
 test('digest topic push uses per-article android tag and collapse key', () => {

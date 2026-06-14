@@ -78,6 +78,15 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/charts-of-the-week',
+        destination: '/?stream=charts',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

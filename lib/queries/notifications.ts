@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import type { ContentStream } from '@/types/article'
 import 'server-only'
 
 export type NotificationRow = {
   id: string
   article_id: string | null
   kind: 'single' | 'digest'
-  content_stream: 'standard' | 'pulse' | null
+  content_stream: ContentStream | null
   title: string | null
   body: string | null
   is_read: boolean

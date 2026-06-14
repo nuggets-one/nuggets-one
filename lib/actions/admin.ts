@@ -386,7 +386,7 @@ export async function publishArticleAction(formData: FormData) {
     try {
       fanResult = await fanOutOnPublish({
         articleId: id,
-        stream: publishPayload.content_stream as 'standard' | 'pulse',
+        stream: publishPayload.content_stream as ContentStream,
         title: publishPayload.title,
         slug,
         imageUrl: existing.hero_thumb_url as string | null,

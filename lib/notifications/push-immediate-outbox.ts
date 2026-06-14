@@ -3,6 +3,7 @@ import 'server-only'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getRecipients } from '@/lib/notifications/fan-out'
 import { insertOutboxRowsIgnoreDuplicates } from '@/lib/notifications/outbox-insert'
+import type { ContentStream } from '@/types/article'
 
 const CHUNK = 500
 
@@ -48,7 +49,7 @@ export async function enqueueImmediatePush({
   slug,
 }: {
   articleId: string
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
   title: string
   slug: string
 }): Promise<number> {
@@ -103,7 +104,7 @@ export type ImmediateOutboxRow = {
   article_id: string
   title: string
   slug: string
-  content_stream: 'standard' | 'pulse'
+  content_stream: ContentStream
   attempts: number
 }
 
@@ -114,7 +115,7 @@ export type DigestOutboxRow = {
   user_id: string | null
   batch_key: string
   body: string
-  content_stream: 'standard' | 'pulse'
+  content_stream: ContentStream
   attempts: number
 }
 

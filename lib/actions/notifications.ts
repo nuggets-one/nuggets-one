@@ -59,6 +59,7 @@ export async function lazyCreatePreferencesAction(): Promise<void> {
         mute_all: false,
         stream_standard: true,
         stream_pulse: true,
+        stream_charts: true,
       },
       { onConflict: 'user_id', ignoreDuplicates: true }
     )
@@ -68,6 +69,7 @@ export async function updatePreferencesAction(prefs: {
   mute_all?: boolean
   stream_standard?: boolean
   stream_pulse?: boolean
+  stream_charts?: boolean
 }): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -88,7 +90,7 @@ export async function updatePreferencesAction(prefs: {
   const adminClient = getAdminClient()
   const { data } = await adminClient
     .from('notification_preferences')
-    .select('mute_all, stream_standard, stream_pulse')
+    .select('mute_all, stream_standard, stream_pulse, stream_charts')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -96,5 +98,6 @@ export async function updatePreferencesAction(prefs: {
     mute_all: data?.mute_all === true,
     stream_standard: data?.stream_standard !== false,
     stream_pulse: data?.stream_pulse !== false,
+    stream_charts: data?.stream_charts !== false,
   })
 }

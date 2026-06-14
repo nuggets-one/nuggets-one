@@ -7,6 +7,7 @@ import { useQueryState } from 'nuqs'
 import Link from 'next/link'
 import { X } from 'lucide-react'
 import type { ContentStream } from '@/types/article'
+import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
 import type { SuggestionRow } from '@/lib/queries/article'
 import { readResponseJson } from '@/lib/http/parse-json-response'
 import { useMobileSearchControls } from '@/components/layout/mobile-search-context'
@@ -165,7 +166,7 @@ function SuggestionsList({
       {!suggestionsPending &&
         trimmed.length >= 2 &&
         suggestions.map((s, i) => {
-          const streamLabel = s.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+          const streamLabel = getStreamLabel(parseContentStream(s.content_stream))
           const publishedAtLabel = formatSuggestionDate(s.published_at)
           return (
             <li key={s.id} id={`suggestion-${i}`} role="option" aria-selected={i === activeIndex}>
@@ -205,7 +206,7 @@ export function HeaderSearch({ utilities }: Props) {
   })
   const [stream] = useQueryState<ContentStream>('stream', {
     defaultValue: 'standard',
-    parse: (v): ContentStream => (v === 'pulse' ? 'pulse' : 'standard'),
+    parse: (v): ContentStream => parseContentStream(v),
     shallow: true,
   })
 

@@ -13,6 +13,8 @@ import {
   ADMIN_ARTICLES_PAGE_SIZE,
   listAdminArticlesPage,
 } from '@/lib/queries/articles-admin'
+import { getStreamLabel } from '@/lib/copy/streams'
+import { parseContentStream } from '@/lib/copy/streams'
 
 export const dynamic = 'force-dynamic'
 
@@ -240,7 +242,7 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
                         {a.title}
                       </td>
                       <td className="px-4 py-3 text-muted">
-                        {a.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'}
+                        {getStreamLabel(parseContentStream(a.content_stream))}
                       </td>
                       <td className="px-4 py-3">
                         <span

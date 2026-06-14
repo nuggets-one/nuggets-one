@@ -1,3 +1,5 @@
+import type { ContentStream } from '@/types/article'
+
 export function buildSingleNotificationRows({
   recipientIds,
   articleId,
@@ -6,7 +8,7 @@ export function buildSingleNotificationRows({
 }: {
   recipientIds: string[]
   articleId: string
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
   title: string
 }) {
   return recipientIds.map((userId) => ({

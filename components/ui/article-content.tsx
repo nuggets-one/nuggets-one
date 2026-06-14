@@ -1,3 +1,4 @@
+import { getStreamLabel } from '@/lib/copy/streams'
 import { createClient } from '@/lib/supabase/server'
 import { resolveAuthUser } from '@/lib/supabase/resolve-auth-user'
 import { getArticleById, getRelatedArticles } from '@/lib/queries/article'
@@ -54,10 +55,6 @@ function formatDateDetail(iso: string): string {
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(iso))
-}
-
-function getStreamLabel(stream: 'standard' | 'pulse'): string {
-  return stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
 }
 
 function estimateReadingTimeMinutes(markdown: string | null): number {

@@ -17,7 +17,9 @@ function topicPushWebDeepLink(
 ): string {
   const base = WEB_PUSH_NOTIFICATION.siteUrl.replace(/\/$/, '')
   if (articleId && slug) return `${base}/nuggets/${articleId}/${slug}`
-  if (stream === 'standard' || stream === 'pulse') return `${base}/?stream=${stream}`
+  if (stream === 'standard' || stream === 'pulse' || stream === 'charts') {
+    return `${base}/?stream=${stream}`
+  }
   return base
 }
 
@@ -41,7 +43,7 @@ function buildTopicWebpushBlock(row: TopicOutboxRow, imageUrl?: string) {
   }
 }
 
-type DigestStream = 'standard' | 'pulse'
+type DigestStream = 'standard' | 'pulse' | 'charts'
 
 type TopicOutboxRow = {
   id: string
@@ -77,6 +79,7 @@ const MAX_ATTEMPTS = 15
 const PUSH_TOPIC_BY_STREAM: Record<DigestStream, string> = {
   standard: 'nuggets-stream-standard',
   pulse: 'nuggets-stream-pulse',
+  charts: 'nuggets-stream-charts',
 }
 
 function topicForStream(stream: DigestStream): string {
@@ -84,11 +87,13 @@ function topicForStream(stream: DigestStream): string {
 }
 
 function streamPushLabel(stream: DigestStream): string {
-  return stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+  if (stream === 'pulse') return 'Market Pulse'
+  if (stream === 'charts') return 'Charts of the Week'
+  return 'Nuggets'
 }
 
 function parseBatchKeyWindowEnd(batchKey: string, intervalHours: number): Date | null {
-  const match = batchKey.match(/^(standard|pulse):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/)
+  const match = batchKey.match(/^(standard|pulse|charts):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/)
   if (!match) return null
   const [, , y, mo, d, hh] = match
   const start = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(hh), 0, 0, 0)

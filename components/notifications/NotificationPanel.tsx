@@ -13,12 +13,14 @@ import {
 } from '@/lib/actions/notifications'
 import type { NotificationRow } from '@/lib/queries/notifications'
 import { readResponseJson } from '@/lib/http/parse-json-response'
+import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
 import { useScrollLock } from '@/lib/ui/use-scroll-lock'
 
 type Prefs = {
   mute_all: boolean
   stream_standard: boolean
   stream_pulse: boolean
+  stream_charts: boolean
 }
 
 type NotificationWithSlug = NotificationRow & {
@@ -100,7 +102,7 @@ function NotificationRowItem({
     minute: '2-digit',
   })
 
-  const streamLabel = row.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+  const streamLabel = getStreamLabel(parseContentStream(row.content_stream))
   const displayTitle =
     row.kind === 'digest'
       ? (row.title ?? 'New updates')
@@ -298,6 +300,16 @@ function PreferencesSection({
         />
       </label>
       <label className="flex items-center justify-between gap-2 cursor-pointer">
+        <span className="text-sm text-primary">Charts of the Week</span>
+        <input
+          type="checkbox"
+          checked={prefs.stream_charts}
+          onChange={(e) => onChange({ stream_charts: e.target.checked })}
+          className="w-4 h-4 accent-accent"
+          disabled={prefs.mute_all}
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 cursor-pointer">
         <span className="text-sm text-primary">Mute all</span>
         <input
           type="checkbox"
@@ -327,6 +339,7 @@ export function NotificationPanel({
     mute_all: false,
     stream_standard: true,
     stream_pulse: true,
+    stream_charts: true,
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

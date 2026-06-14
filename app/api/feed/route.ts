@@ -9,16 +9,11 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getFeedPage } from '@/lib/queries/feed'
+import { parseContentStream } from '@/lib/copy/streams'
 import type { ContentStream, FeedCursor } from '@/types/article'
 
-const VALID_STREAMS = new Set(['standard', 'pulse'])
 const MAX_TAGS = 5
 const MAX_Q_LENGTH = 200
-
-function parseStream(raw: string | null): ContentStream {
-  if (raw && VALID_STREAMS.has(raw)) return raw as ContentStream
-  return 'standard'
-}
 
 function parseTags(raw: string | null): string[] {
   if (!raw) return []
@@ -54,14 +49,14 @@ function getCacheControl(
   hasQ: boolean
 ): string {
   if (hasCursor || hasQ) return 'no-store'
-  const maxAge = stream === 'pulse' ? 120 : 300
+  const maxAge = stream === 'standard' ? 300 : 120
   return `public, max-age=${maxAge}, stale-while-revalidate=60`
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
 
-  const stream = parseStream(searchParams.get('stream'))
+  const stream = parseContentStream(searchParams.get('stream'))
   const tags = parseTags(searchParams.get('tags'))
   const q = parseQ(searchParams.get('q'))
   const cursor = parseCursor(

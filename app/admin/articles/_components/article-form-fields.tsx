@@ -9,6 +9,7 @@ import { isImageUrl } from '@/lib/ui/is-image-url'
 import { convertClipboardHtmlToMarkdown } from '@/lib/markdown/html-clipboard-to-markdown'
 import { describeCardCoverPreview, resolveArticleHeroFields } from '@/lib/ui/resolve-article-hero'
 import { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
+import { parseContentStream } from '@/lib/copy/streams'
 
 // S1-F1: moved from new/page.tsx — page files must only export the default page
 // component plus Next.js-approved named exports (metadata, generateMetadata, etc.).
@@ -47,7 +48,7 @@ export function ArticleFormFields({
   tags?: TagOption[]
 }) {
   const selectedTags = new Set(defaults?.tag_slugs ?? [])
-  const stream = defaults?.content_stream === 'pulse' ? 'pulse' : 'standard'
+  const stream = parseContentStream(defaults?.content_stream ?? null)
   const initialMediaUrls = defaults?.media_urls?.length
     ? defaults.media_urls
     : defaults?.hero_thumb_url
@@ -107,9 +108,10 @@ export function ArticleFormFields({
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-muted">Stream</span>
-            <div className="flex min-h-[42px] w-fit items-center rounded-xl border border-border bg-surface-raised p-1">
+            <div className="flex min-h-[42px] w-fit flex-wrap items-center rounded-xl border border-border bg-surface-raised p-1">
               <SegmentedRadio name="content_stream" value="standard" label="Standard" defaultChecked={stream === 'standard'} />
               <SegmentedRadio name="content_stream" value="pulse" label="Pulse" defaultChecked={stream === 'pulse'} />
+              <SegmentedRadio name="content_stream" value="charts" label="Charts" defaultChecked={stream === 'charts'} />
             </div>
           </div>
 

@@ -12,7 +12,7 @@ export type ArticleCardProps = {
   card_preview: string | null
   /** Sanitized HTML from markdown card preview — populated by attachCardPreviewHtml in lib/ui/card-preview-markdown.ts. Empty string when card_preview is null/empty. */
   cardPreviewHtml: string
-  content_stream: 'standard' | 'pulse'
+  content_stream: ContentStream
   published_at: string        // ISO string — DB timestamptz serialized
   hero_thumb_url: string | null
   hero_alt_text: string | null
@@ -124,9 +124,9 @@ export type TagSummary = {
 
 // ─── Shared enums ────────────────────────────────────────────────────
 
-export type ContentStream = 'standard' | 'pulse'
+export type ContentStream = 'standard' | 'pulse' | 'charts'
 
-export const CONTENT_STREAMS = ['standard', 'pulse'] as const
+export const CONTENT_STREAMS = ['standard', 'pulse', 'charts'] as const
 
 export const DEFAULT_STREAM: ContentStream = 'standard'
 

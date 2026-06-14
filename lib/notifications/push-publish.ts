@@ -1,5 +1,6 @@
 import 'server-only'
 
+import type { ContentStream } from '@/types/article'
 import { accumulateDigestBuffer, flushCompletedDigestBuffers, getDigestIntervalForPublish } from '@/lib/notifications/push-digest'
 import { enqueueImmediateTopicPush } from '@/lib/notifications/push-topic-outbox'
 import { getAdminClient } from '@/lib/supabase/admin'
@@ -13,7 +14,7 @@ function utcDayStartIso(now = new Date()): string {
   return `${y}-${mo}-${d}T00:00:00.000Z`
 }
 
-async function hasImmediatePushCapacity(stream: 'standard' | 'pulse'): Promise<boolean> {
+async function hasImmediatePushCapacity(stream: ContentStream): Promise<boolean> {
   const adminClient = getAdminClient()
   const { count, error } = await adminClient
     .from('push_topic_outbox')
@@ -45,7 +46,7 @@ async function accumulateAndFlushDigest({
   imageUrl,
   intervalHours,
 }: {
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
   articleId: string
   title: string
   slug: string
@@ -72,7 +73,7 @@ export async function enqueuePushOnPublish({
   pushNotifyImmediately,
 }: {
   articleId: string
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
   title: string
   slug: string
   imageUrl?: string | null
@@ -118,7 +119,7 @@ export async function enqueueLegacyPushOutbox({
 }: {
   recipientIds: string[]
   articleId: string
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
   title: string
   slug: string
 }): Promise<number> {

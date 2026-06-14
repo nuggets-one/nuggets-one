@@ -12,13 +12,15 @@ This keeps the high-volume path off Vercel cron and avoids per-device fan-out fo
 | --- | --- |
 | Nuggets | `nuggets-stream-standard` |
 | Market Pulse | `nuggets-stream-pulse` |
+| Charts of the Week | `nuggets-stream-charts` |
 
 Device registration syncs topic membership from `notification_preferences`:
 
 - `mute_all=true` unsubscribes from every topic.
 - `stream_standard=false` unsubscribes from `nuggets-stream-standard`.
 - `stream_pulse=false` unsubscribes from `nuggets-stream-pulse`.
-- Guest installs default to both topics while notifications are enabled.
+- `stream_charts=false` unsubscribes from `nuggets-stream-charts`.
+- Guest installs default to all stream topics while notifications are enabled.
 
 ## Delivery Flow
 
@@ -36,7 +38,7 @@ Both paths use the same visible format on device:
 
 | Field | Value |
 | --- | --- |
-| `notification.title` | `Nuggets` or `Market Pulse` |
+| `notification.title` | Stream label (`Nuggets`, `Market Pulse`, or `Charts of the Week`) |
 | `notification.body` | Article headline |
 | `data.articleId` / `data.slug` | Deep-link to `/nuggets/[id]/[slug]` |
 | `android.notification.tag` | `article:{articleId}` (per-article; notifications stack instead of replacing) |

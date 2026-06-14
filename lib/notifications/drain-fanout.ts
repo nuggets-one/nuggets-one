@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { getAdminClient } from '@/lib/supabase/admin'
+import { parseContentStream } from '@/lib/copy/streams'
 import { upsertNotifications } from '@/lib/notifications/fan-out'
 
 /** Max failed drain attempts before marking row drained (remaining IDs abandoned — see logs). */
@@ -41,7 +42,7 @@ export async function drainPendingFanout(
     try {
       const recipientIds = row.remaining_user_ids as string[]
       const articleId = row.article_id as string
-      const stream = row.stream as 'standard' | 'pulse'
+      const stream = parseContentStream(row.stream as string)
       const title = row.title as string
 
       await upsertNotifications({

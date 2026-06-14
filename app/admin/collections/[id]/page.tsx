@@ -12,6 +12,7 @@ import {
   searchPublishedArticlesForPicker,
 } from '@/lib/queries/collections-admin'
 import { CollectionFormFields } from '@/app/admin/collections/_components/CollectionFormFields'
+import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
 import { DeleteCollectionButton } from '@/app/admin/collections/_components/DeleteCollectionButton'
 
 export const dynamic = 'force-dynamic'
@@ -153,7 +154,7 @@ export default async function AdminCollectionEditPage({ params, searchParams }: 
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-primary">{article.title}</p>
                     <p className="text-xs text-muted">
-                      {article.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'} ·{' '}
+                      {getStreamLabel(parseContentStream(article.content_stream))} ·{' '}
                       <span className="font-mono">{article.id}</span>
                     </p>
                   </div>
@@ -220,7 +221,7 @@ export default async function AdminCollectionEditPage({ params, searchParams }: 
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-muted">
-                      {entry.content_stream === 'pulse' ? 'Market Pulse' : 'Nuggets'}
+                      {getStreamLabel(parseContentStream(entry.content_stream))}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center justify-end gap-2">

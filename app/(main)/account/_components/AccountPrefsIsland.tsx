@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { updatePreferencesAction } from '@/lib/actions/notifications'
 import { BrowserPushToggle } from '@/components/push/browser-push-toggle'
+import { STREAM_INTRO_COPY } from '@/lib/copy/streams'
 
 type Prefs = {
   mute_all: boolean
   stream_standard: boolean
   stream_pulse: boolean
+  stream_charts: boolean
 }
 
 type Props = {
@@ -26,7 +28,7 @@ export function AccountPrefsIsland({ initialPrefs }: Props) {
   return (
     <div className="space-y-3">
       <label className="flex items-center justify-between gap-4 cursor-pointer">
-        <span className="text-sm text-primary">Nuggets stream</span>
+        <span className="text-sm text-primary">{STREAM_INTRO_COPY.standard.label} stream</span>
         <input
           type="checkbox"
           checked={prefs.stream_standard}
@@ -36,11 +38,21 @@ export function AccountPrefsIsland({ initialPrefs }: Props) {
         />
       </label>
       <label className="flex items-center justify-between gap-4 cursor-pointer">
-        <span className="text-sm text-primary">Market Pulse stream</span>
+        <span className="text-sm text-primary">{STREAM_INTRO_COPY.pulse.label} stream</span>
         <input
           type="checkbox"
           checked={prefs.stream_pulse}
           onChange={(e) => handleChange({ stream_pulse: e.target.checked })}
+          disabled={prefs.mute_all}
+          className="w-4 h-4 accent-accent"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-4 cursor-pointer">
+        <span className="text-sm text-primary">{STREAM_INTRO_COPY.charts.label} stream</span>
+        <input
+          type="checkbox"
+          checked={prefs.stream_charts}
+          onChange={(e) => handleChange({ stream_charts: e.target.checked })}
           disabled={prefs.mute_all}
           className="w-4 h-4 accent-accent"
         />

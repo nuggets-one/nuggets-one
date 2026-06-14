@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS articles (
   excerpt text,
   content_markdown text,
   content_stream text NOT NULL DEFAULT 'standard'
-    CHECK (content_stream IN ('standard','pulse')),
+    CHECK (content_stream IN ('standard','pulse','charts')),
   status text NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft','published')),
   published_at timestamptz,
@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   mute_all boolean NOT NULL DEFAULT false,
   stream_standard boolean NOT NULL DEFAULT true,
   stream_pulse boolean NOT NULL DEFAULT true,
+  stream_charts boolean NOT NULL DEFAULT true,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -129,7 +130,7 @@ CREATE TABLE IF NOT EXISTS user_notifications (
   article_id uuid REFERENCES articles(id) ON DELETE CASCADE,
   kind text NOT NULL CHECK (kind IN ('single','digest')),
   content_stream text CHECK (content_stream IS NULL OR 
-    content_stream IN ('standard','pulse')),
+    content_stream IN ('standard','pulse','charts')),
   title text,
   body text,
   is_read boolean NOT NULL DEFAULT false,
@@ -169,6 +170,10 @@ CREATE INDEX IF NOT EXISTS idx_articles_feed_pulse
   ON articles (published_at DESC, id DESC)
   WHERE status = 'published' AND content_stream = 'pulse';
 
+CREATE INDEX IF NOT EXISTS idx_articles_feed_charts
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND content_stream = 'charts';
+
 CREATE INDEX IF NOT EXISTS idx_articles_search_vector
   ON articles USING gin(search_vector);
 
@@ -182,6 +187,10 @@ CREATE INDEX IF NOT EXISTS idx_notification_prefs_standard
 CREATE INDEX IF NOT EXISTS idx_notification_prefs_pulse
   ON notification_preferences (user_id)
   WHERE mute_all = false AND stream_pulse = true;
+
+CREATE INDEX IF NOT EXISTS idx_notification_prefs_charts
+  ON notification_preferences (user_id)
+  WHERE mute_all = false AND stream_charts = true;
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_user_notifications_user_article_single
   ON user_notifications (user_id, article_id)

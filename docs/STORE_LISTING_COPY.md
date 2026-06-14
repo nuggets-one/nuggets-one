@@ -32,7 +32,7 @@ Character count: 78
 Nuggets is a fast, editorial reading app for curated knowledge — short summaries and links across topics that matter to curious readers.
 
 WHAT YOU GET
-• Home feed — dense card grid for quick discovery (Nuggets and Market Pulse streams)
+• Home feed — dense card grid for quick discovery (Nuggets, Market Pulse, and Charts of the Week streams)
 • Full article pages — calm typography, hero media, and source links
 • Search — find nuggets within the active stream
 • Bookmarks — save articles when signed in (syncs with your account)

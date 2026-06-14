@@ -22,6 +22,14 @@ test.describe('mobile feed intro context', () => {
     ).toBeVisible()
   })
 
+  test('shows Charts stream summary on charts stream', async ({ page }) => {
+    await page.goto('/?stream=charts', { waitUntil: 'domcontentloaded' })
+
+    await expect(
+      page.getByText(STREAM_INTRO_COPY.charts.mobileSummary, { exact: true }),
+    ).toBeVisible()
+  })
+
   test('updates intro when switching streams via bottom nav', async ({ page }) => {
     await page.goto('/?stream=standard', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main article').first()).toBeVisible()
@@ -31,9 +39,21 @@ test.describe('mobile feed intro context', () => {
     ).toBeVisible()
 
     const nav = page.getByRole('navigation', { name: 'Primary destinations' })
-    await nav.getByRole('link', { name: 'Market Pulse' }).click()
+    await nav.getByRole('link', { name: STREAM_INTRO_COPY.pulse.label }).click()
     await expect(
       page.getByText(STREAM_INTRO_COPY.pulse.mobileSummary, { exact: true }),
+    ).toBeVisible()
+  })
+
+  test('switches to Charts via bottom nav', async ({ page }) => {
+    await page.goto('/?stream=standard', { waitUntil: 'domcontentloaded' })
+
+    const nav = page.getByRole('navigation', { name: 'Primary destinations' })
+    await nav.getByRole('link', { name: STREAM_INTRO_COPY.charts.label }).click()
+
+    await expect(page).toHaveURL(/\?stream=charts/)
+    await expect(
+      page.getByText(STREAM_INTRO_COPY.charts.mobileSummary, { exact: true }),
     ).toBeVisible()
   })
 })

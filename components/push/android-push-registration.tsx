@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
 import { detachPushToken, registerPushToken } from '@/lib/push/register-push-token'
+import { CONTENT_STREAMS } from '@/types/article'
 
 type AuthStatus = {
   authenticated: boolean
@@ -75,7 +76,7 @@ export function AndroidPushRegistration() {
           }
 
           const stream = data?.stream
-          if (stream === 'standard' || stream === 'pulse') {
+          if (typeof stream === 'string' && (CONTENT_STREAMS as readonly string[]).includes(stream)) {
             router.push(`/?stream=${stream}`)
           }
         }

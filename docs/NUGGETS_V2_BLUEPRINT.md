@@ -357,22 +357,23 @@ Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 
 ---
 
-### 6.1 Feed (Market Pulse + Standard)
+### 6.1 Feed (Nuggets + Market Pulse + Charts of the Week)
 
 **Shared shell + URL state**, not separate top-level routes.
 
-- `/` with `stream=standard` (default) vs `stream=pulse` (via `nuqs`)
+- `/` with `stream=standard` (default), `stream=pulse`, or `stream=charts` (via `nuqs`)
+- Marketing alias (shipped): `/charts-of-the-week` → **308** redirect to `/?stream=charts`
 - Optional later: `/market-pulse` as marketing alias → redirect to `/?stream=pulse`
 
 ### 6.2 Filters and search (canonical query contract — single URL model)
 
 **Browse surface:** Call it **Home / Discover / Browse** in product copy — avoid “feed” as the primary user-facing word (**PRODUCT**).
 
-**Streams:** **`stream=standard`** (Nuggets) and **`stream=pulse`** (Market Pulse) load **disjoint** article rows — implementation must never surface the same **`articles.id`** in both streams.
+**Streams:** **`stream=standard`** (Nuggets), **`stream=pulse`** (Market Pulse), and **`stream=charts`** (Charts of the Week) load **disjoint** article rows — implementation must never surface the same **`articles.id`** across streams.
 
 | Mechanism | Values | Notes |
 |-----------|--------|-------|
-| **`stream`** (URL, `nuqs`) | `standard` \| `pulse` | Default: **`standard`** (omit or explicit). |
+| **`stream`** (URL, `nuqs`) | `standard` \| `pulse` \| `charts` | Default: **`standard`** (omit or explicit). |
 | **`tags`** (URL, `nuqs`) | comma-separated slugs | e.g. `tags=crypto,macro` |
 | **`q`** (URL, `nuqs`) | string | **Committed search query** — **URL-owned** alongside **`stream`** + **`tags`**. Example: **`/?stream=pulse&q=taiwan&tags=macro`**. **Committed `q` updates only on Enter or explicit Search submit** — **not** when picking a nugget from suggestions (**PRODUCT §0 / §11**). |
 

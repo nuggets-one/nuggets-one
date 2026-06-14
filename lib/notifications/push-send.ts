@@ -11,6 +11,8 @@ import {
 } from '@/lib/notifications/push-fcm-payload'
 import type { DigestOutboxRow, ImmediateOutboxRow } from '@/lib/notifications/push-immediate-outbox'
 import { getAdminClient } from '@/lib/supabase/admin'
+import type { ContentStream } from '@/types/article'
+import { pushNotificationTitle } from '@/lib/copy/streams'
 
 type ServiceAccountJson = {
   project_id: string
@@ -70,7 +72,7 @@ export type PushOutboxRow = {
   article_id: string
   title: string
   slug: string
-  content_stream: 'standard' | 'pulse'
+  content_stream: ContentStream
 }
 
 export type PushSendResult = {
@@ -88,7 +90,7 @@ export type PushTopicOutboxRow = {
   body: string
   slug: string | null
   batch_key: string | null
-  content_stream: 'standard' | 'pulse'
+  content_stream: ContentStream
   data: Record<string, unknown> | null
   attempts: number
 }
@@ -310,7 +312,7 @@ export async function sendPushForOutboxRows(rows: PushOutboxRow[]): Promise<Push
       messages.push({
         token,
         notification: {
-          title: row.content_stream === 'pulse' ? 'Market Pulse' : 'New Nugget',
+          title: pushNotificationTitle(row.content_stream),
           body: row.title,
         },
         data: {
@@ -339,7 +341,7 @@ export async function sendPushForImmediateRows(rows: ImmediateOutboxRow[]): Prom
       messages.push({
         token: row.token,
         notification: {
-          title: row.content_stream === 'pulse' ? 'Market Pulse' : 'New Nugget',
+          title: pushNotificationTitle(row.content_stream),
           body: row.title,
         },
         data: { articleId: row.article_id, slug: row.slug },
@@ -356,7 +358,7 @@ export async function sendPushForImmediateRows(rows: ImmediateOutboxRow[]): Prom
         messages.push({
           token,
           notification: {
-            title: row.content_stream === 'pulse' ? 'Market Pulse' : 'New Nugget',
+            title: pushNotificationTitle(row.content_stream),
             body: row.title,
           },
           data: { articleId: row.article_id, slug: row.slug },

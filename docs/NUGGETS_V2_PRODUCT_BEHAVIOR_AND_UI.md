@@ -89,7 +89,7 @@ After **`/login?next=`** succeeds, user lands on **`next`**. **Do not** auto-boo
 
 ### 0.11 Notification row anatomy (DECIDED)
 
-Align **`BLUEPRINT` §6.6b**. **Single-article row:** stream chip (**Nuggets** / **Market Pulse**) + **article title** (2-line clamp) + relative time (**2h ago**) + unread indicator (left accent **or** dot). **Tap:** same-tab **`/nuggets/[id]/[slug]`**; mark row **read**. **Batch / summary row:** **"N new …"** line (**stream**-labeled) + relative time + **no** article title. **Tap:** same-tab **`/?stream=`** matching that digest (**standard** / **pulse**); mark **all** rows in that batch **`read`** ( **`batch_key`** alignment — **`BLUEPRINT` §6.6**).
+Align **`BLUEPRINT` §6.6b**. **Single-article row:** stream chip (**Nuggets** / **Market Pulse** / **Charts of the Week**) + **article title** (2-line clamp) + relative time (**2h ago**) + unread indicator (left accent **or** dot). **Tap:** same-tab **`/nuggets/[id]/[slug]`**; mark row **read**. **Batch / summary row:** **"N new …"** line (**stream**-labeled) + relative time + **no** article title. **Tap:** same-tab **`/?stream=`** matching that digest (**standard** / **pulse** / **charts**); mark **all** rows in that batch **`read`** ( **`batch_key`** alignment — **`BLUEPRINT` §6.6**).
 
 ### 0.12 Bookmarks — stale targets (DECIDED)
 
@@ -290,7 +290,7 @@ Implemented via `next-themes` + Tailwind `dark:` + CSS variables (§3 / `BUILD` 
 | **Right** | Search icon (opens full-screen overlay — `MobileSearchOverlay` analog) · Sign-in **or** bell · Account avatar (auth) |
 
 - Height: `h-12` (48px). Same border / background as desktop.
-- **Bottom nav persists** (§14) — four destinations: Nuggets · Market Pulse · Collections · Bookmarks (auth-only).
+- **Bottom nav persists** (§14) — five destinations when authenticated: Nuggets · Market Pulse · Charts · Collections · Bookmarks; **four** when logged out (Bookmarks hidden).
 
 #### Footer (every page)
 
@@ -331,6 +331,10 @@ Header → **Stream tabs** → **All + More filters** → **Active filters** (co
 ### Market Pulse (`/?stream=pulse`)
 
 - **Same grid system** as standard — **different data slice + fresher cache**, not a different chrome. Optional **micro-label** (“Pulse”) on card or section header only — avoid building a second layout engine.
+
+### Charts of the Week (`/?stream=charts`)
+
+- **Same grid system** as other streams — curated chart images + attribution; **no** separate route or charting library. Marketing alias **`/charts-of-the-week`** → **308** redirect to **`/?stream=charts`**. Tab label **Charts of the Week** on wider viewports; short label **Charts** in cramped chrome (mobile bottom nav).
 
 ### Collections
 
@@ -625,7 +629,7 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 ┌──────────────────────────────────────────────────────────┐
 │ Header: logo · search input · theme · sign-in / bell     │  ← thin chrome
 ├──────────────────────────────────────────────────────────┤
-│ Stream tabs: [ Nuggets ]  [ Market Pulse ]               │  ← primary chrome
+│ Stream tabs: [ Nuggets ]  [ Market Pulse ]  [ Charts ]   │  ← primary chrome
 ├──────────────────────────────────────────────────────────┤
 │ [ All ] · tag pills … scroll …         [ More filters ▾ ]   │
 ├──────────────────────────────────────────────────────────┤
@@ -639,12 +643,12 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 
 #### Stream tabs (primary chrome — not just URL state)
 
-- Two tabs: **Nuggets** (default) | **Market Pulse** — visible above the filter strip at all times.
+- Three tabs: **Nuggets** (default) | **Market Pulse** | **Charts of the Week** — visible above the filter strip at all times. Narrow viewports may show short labels (**Pulse**, **Charts**).
 - Each tab is a `next/link` with `prefetch` — instant swap (`BLUEPRINT` §5.7).
 - Active tab: brand-colored bottom border or filled-chip treatment; inactive tab is text-only.
 - Same component on desktop and mobile — full-width on mobile, content-width on desktop.
 - Toggling stream **clears `tags` and `q`** (frozen — different corpus; §0.5).
-- Mobile bottom nav still has Nuggets + Market Pulse destinations (§14) — both surfaces route to the same `/?stream=…` URL; the in-page tab and the bottom-nav tab stay in sync via `nuqs`.
+- Mobile bottom nav has Nuggets, Market Pulse, and Charts destinations (§14) — all surfaces route to the same `/?stream=…` URL; in-page tabs and bottom nav stay in sync via `nuqs`.
 
 #### Tag taxonomy filters (sticky body chrome)
 
@@ -728,7 +732,7 @@ Changing `stream` (Nuggets ↔ Market Pulse) **clears `tags` and `q`** — diffe
 | Area | Rule |
 |------|------|
 | **Home density** | Same column progression — **1 col**; generous vertical rhythm **`gap-3`** |
-| **Bottom nav** | **DECIDED tabs (v2):** **Nuggets** → `/` (`stream=standard`); **Market Pulse** → `/?stream=pulse`; **Collections** → `/collections`; **Bookmarks** → `/bookmarks` (show only when **authenticated**). **Logged-out:** omit Bookmarks tab. Bottom nav and the in-page **Stream tabs** above the grid (§11.1) are kept in sync via `nuqs` — both routes write the same `stream` URL param. **No mismatch UX** (don't have one say Nuggets while the other says Pulse). |
+| **Bottom nav** | **DECIDED tabs (v2):** **Nuggets** → `/` (`stream=standard`); **Market Pulse** → `/?stream=pulse`; **Charts** → `/?stream=charts` (label **Charts**, `aria-label` **Charts of the Week**); **Collections** → `/collections`; **Bookmarks** → `/bookmarks` (show only when **authenticated**). **Logged-out:** omit Bookmarks tab (four tabs). Bottom nav and the in-page **Stream tabs** above the grid (§11.1) are kept in sync via `nuqs` — both write the same `stream` URL param. **No mismatch UX** (don't have one say Nuggets while the other says Pulse). Share/marketing alias: **`/charts-of-the-week`** redirects to **`/?stream=charts`**. |
 | **Cards** | Primary tap → **navigate** detail — **no drawer stack** PMF |
 | **Detail** | Sticky mini-bar (bookmark/share) optional |
 | **Sharing** | Native share first |

@@ -2,7 +2,7 @@ import { unstable_cache } from 'next/cache'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
 
-export type StreamArticleCounts = { standard: number; pulse: number }
+export type StreamArticleCounts = { standard: number; pulse: number; charts: number }
 
 const PENDING_MIGRATION_CODES = new Set(['PGRST205', '42P01'])
 
@@ -26,11 +26,12 @@ async function fetchStreamArticleCount(stream: ContentStream): Promise<number> {
 }
 
 async function fetchStreamArticleCounts(): Promise<StreamArticleCounts> {
-  const [standard, pulse] = await Promise.all([
+  const [standard, pulse, charts] = await Promise.all([
     fetchStreamArticleCount('standard'),
     fetchStreamArticleCount('pulse'),
+    fetchStreamArticleCount('charts'),
   ])
-  return { standard, pulse }
+  return { standard, pulse, charts }
 }
 
 const cachedStreamArticleCounts = unstable_cache(

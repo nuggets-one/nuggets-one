@@ -1,32 +1,47 @@
 'use client'
 
 import clsx from 'clsx'
-import { Activity, Bookmark, House, Layers, type LucideIcon } from 'lucide-react'
+import { Activity, BarChart2, Bookmark, House, Layers, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
 import { useMemo, useSyncExternalStore } from 'react'
 import { useAuthStatus } from '@/components/layout/auth-status-provider'
+import { parseContentStream, STREAM_INTRO_COPY } from '@/lib/copy/streams'
 import { DEFAULT_STREAM, type ContentStream } from '@/types/article'
 
 function pathActive(pathname: string, base: string) {
   return pathname === base || pathname.startsWith(`${base}/`)
 }
 
-type NavItemId = 'nuggets' | 'pulse' | 'collections' | 'bookmarks'
+type NavItemId = 'nuggets' | 'pulse' | 'charts' | 'collections' | 'bookmarks'
 
 type NavItem = {
   id: NavItemId
   label: string
+  ariaLabel: string
   href: string
   icon: LucideIcon
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'nuggets', label: 'Nuggets', href: '/?stream=standard', icon: House },
-  { id: 'pulse', label: 'Market Pulse', href: '/?stream=pulse', icon: Activity },
-  { id: 'collections', label: 'Collections', href: '/collections', icon: Layers },
-  { id: 'bookmarks', label: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
+  { id: 'nuggets', label: 'Nuggets', ariaLabel: 'Nuggets', href: '/?stream=standard', icon: House },
+  {
+    id: 'pulse',
+    label: 'Pulse',
+    ariaLabel: STREAM_INTRO_COPY.pulse.label,
+    href: '/?stream=pulse',
+    icon: Activity,
+  },
+  {
+    id: 'charts',
+    label: STREAM_INTRO_COPY.charts.shortLabel,
+    ariaLabel: STREAM_INTRO_COPY.charts.label,
+    href: '/?stream=charts',
+    icon: BarChart2,
+  },
+  { id: 'collections', label: 'Collections', ariaLabel: 'Collections', href: '/collections', icon: Layers },
+  { id: 'bookmarks', label: 'Bookmarks', ariaLabel: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
 ]
 
 function isItemActive(
@@ -37,9 +52,11 @@ function isItemActive(
   const onHome = pathname === '/'
   switch (id) {
     case 'nuggets':
-      return onHome && stream !== 'pulse'
+      return onHome && stream === 'standard'
     case 'pulse':
       return onHome && stream === 'pulse'
+    case 'charts':
+      return onHome && stream === 'charts'
     case 'collections':
       return pathActive(pathname, '/collections')
     case 'bookmarks':
@@ -51,7 +68,7 @@ export function MobileBottomNav() {
   const pathname = usePathname() ?? ''
   const [stream] = useQueryState<ContentStream>('stream', {
     defaultValue: DEFAULT_STREAM,
-    parse: (v): ContentStream => (v === 'pulse' ? 'pulse' : 'standard'),
+    parse: (v): ContentStream => parseContentStream(v),
     shallow: true,
   })
   const auth = useAuthStatus()
@@ -71,6 +88,13 @@ export function MobileBottomNav() {
     [auth.status],
   )
 
+  const gridCols =
+    visibleItems.length >= 5
+      ? 'grid-cols-5'
+      : visibleItems.length === 4
+        ? 'grid-cols-4'
+        : 'grid-cols-3'
+
   return (
     <nav
       role="navigation"
@@ -79,20 +103,20 @@ export function MobileBottomNav() {
     >
       <div
         className={clsx(
-          'grid min-h-[64px] items-stretch px-2 pb-1 pt-1',
-          visibleItems.length === 4 ? 'grid-cols-4' : 'grid-cols-3',
+          'grid min-h-[64px] items-stretch px-1 pb-1 pt-1 sm:px-2',
+          gridCols,
         )}
       >
-        {visibleItems.map(({ id, label, href, icon: Icon }) => {
+        {visibleItems.map(({ id, label, ariaLabel, href, icon: Icon }) => {
           const active = navReady && isItemActive(id, pathname, stream)
           return (
             <Link
               key={id}
               href={href}
-              aria-label={label}
+              aria-label={ariaLabel}
               aria-current={active ? 'page' : undefined}
               className={clsx(
-                'relative flex min-h-[58px] flex-col items-center justify-center rounded-xl px-2 py-1.5 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950',
+                'relative flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 sm:px-2',
                 active
                   ? 'bg-primary-100/90 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
                   : 'text-slate-500 hover:bg-slate-100/80 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-200',
@@ -111,7 +135,7 @@ export function MobileBottomNav() {
               </span>
               <span
                 className={clsx(
-                  'text-[11px] leading-tight tracking-[0.01em]',
+                  'text-[10px] leading-tight tracking-[0.01em] sm:text-[11px]',
                   active ? 'font-semibold' : 'font-medium',
                 )}
               >
@@ -119,7 +143,7 @@ export function MobileBottomNav() {
               </span>
               <span
                 className={clsx(
-                  'absolute inset-x-8 top-0.5 h-[2px] rounded-full bg-primary-500 transition-opacity duration-200 dark:bg-primary-400',
+                  'absolute inset-x-4 top-0.5 h-[2px] rounded-full bg-primary-500 transition-opacity duration-200 dark:bg-primary-400 sm:inset-x-8',
                   active ? 'opacity-100' : 'opacity-0',
                 )}
                 aria-hidden

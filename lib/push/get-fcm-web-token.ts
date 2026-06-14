@@ -5,6 +5,7 @@ import {
   getFirebaseWebConfig,
   isFirebaseWebPushConfigured,
 } from '@/lib/push/firebase-web-config'
+import { CONTENT_STREAMS } from '@/types/article'
 
 const SW_PATH = '/firebase-messaging-sw.js'
 
@@ -97,7 +98,7 @@ function resolveNotificationUrl(data: Record<string, unknown> | undefined): stri
   if (typeof articleId === 'string' && typeof slug === 'string') {
     return `/nuggets/${articleId}/${slug}`
   }
-  if (data?.stream === 'standard' || data?.stream === 'pulse') {
+  if (typeof data?.stream === 'string' && (CONTENT_STREAMS as readonly string[]).includes(data.stream)) {
     return `/?stream=${data.stream}`
   }
   return '/'

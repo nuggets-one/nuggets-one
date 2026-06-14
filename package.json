@@ -18,6 +18,7 @@
     "android:bundle": "npm run cap:sync && node scripts/android-bundle-release.mjs",
     "android:preflight": "node scripts/android-release-preflight.mjs",
     "db:apply-push-migration": "node scripts/apply-push-migration.mjs",
+    "deploy:push-topic-outbox": "node scripts/deploy-push-topic-outbox.mjs",
     "push:audit": "node scripts/audit-push-digest.mjs",
     "push:check-cron": "node scripts/check-push-cron.mjs",
     "push:flush-backlog": "node scripts/flush-digest-backlog.mjs",

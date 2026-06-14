@@ -16,39 +16,56 @@ import { FEED_VIEW_STORAGE_KEY, isSkimFeedView } from '@/lib/feed/feed-view'
 import { FeedPager } from '@/components/feed/feed-pager'
 import { FeedEmpty } from '@/components/feed/feed-empty'
 import { FeedTopBar } from '@/components/feed/feed-top-bar'
-import { DEFAULT_STREAM } from '@/types/article'
-import type { ContentStream } from '@/types/article'
-import { HOME_METADATA } from '@/lib/copy/streams'
+import {
+  getStreamLabel,
+  HOME_METADATA,
+  parseContentStream,
+  STREAM_INTRO_COPY,
+} from '@/lib/copy/streams'
 import { getDefaultOgImageUrl, getSiteUrl } from '@/lib/seo/site-url'
 
 const homeOgImage = getDefaultOgImageUrl()
 
-export const metadata: Metadata = {
-  title: {
-    absolute: HOME_METADATA.title,
-  },
-  description: HOME_METADATA.description,
-  openGraph: {
-    title: HOME_METADATA.title,
-    description: HOME_METADATA.ogDescription,
-    url: getSiteUrl(),
-    siteName: 'Nuggets',
-    type: 'website',
-    images: [
-      {
-        url: homeOgImage,
-        width: 1200,
-        height: 630,
-        alt: HOME_METADATA.title,
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: HOME_METADATA.title,
-    description: HOME_METADATA.ogDescription,
-    images: [homeOgImage],
-  },
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}): Promise<Metadata> {
+  const params = await searchParams
+  const stream = parseContentStream(params.stream)
+  const intro = STREAM_INTRO_COPY[stream]
+  const title =
+    stream === 'standard' ? HOME_METADATA.title : intro.title
+  const description =
+    stream === 'standard' ? HOME_METADATA.description : intro.tagline
+  const ogDescription =
+    stream === 'standard' ? HOME_METADATA.ogDescription : intro.mobileSummary
+
+  return {
+    title: { absolute: title },
+    description,
+    openGraph: {
+      title,
+      description: ogDescription,
+      url: stream === 'standard' ? getSiteUrl() : `${getSiteUrl()}/?stream=${stream}`,
+      siteName: 'Nuggets',
+      type: 'website',
+      images: [
+        {
+          url: homeOgImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: ogDescription,
+      images: [homeOgImage],
+    },
+  }
 }
 
 type SearchParams = {
@@ -66,7 +83,7 @@ const MAX_TAGS = 5
 const MAX_Q_LENGTH = 200
 
 async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
-  const stream = (searchParams.stream === 'pulse' ? 'pulse' : DEFAULT_STREAM) as ContentStream
+  const stream = parseContentStream(searchParams.stream)
   const tagsRaw = searchParams.tags ?? ''
   const tags = tagsRaw
     ? tagsRaw
@@ -109,13 +126,13 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
     getStreamArticleCounts().catch((error) => {
       const message = error instanceof Error ? error.message : String(error)
       console.error(`FeedGrid getStreamArticleCounts error: ${message}`)
-      return { standard: 0, pulse: 0 }
+      return { standard: 0, pulse: 0, charts: 0 }
     }),
   ])
 
   const { articles, nextCursor } = feedResult
   const totalCount = typeof feedResult.totalCount === 'number' ? feedResult.totalCount : undefined
-  const streamLabel = stream === 'pulse' ? 'Market Pulse' : 'Nuggets'
+  const streamLabel = getStreamLabel(stream)
 
   const supabase = await createClient()
   const { user } = await resolveAuthUser(supabase)
@@ -215,9 +232,10 @@ export default async function HomePage({ searchParams }: Props) {
         <>
           <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
             <div className="min-h-[44px] border-b border-border bg-header px-4 pt-2 backdrop-blur-sm lg:px-6">
-              <div className="flex h-11 w-full gap-1 sm:inline-flex sm:w-auto lg:w-[22rem]">
+              <div className="flex h-11 w-full gap-1 sm:inline-flex sm:w-auto lg:w-[32rem]">
                 <div className="h-9 min-h-[44px] flex-1 animate-pulse rounded-md bg-border/40 sm:flex-none sm:h-9 sm:w-24 lg:flex-1 lg:basis-0 lg:min-w-0" />
                 <div className="h-9 min-h-[44px] flex-1 animate-pulse rounded-md bg-border/40 sm:flex-none sm:h-9 sm:w-36 lg:flex-1 lg:basis-0 lg:min-w-0" />
+                <div className="h-9 min-h-[44px] flex-1 animate-pulse rounded-md bg-border/40 sm:flex-none sm:h-9 sm:w-28 lg:flex-1 lg:basis-0 lg:min-w-0" />
               </div>
             </div>
             <section className="sticky top-[var(--header-height)] z-40 min-h-[88px] border-b border-border bg-rail/95 backdrop-blur-sm">

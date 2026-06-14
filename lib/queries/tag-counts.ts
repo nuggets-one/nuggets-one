@@ -50,6 +50,12 @@ const cachedPulseTagCounts = unstable_cache(
   { revalidate: 3600 }
 )
 
+const cachedChartsTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('charts'),
+  ['tag-counts', 'charts'],
+  { revalidate: 3600 }
+)
+
 /**
  * Slug → count of published articles in the given stream.
  * Cached for 1h; recomputed on cache miss via a single in-memory aggregation
@@ -60,7 +66,7 @@ const cachedPulseTagCounts = unstable_cache(
 export async function getTagCountsForStream(
   stream: ContentStream
 ): Promise<TagCounts> {
-  return stream === 'pulse'
-    ? cachedPulseTagCounts()
-    : cachedStandardTagCounts()
+  if (stream === 'pulse') return cachedPulseTagCounts()
+  if (stream === 'charts') return cachedChartsTagCounts()
+  return cachedStandardTagCounts()
 }

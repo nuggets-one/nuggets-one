@@ -1,3 +1,5 @@
+import { CONTENT_STREAMS } from '@/types/article'
+
 export type TopicPushKind = 'immediate' | 'digest'
 
 export type TopicPushRowRef = {
@@ -41,7 +43,9 @@ export function topicPushWebDeepLink(
 ): string {
   const base = siteUrl.replace(/\/$/, '')
   if (articleId && slug) return `${base}/nuggets/${articleId}/${slug}`
-  if (stream === 'standard' || stream === 'pulse') return `${base}/?stream=${stream}`
+  if ((CONTENT_STREAMS as readonly string[]).includes(stream)) {
+    return `${base}/?stream=${stream}`
+  }
   return base
 }
 

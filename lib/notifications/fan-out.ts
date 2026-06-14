@@ -11,6 +11,8 @@ import {
 import { enqueuePushOnPublish } from '@/lib/notifications/push-publish'
 import { triggerPushTopicSender } from '@/lib/notifications/push-topic-sender'
 import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
+import { streamPrefColumn } from '@/lib/notifications/stream-prefs'
+import type { ContentStream } from '@/types/article'
 
 export const FAN_OUT_CAP = 5000
 
@@ -27,7 +29,7 @@ export type FanOutResult = {
  * e.g. "standard:2026-04-28 14:00"
  */
 export function buildBatchKey(
-  stream: 'standard' | 'pulse',
+  stream: ContentStream,
   now: Date = new Date()
 ): string {
   const y = now.getUTCFullYear()
@@ -51,7 +53,7 @@ async function insertChunkRows(
     user_id: string
     article_id: string
     kind: 'single'
-    content_stream: 'standard' | 'pulse'
+    content_stream: ContentStream
     title: string
     batch_key: null
     is_read: boolean
@@ -71,13 +73,13 @@ async function insertChunkRows(
   return inserted
 }
 
-async function getRecipientsFallback(stream: 'standard' | 'pulse'): Promise<string[]> {
+async function getRecipientsFallback(stream: ContentStream): Promise<string[]> {
   const adminClient = getAdminClient()
-  const streamField = stream === 'pulse' ? 'stream_pulse' : 'stream_standard'
+  const streamField = streamPrefColumn(stream)
 
   const { data: prefs, error: prefsError } = await adminClient
     .from('notification_preferences')
-    .select('user_id, mute_all, stream_standard, stream_pulse')
+    .select('user_id, mute_all, stream_standard, stream_pulse, stream_charts')
 
   if (prefsError) throw new Error(`getRecipients fallback prefs error: ${prefsError.message}`)
 
@@ -106,10 +108,10 @@ async function getRecipientsFallback(stream: 'standard' | 'pulse'): Promise<stri
 }
 
 export async function getRecipients(
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
 ): Promise<string[]> {
   const adminClient = getAdminClient()
-  const streamCol = stream === 'pulse' ? 'stream_pulse' : 'stream_standard'
+  const streamCol = streamPrefColumn(stream)
 
   const { data, error } = await adminClient.rpc(
     'get_notification_recipients',
@@ -135,7 +137,7 @@ const UPSERT_CHUNK = 500
 
 async function getTodaySingleCountsByUser(
   userIds: string[],
-  stream: 'standard' | 'pulse',
+  stream: ContentStream,
   dayStart: string
 ): Promise<Map<string, number>> {
   const adminClient = getAdminClient()
@@ -168,7 +170,7 @@ async function upsertDigestOverflowRows({
   batchKey,
 }: {
   userIds: string[]
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
   batchKey: string
 }): Promise<number> {
   if (userIds.length === 0) return 0
@@ -245,7 +247,7 @@ export async function upsertNotifications({
 }: {
   recipientIds: string[]
   articleId: string
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
   title: string
 }): Promise<number> {
   const adminClient = getAdminClient()
@@ -317,7 +319,7 @@ export async function fanOutOnPublish({
   pushNotifyImmediately = false,
 }: {
   articleId: string
-  stream: 'standard' | 'pulse'
+  stream: ContentStream
   title: string
   slug: string
   imageUrl?: string | null

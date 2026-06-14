@@ -9,6 +9,7 @@ import { revalidateTag } from 'next/cache'
 export const CACHE_TAGS = {
   feedStandard:    'feed:standard',
   feedPulse:       'feed:pulse',
+  feedCharts:      'feed:charts',
   article:         (id: string) => `article:${id}`,
   tags:            'tags:official',
   collectionsList: 'collections:list',
@@ -34,6 +35,7 @@ const HARD_BUST = { expire: 0 }
 export function revalidateArticle(id: string): void {
   revalidateTag(CACHE_TAGS.feedStandard, HARD_BUST)
   revalidateTag(CACHE_TAGS.feedPulse, HARD_BUST)
+  revalidateTag(CACHE_TAGS.feedCharts, HARD_BUST)
   revalidateTag(CACHE_TAGS.article(id), HARD_BUST)
 }
 

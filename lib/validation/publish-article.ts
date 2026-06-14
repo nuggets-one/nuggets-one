@@ -1,7 +1,7 @@
 import { buildExcerptFromMarkdown, collapseWhitespace, resolveCardPreview } from '@shared/article-preview'
 import { z } from 'zod'
 
-const CONTENT_STREAM_VALUES = ['standard', 'pulse'] as const
+const CONTENT_STREAM_VALUES = ['standard', 'pulse', 'charts'] as const
 export const publishArticleSchema = z.object({
   title: z.string().trim().min(1, 'title_required').max(300, 'title_too_long'),
   content_markdown: z.string().trim().min(1, 'body_required'),
