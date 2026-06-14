@@ -12,3 +12,5 @@ UPDATE tags
 SET dimension = 'source'
 WHERE slug IN ('goldman-sachs', 'bloomberg', 'jpmorgan')
   AND dimension = 'subtopic';
+
+NOTIFY pgrst, 'reload schema';
