@@ -1,5 +1,7 @@
 // ─── Feed / card types ───────────────────────────────────────────────
 
+import type { FeedScope } from '@/lib/feed/scope'
+
 /**
  * Lean fields only — no content_markdown, no search_vector.
  * This is what ArticleCard receives as props.
@@ -75,6 +77,8 @@ export type FeedPageParams = {
   stream: ContentStream
   tags?: string[]             // tag slugs for AND filter — empty = no filter
   q?: string                  // committed search query — empty = no search
+  /** Global (default) or India — only on standard/pulse; ignored on charts. */
+  scope?: FeedScope
   cursor?: FeedCursor         // absent = first page
   limit?: number              // default 24 — do not exceed without perf review
 }

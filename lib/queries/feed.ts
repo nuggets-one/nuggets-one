@@ -1,4 +1,6 @@
 import { getPublicClient } from '@/lib/supabase/public'
+import { applyFeedScopeFilter, effectiveFeedScope, scopeToRpcParam } from '@/lib/feed/scope'
+import type { FeedScope } from '@/lib/feed/scope'
 import { normalizeCuratorDisplayNameOnRows } from '@/lib/queries/normalize-curator-display-name'
 import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
 import type { SupabaseLike } from '@/lib/queries/card-tag-labels'
@@ -141,19 +143,21 @@ export async function getFeedPage({
   q = '',
   cursor,
   limit = 24,
+  scope: scopeParam,
 }: FeedPageParams): Promise<FeedPage> {
   const supabase = getPublicClient()
+  const scope = effectiveFeedScope(stream, scopeParam)
 
   // Branch: full-text search vs cursor pagination
   // Search uses ranked RPC pagination (rank DESC, published_at DESC, id DESC).
   // Non-search feed uses keyset on (published_at DESC, id DESC).
 
   if (q.trim()) {
-    return getFeedPageBySearch({ supabase, stream, tags, q, cursor, limit })
+    return getFeedPageBySearch({ supabase, stream, tags, q, cursor, limit, scope })
   }
 
-  const totalCountPromise = getFeedTotalCount({ supabase, stream, tags, q: '' })
-  const page = await getFeedPageByCursor({ supabase, stream, tags, cursor, limit })
+  const totalCountPromise = getFeedTotalCount({ supabase, stream, tags, q: '', scope })
+  const page = await getFeedPageByCursor({ supabase, stream, tags, cursor, limit, scope })
   return { ...page, totalCount: await totalCountPromise }
 }
 
@@ -162,17 +166,21 @@ async function getFeedTotalCount({
   stream,
   tags,
   q,
+  scope,
 }: {
   supabase: ReturnType<typeof getPublicClient>
   stream: ContentStream
   tags: string[]
   q: string
+  scope?: FeedScope
 }): Promise<number> {
   let query = supabase
     .from('articles')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'published')
     .eq('content_stream', stream)
+
+  query = applyFeedScopeFilter(query, stream, scope)
 
   if (tags.length > 0) {
     query = query.contains('tag_slugs', tags)
@@ -199,12 +207,14 @@ async function getFeedPageByCursor({
   tags,
   cursor,
   limit,
+  scope,
 }: {
   supabase: ReturnType<typeof getPublicClient>
   stream: ContentStream
   tags: string[]
   cursor?: FeedCursor
   limit: number
+  scope?: FeedScope
 }): Promise<FeedPage> {
   async function runQuery(selectClause: string) {
     let query = supabase
@@ -215,6 +225,8 @@ async function getFeedPageByCursor({
       .order('published_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(limit)
+
+    query = applyFeedScopeFilter(query, stream, scope)
 
     if (tags.length > 0) {
       query = query.contains('tag_slugs', tags)
@@ -263,6 +275,7 @@ async function getFeedPageBySearch({
   q,
   cursor,
   limit,
+  scope,
 }: {
   supabase: ReturnType<typeof getPublicClient>
   stream: ContentStream
@@ -270,6 +283,7 @@ async function getFeedPageBySearch({
   q: string
   cursor?: FeedCursor
   limit: number
+  scope?: FeedScope
 }): Promise<FeedPage> {
   const safeCursorRank = typeof cursor?.rank === 'number' ? cursor.rank : null
   const safeCursorPublishedAt = cursor?.published_at ?? null
@@ -284,6 +298,7 @@ async function getFeedPageBySearch({
     p_cursor_rank: safeCursorRank,
     p_cursor_published_at: safeCursorPublishedAt,
     p_cursor_id: safeCursorId,
+    p_scope: scopeToRpcParam(stream, scope),
   })
 
   if (error) {
@@ -291,7 +306,7 @@ async function getFeedPageBySearch({
       console.warn(
         'search_articles_ranked RPC missing in schema cache; using legacy search fallback.'
       )
-      return getFeedPageBySearchLegacy({ supabase, stream, tags, q, cursor, limit })
+      return getFeedPageBySearchLegacy({ supabase, stream, tags, q, cursor, limit, scope })
     }
     throw new Error(`getFeedPageBySearch error: ${error.message}`)
   }
@@ -331,6 +346,7 @@ async function getFeedPageBySearchLegacy({
   q,
   cursor,
   limit,
+  scope,
 }: {
   supabase: ReturnType<typeof getPublicClient>
   stream: ContentStream
@@ -338,6 +354,7 @@ async function getFeedPageBySearchLegacy({
   q: string
   cursor?: FeedCursor
   limit: number
+  scope?: FeedScope
 }): Promise<FeedPage> {
   async function runQuery(selectClause: string) {
     let query = supabase
@@ -352,6 +369,8 @@ async function getFeedPageBySearchLegacy({
       .order('published_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(limit)
+
+    query = applyFeedScopeFilter(query, stream, scope)
 
     if (tags.length > 0) {
       query = query.contains('tag_slugs', tags)

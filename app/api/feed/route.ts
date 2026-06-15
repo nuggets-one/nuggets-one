@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getFeedPage } from '@/lib/queries/feed'
+import { parseFeedScope, effectiveFeedScope, isScopeEnabledStream } from '@/lib/feed/scope'
 import { parseContentStream } from '@/lib/copy/streams'
 import type { ContentStream, FeedCursor } from '@/types/article'
 
@@ -59,6 +60,9 @@ export async function GET(req: NextRequest) {
   const stream = parseContentStream(searchParams.get('stream'))
   const tags = parseTags(searchParams.get('tags'))
   const q = parseQ(searchParams.get('q'))
+  const scope = isScopeEnabledStream(stream)
+    ? effectiveFeedScope(stream, parseFeedScope(searchParams.get('scope')))
+    : undefined
   const cursor = parseCursor(
     searchParams.get('cursor_pub'),
     searchParams.get('cursor_id'),
@@ -69,7 +73,7 @@ export async function GET(req: NextRequest) {
   const hasQ = q.length > 0
 
   try {
-    const result = await getFeedPage({ stream, tags, q, cursor })
+    const result = await getFeedPage({ stream, tags, q, cursor, scope })
 
     return NextResponse.json(
       result,

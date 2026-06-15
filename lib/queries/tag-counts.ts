@@ -1,5 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { CACHE_TAGS } from '@/lib/cache'
+import { applyFeedScopeFilter, effectiveFeedScope } from '@/lib/feed/scope'
+import type { FeedScope } from '@/lib/feed/scope'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
 
@@ -8,15 +10,21 @@ export type TagCounts = Record<string, number>
 const PENDING_MIGRATION_CODES = new Set(['PGRST205', '42P01'])
 
 async function fetchTagCountsForStream(
-  stream: ContentStream
+  stream: ContentStream,
+  scope?: FeedScope
 ): Promise<TagCounts> {
   const supabase = getPublicClient()
+  const effectiveScope = effectiveFeedScope(stream, scope)
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('articles')
     .select('tag_slugs')
     .eq('status', 'published')
     .eq('content_stream', stream)
+
+  query = applyFeedScopeFilter(query, stream, effectiveScope)
+
+  const { data, error } = await query
 
   if (error) {
     if (!PENDING_MIGRATION_CODES.has(error.code ?? '')) {
@@ -39,35 +47,57 @@ async function fetchTagCountsForStream(
   return counts
 }
 
-const cachedStandardTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('standard'),
-  ['tag-counts', 'standard'],
-  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('standard')] }
+function cacheKey(stream: ContentStream, scope: FeedScope | 'all'): string {
+  return `tag-counts:${stream}:${scope}`
+}
+
+const cachedStandardGlobalTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('standard', 'global'),
+  [cacheKey('standard', 'global')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('standard:global')] }
 )
 
-const cachedPulseTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('pulse'),
-  ['tag-counts', 'pulse'],
-  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('pulse')] }
+const cachedStandardIndiaTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('standard', 'india'),
+  [cacheKey('standard', 'india')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('standard:india')] }
+)
+
+const cachedPulseGlobalTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('pulse', 'global'),
+  [cacheKey('pulse', 'global')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('pulse:global')] }
+)
+
+const cachedPulseIndiaTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('pulse', 'india'),
+  [cacheKey('pulse', 'india')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('pulse:india')] }
 )
 
 const cachedChartsTagCounts = unstable_cache(
   () => fetchTagCountsForStream('charts'),
-  ['tag-counts', 'charts'],
+  [cacheKey('charts', 'all')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('charts')] }
 )
 
 /**
- * Slug → count of published articles in the given stream.
+ * Slug → count of published articles in the given stream (optionally scoped).
  * Cached for 1h; recomputed on cache miss via a single in-memory aggregation
- * over `articles.tag_slugs`. Equivalent to
- * `select unnest(tag_slugs), count(*) from articles where status='published'
- * and content_stream=$1 group by 1`, computed in JS to avoid an RPC migration.
+ * over `articles.tag_slugs`.
  */
 export async function getTagCountsForStream(
-  stream: ContentStream
+  stream: ContentStream,
+  scope?: FeedScope
 ): Promise<TagCounts> {
-  if (stream === 'pulse') return cachedPulseTagCounts()
   if (stream === 'charts') return cachedChartsTagCounts()
-  return cachedStandardTagCounts()
+  const effectiveScope = effectiveFeedScope(stream, scope) ?? 'global'
+  if (stream === 'pulse') {
+    return effectiveScope === 'india'
+      ? cachedPulseIndiaTagCounts()
+      : cachedPulseGlobalTagCounts()
+  }
+  return effectiveScope === 'india'
+    ? cachedStandardIndiaTagCounts()
+    : cachedStandardGlobalTagCounts()
 }

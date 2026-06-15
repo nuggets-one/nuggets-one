@@ -1,4 +1,10 @@
 import { getPublicClient } from '@/lib/supabase/public'
+import {
+  applyFeedScopeFilter,
+  effectiveFeedScope,
+  scopeToRpcParam,
+} from '@/lib/feed/scope'
+import type { FeedScope } from '@/lib/feed/scope'
 import { notFound } from 'next/navigation'
 import {
   normalizeHeroMediaKind,
@@ -67,26 +73,30 @@ export const SEARCH_SUGGEST_ROW_CAP = 8
 export async function suggestArticles({
   q,
   stream,
+  scope,
   limit = SEARCH_SUGGEST_ROW_CAP,
 }: {
   q: string
   stream: ContentStream
+  scope?: FeedScope
   limit?: number
 }): Promise<SuggestionRow[]> {
   if (!q || q.trim().length < 2) return []
 
   const supabase = getPublicClient()
   const rpcClient = supabase as unknown as RpcClient
+  const effectiveScope = effectiveFeedScope(stream, scope)
 
   const { data, error } = await rpcClient.rpc('search_suggestions_ranked', {
     p_stream: stream,
     p_q: q.trim(),
     p_limit: Math.min(limit, SEARCH_SUGGEST_ROW_CAP),
+    p_scope: scopeToRpcParam(stream, effectiveScope),
   })
 
   if (error) {
     if (isMissingSuggestRpcFunctionError(error.message)) {
-      const { data: fallbackData, error: fallbackError } = await supabase
+      let query = supabase
         .from('articles')
         .select('id, slug, title, content_stream, published_at')
         .eq('status', 'published')
@@ -98,6 +108,10 @@ export async function suggestArticles({
         .order('published_at', { ascending: false })
         .order('id', { ascending: false })
         .limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))
+
+      query = applyFeedScopeFilter(query, stream, effectiveScope)
+
+      const { data: fallbackData, error: fallbackError } = await query
 
       if (fallbackError || !fallbackData) {
         console.error('suggestArticles fallback error:', fallbackError?.message)

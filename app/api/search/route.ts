@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getFeedPage } from '@/lib/queries/feed'
+import { effectiveFeedScope, isScopeEnabledStream, parseFeedScope } from '@/lib/feed/scope'
 import { parseContentStream } from '@/lib/copy/streams'
 import type { ContentStream } from '@/types/article'
 
@@ -20,6 +21,9 @@ export async function GET(req: NextRequest) {
   const q = (searchParams.get('q') ?? '').trim().slice(0, MAX_Q_LENGTH)
   const stream = parseContentStream(searchParams.get('stream'))
   const tags = parseTags(searchParams.get('tags'))
+  const scope = isScopeEnabledStream(stream)
+    ? effectiveFeedScope(stream, parseFeedScope(searchParams.get('scope')))
+    : undefined
 
   if (!q) {
     return NextResponse.json(
@@ -29,7 +33,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await getFeedPage({ stream, tags, q })
+    const result = await getFeedPage({ stream, tags, q, scope })
     return NextResponse.json(result, {
       headers: { 'Cache-Control': 'no-store' },
     })
