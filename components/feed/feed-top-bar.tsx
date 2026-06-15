@@ -37,19 +37,38 @@ export function FeedTopBar({
 }: Props) {
   const scopeEnabled = isScopeEnabledStream(stream)
   const activeScope = scope ?? 'global'
+  const showScope = scopeEnabled && scopeCounts !== null
 
   return (
     <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
-      <div className="hidden justify-center border-b border-border bg-header px-4 py-3 backdrop-blur-sm sm:flex sm:justify-start lg:px-6">
-        <StreamTabs
-          activeStream={stream}
-          activeScope={scopeEnabled ? activeScope : undefined}
-          streamCounts={streamCounts}
-        />
+      <div className="hidden border-b border-border bg-header px-4 py-3 backdrop-blur-sm sm:flex sm:justify-start lg:px-6">
+        <div className="flex w-full min-w-0 items-center gap-3 lg:justify-between">
+          <StreamTabs
+            activeStream={stream}
+            activeScope={scopeEnabled ? activeScope : undefined}
+            streamCounts={streamCounts}
+            inlineToolbar={showScope}
+          />
+
+          {showScope ? (
+            <div className="hidden shrink-0 items-center gap-3 lg:flex">
+              <span
+                className="h-7 w-px shrink-0 bg-border"
+                aria-hidden="true"
+              />
+              <FeedScopeTabs
+                stream={stream}
+                activeScope={activeScope}
+                scopeCounts={scopeCounts}
+                inlineToolbar
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      {scopeEnabled && scopeCounts ? (
-        <div className="hidden border-b border-border/70 bg-header/80 px-4 py-2 backdrop-blur-sm sm:flex sm:justify-start lg:px-6">
+      {showScope ? (
+        <div className="hidden sm:flex lg:hidden border-b border-border/70 bg-header/80 px-4 py-2 backdrop-blur-sm lg:px-6">
           <FeedScopeTabs
             stream={stream}
             activeScope={activeScope}
@@ -64,7 +83,7 @@ export function FeedTopBar({
           aria-label="Feed filters"
         >
           <div className="space-y-2 px-4 py-2.5 lg:px-6">
-            {scopeEnabled && scopeCounts ? (
+            {showScope ? (
               <div className="sm:hidden">
                 <FeedScopeTabs
                   stream={stream}

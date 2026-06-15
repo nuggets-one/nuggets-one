@@ -12,13 +12,24 @@ type Props = {
   stream: 'standard' | 'pulse'
   activeScope: FeedScope
   scopeCounts: ScopeCounts
+  /** Tighter sizing when scope sits on the lg stream toolbar row. */
+  inlineToolbar?: boolean
 }
 
-export function FeedScopeTabs({ stream, activeScope, scopeCounts }: Props) {
+export function FeedScopeTabs({
+  stream,
+  activeScope,
+  scopeCounts,
+  inlineToolbar = false,
+}: Props) {
   return (
     <nav
       aria-label="Content scope"
-      className="flex w-full gap-1 rounded-md bg-rail/60 p-0.5 sm:inline-flex sm:w-auto"
+      className={`flex gap-1 rounded-md bg-rail/60 p-0.5 ${
+        inlineToolbar
+          ? 'w-auto shrink-0'
+          : 'w-full gap-1 sm:inline-flex sm:w-auto'
+      }`}
     >
       {SCOPES.map((scope) => {
         const active = activeScope === scope

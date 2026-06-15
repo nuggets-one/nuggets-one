@@ -34,13 +34,22 @@ type Props = {
   activeStream: ContentStream
   activeScope?: FeedScope
   streamCounts: StreamArticleCounts
+  /** When true, stream group sizes to content (for lg toolbar row with scope on the right). */
+  inlineToolbar?: boolean
 }
 
-export function StreamTabs({ activeStream, activeScope, streamCounts }: Props) {
+export function StreamTabs({
+  activeStream,
+  activeScope,
+  streamCounts,
+  inlineToolbar = false,
+}: Props) {
   return (
     <nav
       aria-label="Content stream"
-      className="flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto lg:inline-flex lg:w-[32rem]"
+      className={`flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto ${
+        inlineToolbar ? 'lg:w-auto' : 'lg:inline-flex lg:w-[32rem]'
+      }`}
     >
       {STREAMS.map(({ value, fullLabel, shortLabel }) => {
         const active = activeStream === value
