@@ -47,9 +47,7 @@ export function StreamTabs({
   return (
     <nav
       aria-label="Content stream"
-      className={`flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto ${
-        inlineToolbar ? 'lg:w-auto' : 'lg:inline-flex lg:w-[32rem]'
-      }`}
+      className="flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto lg:w-auto"
     >
       {STREAMS.map(({ value, fullLabel, shortLabel }) => {
         const active = activeStream === value
@@ -63,13 +61,13 @@ export function StreamTabs({
             href={href}
             aria-current={active ? 'page' : undefined}
             aria-label={`${fullLabel}, ${formattedCount} published articles`}
-            className={`flex min-h-[44px] flex-1 items-center justify-center rounded-md px-2 text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:px-3 lg:flex-1 lg:basis-0 lg:min-w-0 ${
+            className={`flex min-h-[44px] flex-1 items-center justify-center rounded-md px-2 text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:px-3 lg:flex-none ${
               active
                 ? 'border border-chip-active-border bg-chip-active-bg font-semibold text-chip-active-text shadow-chip-active'
                 : 'font-medium text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text'
             }`}
           >
-            <span className="inline-flex items-baseline justify-center gap-1.5">
+            <span className="inline-flex items-baseline justify-center gap-1.5 whitespace-nowrap">
               {useShortOnMobile ? (
                 <>
                   <span className="sm:hidden">{shortLabel}</span>
