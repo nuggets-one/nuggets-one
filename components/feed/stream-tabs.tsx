@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { STREAM_INTRO_COPY } from '@/lib/copy/streams'
+import { buildStreamTabHref, type FeedScope } from '@/lib/feed/scope'
 import type { ContentStream } from '@/types/article'
 import type { StreamArticleCounts } from '@/lib/queries/stream-counts'
 
 const STREAMS: {
   value: ContentStream
-  href: string
   shortLabel: string
   fullLabel: string
 }[] = [
@@ -13,19 +13,16 @@ const STREAMS: {
     value: 'standard',
     fullLabel: STREAM_INTRO_COPY.standard.label,
     shortLabel: STREAM_INTRO_COPY.standard.shortLabel,
-    href: '/?stream=standard',
   },
   {
     value: 'pulse',
     fullLabel: STREAM_INTRO_COPY.pulse.label,
     shortLabel: STREAM_INTRO_COPY.pulse.shortLabel,
-    href: '/?stream=pulse',
   },
   {
     value: 'charts',
     fullLabel: STREAM_INTRO_COPY.charts.label,
     shortLabel: STREAM_INTRO_COPY.charts.shortLabel,
-    href: '/?stream=charts',
   },
 ]
 
@@ -35,20 +32,22 @@ const numberFmt = new Intl.NumberFormat(undefined, {
 
 type Props = {
   activeStream: ContentStream
+  activeScope?: FeedScope
   streamCounts: StreamArticleCounts
 }
 
-export function StreamTabs({ activeStream, streamCounts }: Props) {
+export function StreamTabs({ activeStream, activeScope, streamCounts }: Props) {
   return (
     <nav
       aria-label="Content stream"
       className="flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto lg:inline-flex lg:w-[32rem]"
     >
-      {STREAMS.map(({ value, fullLabel, shortLabel, href }) => {
+      {STREAMS.map(({ value, fullLabel, shortLabel }) => {
         const active = activeStream === value
         const count = streamCounts[value]
         const formattedCount = numberFmt.format(count)
         const useShortOnMobile = shortLabel !== fullLabel
+        const href = buildStreamTabHref(value, activeScope)
         return (
           <Link
             key={value}

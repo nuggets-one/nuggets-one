@@ -8,11 +8,13 @@ import { ArticleSkimRowSkeleton } from '@/components/ui/article-skim-row-skeleto
 import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 import { StatusBlock } from '@/components/ui/status-block'
 import type { ArticleCardProps, FeedCursor, ContentStream } from '@/types/article'
+import type { FeedScope } from '@/lib/feed/scope'
 import { readResponseJson } from '@/lib/http/parse-json-response'
 
 type Props = {
   initialCursor: FeedCursor | null
   stream: ContentStream
+  scope?: FeedScope
   tags: string[]
   q: string
   isAuthenticated: boolean
@@ -28,6 +30,7 @@ type FeedApiResponse = {
 export function FeedPager({
   initialCursor,
   stream,
+  scope,
   tags,
   q,
   isAuthenticated,
@@ -54,6 +57,7 @@ export function FeedPager({
 
     try {
       const params = new URLSearchParams({ stream })
+      if (scope === 'india') params.set('scope', 'india')
       if (tags.length) params.set('tags', tags.join(','))
       if (q) params.set('q', q)
       if (cursor) {
@@ -84,7 +88,7 @@ export function FeedPager({
       setIsLoading(false)
       isFetchingRef.current = false
     }
-  }, [cursor, isEnd, stream, tags, q])
+  }, [cursor, isEnd, stream, scope, tags, q])
 
   // Abort any in-flight request on unmount
   useEffect(() => {

@@ -12,16 +12,22 @@ import {
 } from 'react'
 import { useQueryState } from 'nuqs'
 import type { TagSummary } from '@/types/article'
+import type { ContentStream } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
 import {
   FEED_DIMENSION_KEYS,
   filterTagsVisibleInPicker,
   groupedSortedByCount,
 } from '@/lib/feed/group-official-tags'
+import {
+  INDIA_SUBTOPIC_SLUG,
+  shouldHideIndiaTagSlug,
+} from '@/lib/feed/scope'
 import { FilterPopover } from '@/components/feed/filter-popover'
 import { FeedViewToggle } from '@/components/feed/feed-view-toggle'
 
 type Props = {
+  stream: ContentStream
   tags: TagSummary[]
   counts: TagCounts
 }
@@ -48,7 +54,7 @@ const scrollArrowBtn =
  * Feed filter chrome: All + scrollable dimension quick rail (format | domain | subtopic | source)
  * + More filters dialog for full taxonomy.
  */
-export function FeedTaxonomyFilters({ tags, counts }: Props) {
+export function FeedTaxonomyFilters({ stream, tags, counts }: Props) {
   const [tagsRaw, setSelected] = useQueryState('tags', {
     defaultValue: '',
     shallow: false,
@@ -60,7 +66,15 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
   )
   const hasActiveTags = selected.length > 0
 
-  const grouped = useMemo(() => groupedSortedByCount(tags, counts), [tags, counts])
+  const visibleTags = useMemo(() => {
+    if (!shouldHideIndiaTagSlug(stream)) return tags
+    return tags.filter((t) => t.slug !== INDIA_SUBTOPIC_SLUG)
+  }, [tags, stream])
+
+  const grouped = useMemo(
+    () => groupedSortedByCount(visibleTags, counts),
+    [visibleTags, counts]
+  )
 
   const dimensionBlocks = useMemo(
     () =>
@@ -124,7 +138,7 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
     })
   }
 
-  if (tags.length === 0) return null
+  if (visibleTags.length === 0) return null
 
   return (
     <div className="flex min-h-11 min-w-0 items-center gap-2">
@@ -207,7 +221,7 @@ export function FeedTaxonomyFilters({ tags, counts }: Props) {
 
       <div className="shrink-0">
         <FilterPopover
-          tags={tags}
+          tags={visibleTags}
           counts={counts}
           idleTriggerLabel="More filters"
           triggerVariant="iconCount"

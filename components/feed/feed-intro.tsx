@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { STREAM_INTRO_COPY } from '@/lib/copy/streams'
+import { getScopeLabel, type FeedScope } from '@/lib/feed/scope'
 import type { ContentStream } from '@/types/article'
 
 type Props = {
   stream: ContentStream
+  scope?: FeedScope
   streamLabel: string
   shownCount: number
   totalCount?: number
@@ -29,11 +31,13 @@ const labelDot = (
 
 function SummaryWithCount({
   streamLabel,
+  scopeLabel,
   summary,
   countLine,
   className,
 }: {
   streamLabel: string
+  scopeLabel?: string
   summary: string
   countLine: ReactNode
   className?: string
@@ -41,6 +45,12 @@ function SummaryWithCount({
   return (
     <p className={className}>
       <span className="font-medium text-primary">{streamLabel}</span>
+      {scopeLabel ? (
+        <>
+          {labelDot}
+          <span className="font-medium text-primary">{scopeLabel}</span>
+        </>
+      ) : null}
       {labelDot}
       <span>{summary}</span>
       {introDivider}
@@ -49,8 +59,33 @@ function SummaryWithCount({
   )
 }
 
+function MetaLine({
+  streamLabel,
+  scopeLabel,
+  countLine,
+}: {
+  streamLabel: string
+  scopeLabel?: string
+  countLine: ReactNode
+}) {
+  return (
+    <p className="mt-1.5 text-[11.5px] leading-4 text-muted sm:text-xs">
+      <span className="font-medium text-primary">{streamLabel}</span>
+      {scopeLabel ? (
+        <>
+          {labelDot}
+          <span className="font-medium text-primary">{scopeLabel}</span>
+        </>
+      ) : null}
+      {labelDot}
+      {countLine}
+    </p>
+  )
+}
+
 export function FeedIntro({
   stream,
+  scope,
   streamLabel,
   shownCount,
   totalCount,
@@ -60,6 +95,7 @@ export function FeedIntro({
   const shown = numberFmt.format(shownCount)
   const hasExactTotal = typeof totalCount === 'number'
   const total = hasExactTotal ? numberFmt.format(totalCount) : null
+  const scopeLabel = scope ? getScopeLabel(scope) : undefined
 
   const countLine = hasExactTotal ? (
     <span>Showing {shown} of {total}</span>
@@ -80,6 +116,7 @@ export function FeedIntro({
           <h1 className="sr-only">{title}</h1>
           <SummaryWithCount
             streamLabel={streamLabel}
+            scopeLabel={scopeLabel}
             summary={mobileSummary}
             countLine={countLine}
             className={summaryLineClass}
@@ -92,11 +129,11 @@ export function FeedIntro({
           <p className="mt-0.5 max-w-[62ch] text-[11.5px] leading-4 text-muted sm:text-xs lg:max-w-none">
             {tagline}
           </p>
-          <p className="mt-1.5 text-[11.5px] leading-4 text-muted sm:text-xs">
-            <span className="font-medium text-primary">{streamLabel}</span>
-            {labelDot}
-            {countLine}
-          </p>
+          <MetaLine
+            streamLabel={streamLabel}
+            scopeLabel={scopeLabel}
+            countLine={countLine}
+          />
         </div>
       </section>
     )
@@ -113,11 +150,11 @@ export function FeedIntro({
       <p className="mt-0.5 max-w-[62ch] text-[11.5px] leading-4 text-muted sm:text-xs lg:max-w-none">
         {tagline}
       </p>
-      <p className="mt-1.5 text-[11.5px] leading-4 text-muted sm:text-xs">
-        <span className="font-medium text-primary">{streamLabel}</span>
-        {labelDot}
-        {countLine}
-      </p>
+      <MetaLine
+        streamLabel={streamLabel}
+        scopeLabel={scopeLabel}
+        countLine={countLine}
+      />
     </section>
   )
 }

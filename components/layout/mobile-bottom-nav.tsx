@@ -8,6 +8,11 @@ import { useQueryState } from 'nuqs'
 import { useMemo, useSyncExternalStore } from 'react'
 import { useAuthStatus } from '@/components/layout/auth-status-provider'
 import { parseContentStream, STREAM_INTRO_COPY } from '@/lib/copy/streams'
+import {
+  buildStreamTabHref,
+  parseFeedScope,
+  type FeedScope,
+} from '@/lib/feed/scope'
 import { DEFAULT_STREAM, type ContentStream } from '@/types/article'
 
 function pathActive(pathname: string, base: string) {
@@ -20,28 +25,25 @@ type NavItem = {
   id: NavItemId
   label: string
   ariaLabel: string
-  href: string
   icon: LucideIcon
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'nuggets', label: 'Nuggets', ariaLabel: 'Nuggets', href: '/?stream=standard', icon: House },
+  { id: 'nuggets', label: 'Nuggets', ariaLabel: 'Nuggets', icon: House },
   {
     id: 'pulse',
     label: 'Pulse',
     ariaLabel: STREAM_INTRO_COPY.pulse.label,
-    href: '/?stream=pulse',
     icon: Activity,
   },
   {
     id: 'charts',
     label: STREAM_INTRO_COPY.charts.shortLabel,
     ariaLabel: STREAM_INTRO_COPY.charts.label,
-    href: '/?stream=charts',
     icon: BarChart2,
   },
-  { id: 'collections', label: 'Collections', ariaLabel: 'Collections', href: '/collections', icon: Layers },
-  { id: 'bookmarks', label: 'Bookmarks', ariaLabel: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
+  { id: 'collections', label: 'Collections', ariaLabel: 'Collections', icon: Layers },
+  { id: 'bookmarks', label: 'Bookmarks', ariaLabel: 'Bookmarks', icon: Bookmark },
 ]
 
 function isItemActive(
@@ -64,6 +66,21 @@ function isItemActive(
   }
 }
 
+function hrefForNavItem(id: NavItemId, activeScope: FeedScope): string {
+  switch (id) {
+    case 'nuggets':
+      return buildStreamTabHref('standard', activeScope)
+    case 'pulse':
+      return buildStreamTabHref('pulse', activeScope)
+    case 'charts':
+      return '/?stream=charts'
+    case 'collections':
+      return '/collections'
+    case 'bookmarks':
+      return '/bookmarks'
+  }
+}
+
 export function MobileBottomNav() {
   const pathname = usePathname() ?? ''
   const [stream] = useQueryState<ContentStream>('stream', {
@@ -71,9 +88,12 @@ export function MobileBottomNav() {
     parse: (v): ContentStream => parseContentStream(v),
     shallow: true,
   })
+  const [scopeRaw] = useQueryState('scope', {
+    defaultValue: '',
+    shallow: true,
+  })
+  const activeScope = parseFeedScope(scopeRaw || null)
   const auth = useAuthStatus()
-  // Active tab uses pathname + stream; defer until mount so SSR and the first
-  // client paint match (usePathname / URL state can differ during hydration).
   const navReady = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -107,8 +127,9 @@ export function MobileBottomNav() {
           gridCols,
         )}
       >
-        {visibleItems.map(({ id, label, ariaLabel, href, icon: Icon }) => {
+        {visibleItems.map(({ id, label, ariaLabel, icon: Icon }) => {
           const active = navReady && isItemActive(id, pathname, stream)
+          const href = hrefForNavItem(id, activeScope)
           return (
             <Link
               key={id}

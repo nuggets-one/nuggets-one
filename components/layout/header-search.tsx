@@ -8,6 +8,12 @@ import Link from 'next/link'
 import { X } from 'lucide-react'
 import type { ContentStream } from '@/types/article'
 import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
+import {
+  buildStreamTabHref,
+  effectiveFeedScope,
+  isScopeEnabledStream,
+  parseFeedScope,
+} from '@/lib/feed/scope'
 import type { SuggestionRow } from '@/lib/queries/article'
 import { readResponseJson } from '@/lib/http/parse-json-response'
 import { useMobileSearchControls } from '@/components/layout/mobile-search-context'
@@ -209,6 +215,13 @@ export function HeaderSearch({ utilities }: Props) {
     parse: (v): ContentStream => parseContentStream(v),
     shallow: true,
   })
+  const [scopeRaw] = useQueryState('scope', {
+    defaultValue: '',
+    shallow: true,
+  })
+  const feedScope = isScopeEnabledStream(stream)
+    ? effectiveFeedScope(stream, parseFeedScope(scopeRaw || null))
+    : undefined
 
   const [inputValue, setInputValue] = useState(committedQ)
   const [suggestions, setSuggestions] = useState<SuggestionRow[]>([])
@@ -280,7 +293,7 @@ export function HeaderSearch({ utilities }: Props) {
 
   useEffect(() => {
     const qTrim = debouncedInput.trim()
-    const queryKey = `${stream}:${qTrim.toLowerCase()}`
+    const queryKey = `${stream}:${feedScope ?? 'none'}:${qTrim.toLowerCase()}`
 
     if (qTrim.length < 2) {
       suggestAbortRef.current?.abort()
@@ -304,6 +317,7 @@ export function HeaderSearch({ utilities }: Props) {
     setSuggestionsPending(true)
 
     const params = new URLSearchParams({ q: qTrim, stream })
+    if (feedScope === 'india') params.set('scope', 'india')
     fetch(`/api/search/suggest?${params}`, { signal: controller.signal })
       .then(async (r) => {
         if (cancelled) return
@@ -335,7 +349,7 @@ export function HeaderSearch({ utilities }: Props) {
       cancelled = true
       controller.abort()
     }
-  }, [debouncedInput, stream])
+  }, [debouncedInput, stream, feedScope])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {

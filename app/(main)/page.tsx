@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { unstable_noStore } from 'next/cache'
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
@@ -7,12 +8,18 @@ import { resolveAuthUser } from '@/lib/supabase/resolve-auth-user'
 import { getFeedPage } from '@/lib/queries/feed'
 import { listOfficialTags } from '@/lib/queries/tags'
 import { getTagCountsForStream } from '@/lib/queries/tag-counts'
+import { getScopeCountsForStream } from '@/lib/queries/scope-counts'
 import { getStreamArticleCounts } from '@/lib/queries/stream-counts'
 import { getBookmarkedArticleIdsForUser } from '@/lib/queries/bookmarks'
 import { ArticleCard } from '@/components/ui/article-card'
 import { ArticleSkimRow } from '@/components/ui/article-skim-row'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
 import { FEED_VIEW_STORAGE_KEY, isSkimFeedView } from '@/lib/feed/feed-view'
+import {
+  isScopeEnabledStream,
+  normalizeTagsAndScope,
+  type FeedScope,
+} from '@/lib/feed/scope'
 import { FeedPager } from '@/components/feed/feed-pager'
 import { FeedEmpty } from '@/components/feed/feed-empty'
 import { FeedTopBar } from '@/components/feed/feed-top-bar'
@@ -70,6 +77,7 @@ export async function generateMetadata({
 
 type SearchParams = {
   stream?: string
+  scope?: string
   tags?: string
   q?: string
   view?: string
@@ -82,10 +90,25 @@ type Props = {
 const MAX_TAGS = 5
 const MAX_Q_LENGTH = 200
 
+function buildLegacyIndiaRedirectUrl(
+  stream: ReturnType<typeof parseContentStream>,
+  tags: string[],
+  q: string,
+  view?: string
+): string {
+  const params = new URLSearchParams()
+  if (stream !== 'standard') params.set('stream', stream)
+  params.set('scope', 'india')
+  if (tags.length > 0) params.set('tags', tags.join(','))
+  if (q) params.set('q', q)
+  if (view) params.set('view', view)
+  return `/?${params.toString()}`
+}
+
 async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const stream = parseContentStream(searchParams.stream)
   const tagsRaw = searchParams.tags ?? ''
-  const tags = tagsRaw
+  const parsedTags = tagsRaw
     ? tagsRaw
       .split(',')
       .map((tag) => tag.trim().toLowerCase())
@@ -93,45 +116,64 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       .slice(0, MAX_TAGS)
     : []
   const q = (searchParams.q ?? '').trim().slice(0, MAX_Q_LENGTH)
+  const { tags, scope, hadLegacyIndiaTag } = normalizeTagsAndScope(
+    stream,
+    parsedTags,
+    searchParams.scope
+  )
+
+  if (hadLegacyIndiaTag && searchParams.scope !== 'india') {
+    redirect(buildLegacyIndiaRedirectUrl(stream, tags, q, searchParams.view))
+  }
+
   const cookieStore = await cookies()
   const storedFeedView = cookieStore.get(FEED_VIEW_STORAGE_KEY)?.value ?? null
   const skimView = isSkimFeedView(searchParams.view, storedFeedView)
 
   // Filtered or search URLs must never be served from stale ISR cache.
-  // BLUEPRINT §11: "Filtered / search URLs → expect dynamic behavior."
-  const hasFilters = !!(searchParams.tags || searchParams.q)
+  const hasFilters = !!(tags.length > 0 || q || scope === 'india')
   if (hasFilters) {
     unstable_noStore()
   }
 
-  const [feedResult, officialTags, tagCounts, streamCounts] = await Promise.all([
-    (hasFilters
-      ? getFeedPage({ stream, tags, q })
-      : getFeedPage({ stream, tags: [], q: '' })
-    ).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(`FeedGrid getFeedPage error: ${message}`)
-      return { articles: [], nextCursor: null, stream, totalCount: 0 }
-    }),
-    listOfficialTags().catch((error) => {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(`FeedGrid listOfficialTags error: ${message}`)
-      return []
-    }),
-    getTagCountsForStream(stream).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(`FeedGrid getTagCountsForStream error: ${message}`)
-      return {}
-    }),
-    getStreamArticleCounts().catch((error) => {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(`FeedGrid getStreamArticleCounts error: ${message}`)
-      return { standard: 0, pulse: 0, charts: 0 }
-    }),
-  ])
+  const feedScope: FeedScope | undefined = isScopeEnabledStream(stream)
+    ? scope ?? 'global'
+    : undefined
+
+  const [feedResult, officialTags, tagCounts, streamCounts, scopeCounts] =
+    await Promise.all([
+      getFeedPage({ stream, tags, q, scope: feedScope }).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`FeedGrid getFeedPage error: ${message}`)
+        return { articles: [], nextCursor: null, stream, totalCount: 0 }
+      }),
+      listOfficialTags().catch((error) => {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`FeedGrid listOfficialTags error: ${message}`)
+        return []
+      }),
+      getTagCountsForStream(stream, feedScope).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`FeedGrid getTagCountsForStream error: ${message}`)
+        return {}
+      }),
+      getStreamArticleCounts().catch((error) => {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`FeedGrid getStreamArticleCounts error: ${message}`)
+        return { standard: 0, pulse: 0, charts: 0 }
+      }),
+      isScopeEnabledStream(stream)
+        ? getScopeCountsForStream(stream).catch((error) => {
+            const message = error instanceof Error ? error.message : String(error)
+            console.error(`FeedGrid getScopeCountsForStream error: ${message}`)
+            return { global: 0, india: 0 }
+          })
+        : Promise.resolve(null),
+    ])
 
   const { articles, nextCursor } = feedResult
-  const totalCount = typeof feedResult.totalCount === 'number' ? feedResult.totalCount : undefined
+  const totalCount =
+    typeof feedResult.totalCount === 'number' ? feedResult.totalCount : undefined
   const streamLabel = getStreamLabel(stream)
 
   const supabase = await createClient()
@@ -144,12 +186,14 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       ? await getBookmarkedArticleIdsForUser(user.id, articleIds)
       : new Set<string>()
 
-  // First page: bookmark state comes from the server (getBookmarkedArticleIdsForUser).
-  // Client batch hydrator runs only inside FeedPager for paginated rows.
+  const scopeKey = feedScope ?? 'none'
+
   return (
     <>
       <FeedTopBar
         stream={stream}
+        scope={feedScope}
+        scopeCounts={scopeCounts}
         tags={officialTags}
         counts={tagCounts}
         streamCounts={streamCounts}
@@ -206,9 +250,10 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
 
       {articles.length > 0 && (
         <FeedPager
-          key={`${stream}:${[...tags].sort().join(',')}:${q}:${skimView ? 'skim' : 'grid'}`}
+          key={`${stream}:${scopeKey}:${[...tags].sort().join(',')}:${q}:${skimView ? 'skim' : 'grid'}`}
           initialCursor={nextCursor}
           stream={stream}
+          scope={feedScope}
           tags={tags}
           q={q}
           isAuthenticated={isAuthenticated}
