@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
 const SHOW_DELAY_MS = 150
+const MID_STAGE_DELAY_MS = 320
 
 function isInternalNavigationHref(href: string): boolean {
   if (!href || href.startsWith('#')) return false
@@ -21,7 +22,9 @@ export function NavigationProgress() {
 
   const [visible, setVisible] = useState(false)
   const [completing, setCompleting] = useState(false)
+  const [stage, setStage] = useState<1 | 2>(1)
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const midStageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     function onDocumentClick(event: MouseEvent) {
@@ -40,6 +43,7 @@ export function NavigationProgress() {
 
       showTimerRef.current = setTimeout(() => {
         setCompleting(false)
+        setStage(1)
         setVisible(true)
       }, SHOW_DELAY_MS)
     }
@@ -51,8 +55,29 @@ export function NavigationProgress() {
         clearTimeout(showTimerRef.current)
         showTimerRef.current = null
       }
+      if (midStageTimerRef.current) {
+        clearTimeout(midStageTimerRef.current)
+        midStageTimerRef.current = null
+      }
     }
   }, [])
+
+  useEffect(() => {
+    if (!visible || completing) return
+    if (midStageTimerRef.current) {
+      clearTimeout(midStageTimerRef.current)
+    }
+    midStageTimerRef.current = setTimeout(() => {
+      setStage(2)
+    }, MID_STAGE_DELAY_MS)
+
+    return () => {
+      if (midStageTimerRef.current) {
+        clearTimeout(midStageTimerRef.current)
+        midStageTimerRef.current = null
+      }
+    }
+  }, [visible, completing])
 
   useEffect(() => {
     if (routeKey === routeKeyRef.current) return
@@ -63,9 +88,14 @@ export function NavigationProgress() {
       clearTimeout(showTimerRef.current)
       showTimerRef.current = null
     }
+    if (midStageTimerRef.current) {
+      clearTimeout(midStageTimerRef.current)
+      midStageTimerRef.current = null
+    }
 
     if (!visible) {
       setCompleting(false)
+      setStage(1)
       return
     }
 
@@ -73,6 +103,7 @@ export function NavigationProgress() {
     const hideTimer = setTimeout(() => {
       setVisible(false)
       setCompleting(false)
+      setStage(1)
     }, 200)
 
     return () => clearTimeout(hideTimer)
@@ -90,7 +121,9 @@ export function NavigationProgress() {
         className={`h-full bg-accent motion-reduce:transition-none ${
           completing
             ? 'w-full opacity-0 transition-[width,opacity] duration-200 ease-out'
-            : 'w-1/3 opacity-100 motion-safe:animate-pulse'
+            : stage === 2
+              ? 'w-2/3 opacity-100 transition-[width] duration-300 ease-out'
+              : 'w-1/3 opacity-100 motion-safe:animate-pulse transition-[width] duration-300 ease-out'
         }`}
       />
     </div>
