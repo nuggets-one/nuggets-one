@@ -1,0 +1,119 @@
+'use client'
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from 'react'
+import { flushSync } from 'react-dom'
+import { usePathname } from 'next/navigation'
+import { FeedSkeleton } from '@/components/feed/feed-skeleton'
+
+type FeedPendingContextValue = {
+  showFeedSkeleton: boolean
+  markFeedPending: () => void
+  beginFeedTransition: (fn: () => void) => void
+  registerFeedContentKey: (contentKey: string) => void
+  resolveFeedPending: (contentKey: string) => void
+}
+
+const FeedPendingContext = createContext<FeedPendingContextValue | null>(null)
+
+export function FeedPendingProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname() ?? ''
+  const isHome = pathname === '/'
+
+  const [feedPending, setFeedPending] = useState(false)
+  const [isTransitionPending, startTransition] = useTransition()
+  const currentContentKeyRef = useRef('')
+  const pendingSinceContentKeyRef = useRef<string | null>(null)
+
+  const registerFeedContentKey = useCallback((contentKey: string) => {
+    currentContentKeyRef.current = contentKey
+  }, [])
+
+  const markFeedPending = useCallback(() => {
+    if (!isHome) return
+    flushSync(() => {
+      pendingSinceContentKeyRef.current = currentContentKeyRef.current
+      setFeedPending(true)
+    })
+  }, [isHome])
+
+  const beginFeedTransition = useCallback(
+    (fn: () => void) => {
+      if (isHome) {
+        flushSync(() => {
+          pendingSinceContentKeyRef.current = currentContentKeyRef.current
+          setFeedPending(true)
+        })
+      }
+      startTransition(fn)
+    },
+    [isHome, startTransition]
+  )
+
+  const resolveFeedPending = useCallback((contentKey: string) => {
+    if (!feedPending) return
+    if (
+      pendingSinceContentKeyRef.current !== null &&
+      contentKey !== pendingSinceContentKeyRef.current
+    ) {
+      setFeedPending(false)
+      pendingSinceContentKeyRef.current = null
+    }
+  }, [feedPending])
+
+  useEffect(() => {
+    if (!isHome) {
+      setFeedPending(false)
+      pendingSinceContentKeyRef.current = null
+    }
+  }, [isHome])
+
+  const showFeedSkeleton = isHome && (feedPending || isTransitionPending)
+
+  return (
+    <FeedPendingContext.Provider
+      value={{
+        showFeedSkeleton,
+        markFeedPending,
+        beginFeedTransition,
+        registerFeedContentKey,
+        resolveFeedPending,
+      }}
+    >
+      {showFeedSkeleton ? (
+        <div
+          className="pointer-events-none fixed inset-x-0 bottom-0 top-[var(--header-height)] z-[60] bg-bg"
+          aria-busy="true"
+          aria-live="polite"
+          data-testid="feed-loading-skeleton"
+        >
+          <div className="mx-auto max-w-[90rem] px-4 pt-6 lg:px-6">
+            <FeedSkeleton count={6} />
+          </div>
+        </div>
+      ) : null}
+      {children}
+    </FeedPendingContext.Provider>
+  )
+}
+
+export function useFeedPending() {
+  const ctx = useContext(FeedPendingContext)
+  if (!ctx) {
+    throw new Error('useFeedPending must be used within FeedPendingProvider')
+  }
+  return ctx
+}
+
+/** Safe for header chrome outside guaranteed provider trees. */
+export function useFeedPendingOptional() {
+  return useContext(FeedPendingContext)
+}
