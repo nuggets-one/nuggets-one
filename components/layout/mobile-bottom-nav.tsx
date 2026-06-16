@@ -102,13 +102,13 @@ export function MobileBottomNav() {
     () => false,
   )
 
-  const visibleItems = useMemo(
-    () =>
-      auth.status === 'authenticated'
-        ? NAV_ITEMS
-        : NAV_ITEMS.filter((item) => item.id !== 'bookmarks'),
-    [auth.status],
-  )
+  const visibleItems = useMemo(() => {
+    // Keep SSR and hydration markup identical, then reveal auth-only tabs.
+    if (!navReady || auth.status !== 'authenticated') {
+      return NAV_ITEMS.filter((item) => item.id !== 'bookmarks')
+    }
+    return NAV_ITEMS
+  }, [auth.status, navReady])
 
   const gridCols =
     visibleItems.length >= 5
