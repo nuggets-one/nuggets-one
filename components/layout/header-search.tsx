@@ -17,6 +17,7 @@ import {
 import type { SuggestionRow } from '@/lib/queries/article'
 import { readResponseJson } from '@/lib/http/parse-json-response'
 import { useMobileSearchControls } from '@/components/layout/mobile-search-context'
+import { useFeedPendingOptional } from '@/components/feed/feed-pending-context'
 import { useScrollLock } from '@/lib/ui/use-scroll-lock'
 
 const DEBOUNCE_MS = 180
@@ -205,6 +206,7 @@ type Props = {
 export function HeaderSearch({ utilities }: Props) {
   const router = useRouter()
   const { setExpanded: setMobileSearchExpanded } = useMobileSearchControls()
+  const feedPending = useFeedPendingOptional()
 
   const [committedQ, setCommittedQ] = useQueryState('q', {
     defaultValue: '',
@@ -367,7 +369,14 @@ export function HeaderSearch({ utilities }: Props) {
       const trimmedValue = value.trim()
       suggestAbortRef.current?.abort()
       suggestAbortRef.current = null
-      setCommittedQ(trimmedValue || null)
+      const applyCommit = () => {
+        setCommittedQ(trimmedValue || null)
+      }
+      if (feedPending) {
+        feedPending.beginFeedTransition(applyCommit)
+      } else {
+        applyCommit()
+      }
       setInputValue(trimmedValue)
       setSuggestions([])
       setSuggestionsPending(false)
@@ -375,7 +384,7 @@ export function HeaderSearch({ utilities }: Props) {
       setIsFocused(false)
       setIsExpanded(false)
     },
-    [setCommittedQ]
+    [feedPending, setCommittedQ]
   )
 
   const handleInputChange = useCallback((next: string) => {
@@ -390,13 +399,20 @@ export function HeaderSearch({ utilities }: Props) {
   const handleClearInput = useCallback(() => {
     suggestAbortRef.current?.abort()
     suggestAbortRef.current = null
+    const applyClear = () => {
+      setCommittedQ(null)
+    }
+    if (feedPending) {
+      feedPending.beginFeedTransition(applyClear)
+    } else {
+      applyClear()
+    }
     setInputValue('')
-    setCommittedQ(null)
     setSuggestions([])
     setSuggestionsPending(false)
     setIsFocused(true)
     inputRef.current?.focus()
-  }, [setCommittedQ])
+  }, [feedPending, setCommittedQ])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Escape') {

@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
 import { useMemo, useSyncExternalStore } from 'react'
 import { useAuthStatus } from '@/components/layout/auth-status-provider'
+import { useFeedPendingOptional } from '@/components/feed/feed-pending-context'
 import { parseContentStream, STREAM_INTRO_COPY } from '@/lib/copy/streams'
 import {
   buildStreamTabHref,
@@ -94,6 +95,7 @@ export function MobileBottomNav() {
   })
   const activeScope = parseFeedScope(scopeRaw || null)
   const auth = useAuthStatus()
+  const feedPending = useFeedPendingOptional()
   const navReady = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -130,12 +132,18 @@ export function MobileBottomNav() {
         {visibleItems.map(({ id, label, ariaLabel, icon: Icon }) => {
           const active = navReady && isItemActive(id, pathname, stream)
           const href = hrefForNavItem(id, activeScope)
+          const isHomeStreamNav = id === 'nuggets' || id === 'pulse' || id === 'charts'
           return (
             <Link
               key={id}
               href={href}
               aria-label={ariaLabel}
               aria-current={active ? 'page' : undefined}
+              onClick={() => {
+                if (isHomeStreamNav && !active) {
+                  feedPending?.markFeedPending()
+                }
+              }}
               className={clsx(
                 'relative flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 sm:px-2',
                 active

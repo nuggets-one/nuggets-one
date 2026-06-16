@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useTransition } from 'react'
+import { useMemo } from 'react'
 import { useQueryState } from 'nuqs'
+import { useFeedPending } from '@/components/feed/feed-pending-context'
 
 export function ActiveFiltersBar() {
   const [tagsRaw, setTagsParam] = useQueryState('tags', {
@@ -9,7 +10,8 @@ export function ActiveFiltersBar() {
     shallow: false,
   })
   const [q, setQ] = useQueryState('q', { defaultValue: '', shallow: false })
-  const [isPending, startTransition] = useTransition()
+  const { beginFeedTransition, showFeedSkeleton } = useFeedPending()
+  const isPending = showFeedSkeleton
 
   const selectedSlugs = useMemo(
     () => (tagsRaw ? tagsRaw.split(',').filter(Boolean) : []),
@@ -20,7 +22,7 @@ export function ActiveFiltersBar() {
   if (!hasFilters) return null
 
   function clearAll() {
-    startTransition(() => {
+    beginFeedTransition(() => {
       setTagsParam(null)
       setQ(null)
     })
@@ -42,7 +44,11 @@ export function ActiveFiltersBar() {
         {hasSearchQuery && (
           <button
             type="button"
-            onClick={() => setQ(null)}
+            onClick={() =>
+              beginFeedTransition(() => {
+                setQ(null)
+              })
+            }
             disabled={isPending}
             className="inline-flex max-w-[16rem] items-center gap-1 rounded-full border border-border bg-surface-raised px-2 py-1 text-[11px] text-primary transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 disabled:opacity-60"
             aria-label={`Remove search query ${q}`}

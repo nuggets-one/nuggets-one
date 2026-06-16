@@ -1,5 +1,8 @@
 import { Suspense } from 'react'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
+import { FeedPendingProvider } from '@/components/feed/feed-pending-context'
+import { FeedPendingCoordinator } from '@/components/feed/feed-pending-coordinator'
+import { NavigationProgress } from '@/components/layout/navigation-progress'
 import { Footer } from '@/components/layout/footer'
 import { FooterRouteGate } from '@/components/layout/footer-route-gate'
 import { GlobalImageLightboxHost } from '@/components/layout/global-image-lightbox-host'
@@ -35,9 +38,16 @@ export default async function MainLayout({
     <NuqsAdapter>
       <MobileSearchProvider>
       <AuthStatusProvider>
+      <FeedPendingProvider>
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       <Header legalLinks={legalLinks} />
       <div className="pb-20 lg:pb-0">
-        <main className="mx-auto max-w-[90rem] px-4 pt-6 lg:px-6">
+        <main className="relative mx-auto max-w-[90rem] px-4 pt-6 lg:px-6">
+          <Suspense fallback={null}>
+            <FeedPendingCoordinator />
+          </Suspense>
           {children}
         </main>
         <Suspense
@@ -68,6 +78,7 @@ export default async function MainLayout({
       {/* The canonical nugget detail route may also render here as an intercepted
           in-context sheet. Direct URL hits still render via the full page route. */}
       {modal}
+      </FeedPendingProvider>
       </AuthStatusProvider>
       </MobileSearchProvider>
     </NuqsAdapter>

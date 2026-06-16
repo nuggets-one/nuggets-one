@@ -1,12 +1,13 @@
 'use client'
 
 import { LayoutGrid, List } from 'lucide-react'
-import { useEffect, useRef, useTransition } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQueryState } from 'nuqs'
 import {
   FEED_VIEW_STORAGE_KEY,
   persistFeedViewPreference,
 } from '@/lib/feed/feed-view'
+import { useFeedPending } from '@/components/feed/feed-pending-context'
 
 const segmentBase =
   'inline-flex min-h-[32px] min-w-[44px] flex-1 items-center justify-center rounded-md border border-transparent px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-1 disabled:opacity-60'
@@ -22,7 +23,8 @@ export function FeedViewToggle() {
     defaultValue: '',
     shallow: false,
   })
-  const [isPending, startTransition] = useTransition()
+  const { beginFeedTransition, showFeedSkeleton } = useFeedPending()
+  const isPending = showFeedSkeleton
   const hydratedRef = useRef(false)
 
   const isSkim = view !== 'grid'
@@ -36,9 +38,7 @@ export function FeedViewToggle() {
     try {
       const stored = localStorage.getItem(FEED_VIEW_STORAGE_KEY)
       if (stored === 'grid') {
-        startTransition(() => {
-          void setView('grid')
-        })
+        void setView('grid')
       }
     } catch {
       // localStorage unavailable — server default skim applies
@@ -46,7 +46,7 @@ export function FeedViewToggle() {
   }, [view, setView])
 
   function select(next: 'grid' | 'skim') {
-    startTransition(() => {
+    beginFeedTransition(() => {
       void setView(next === 'grid' ? 'grid' : null)
       persistFeedViewPreference(next)
     })

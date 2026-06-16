@@ -23,6 +23,7 @@ import {
 import { FeedPager } from '@/components/feed/feed-pager'
 import { FeedEmpty } from '@/components/feed/feed-empty'
 import { FeedTopBar } from '@/components/feed/feed-top-bar'
+import { FeedContentPendingGate } from '@/components/feed/feed-content-pending-gate'
 import {
   getStreamLabel,
   HOME_METADATA,
@@ -187,6 +188,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       : new Set<string>()
 
   const scopeKey = feedScope ?? 'none'
+  const feedContentKey = `${stream}:${scopeKey}:${[...tags].sort().join(',')}:${q}:${skimView ? 'skim' : 'grid'}`
 
   return (
     <>
@@ -203,20 +205,37 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
         skimView={skimView}
       />
 
-      {articles.length === 0 ? (
-        <FeedEmpty q={q} hasTags={tags.length > 0} />
-      ) : skimView ? (
-        <>
-          <div className="-mx-4 flex flex-col md:hidden">
-            {articles.map((article, index) => (
-              <ArticleSkimRow
-                key={article.id}
-                article={article}
-                priority={index === 0}
-              />
-            ))}
-          </div>
-          <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
+      <FeedContentPendingGate contentKey={feedContentKey}>
+        {articles.length === 0 ? (
+          <FeedEmpty q={q} hasTags={tags.length > 0} />
+        ) : skimView ? (
+          <>
+            <div className="-mx-4 flex flex-col md:hidden">
+              {articles.map((article, index) => (
+                <ArticleSkimRow
+                  key={article.id}
+                  article={article}
+                  priority={index === 0}
+                />
+              ))}
+            </div>
+            <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
+              {articles.map((article, index) => (
+                <ArticleCard
+                  key={article.id}
+                  article={article}
+                  priority={index === 0}
+                  isAuthenticated={isAuthenticated}
+                  initialBookmarked={bookmarkedIds.has(article.id)}
+                  adminEditHref={
+                    isAdmin ? `/admin/articles/${article.id}` : null
+                  }
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
             {articles.map((article, index) => (
               <ArticleCard
                 key={article.id}
@@ -230,37 +249,22 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
               />
             ))}
           </div>
-        </>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-4">
-          {articles.map((article, index) => (
-            <ArticleCard
-              key={article.id}
-              article={article}
-              priority={index === 0}
-              isAuthenticated={isAuthenticated}
-              initialBookmarked={bookmarkedIds.has(article.id)}
-              adminEditHref={
-                isAdmin ? `/admin/articles/${article.id}` : null
-              }
-            />
-          ))}
-        </div>
-      )}
+        )}
 
-      {articles.length > 0 && (
-        <FeedPager
-          key={`${stream}:${scopeKey}:${[...tags].sort().join(',')}:${q}:${skimView ? 'skim' : 'grid'}`}
-          initialCursor={nextCursor}
-          stream={stream}
-          scope={feedScope}
-          tags={tags}
-          q={q}
-          isAuthenticated={isAuthenticated}
-          isAdmin={isAdmin}
-          skimView={skimView}
-        />
-      )}
+        {articles.length > 0 && (
+          <FeedPager
+            key={`${stream}:${scopeKey}:${[...tags].sort().join(',')}:${q}:${skimView ? 'skim' : 'grid'}`}
+            initialCursor={nextCursor}
+            stream={stream}
+            scope={feedScope}
+            tags={tags}
+            q={q}
+            isAuthenticated={isAuthenticated}
+            isAdmin={isAdmin}
+            skimView={skimView}
+          />
+        )}
+      </FeedContentPendingGate>
     </>
   )
 }

@@ -8,9 +8,9 @@ import {
   useMemo,
   useRef,
   useState,
-  useTransition,
 } from 'react'
 import { useQueryState } from 'nuqs'
+import { useFeedPending } from '@/components/feed/feed-pending-context'
 import type { TagSummary } from '@/types/article'
 import type { ContentStream } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
@@ -59,7 +59,8 @@ export function FeedTaxonomyFilters({ stream, tags, counts }: Props) {
     defaultValue: '',
     shallow: false,
   })
-  const [isPending, startTransition] = useTransition()
+  const { beginFeedTransition, showFeedSkeleton } = useFeedPending()
+  const isPending = showFeedSkeleton
   const selected = useMemo(
     () => (tagsRaw ? tagsRaw.split(',').filter(Boolean) : []),
     [tagsRaw]
@@ -130,7 +131,7 @@ export function FeedTaxonomyFilters({ stream, tags, counts }: Props) {
   }
 
   const toggleSlug = (slug: string) => {
-    startTransition(() => {
+    beginFeedTransition(() => {
       const next = selected.includes(slug)
         ? selected.filter((s) => s !== slug)
         : [...selected, slug]
@@ -145,7 +146,7 @@ export function FeedTaxonomyFilters({ stream, tags, counts }: Props) {
       <button
         type="button"
         onClick={() =>
-          startTransition(() => {
+          beginFeedTransition(() => {
             setSelected(null)
           })
         }

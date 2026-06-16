@@ -3,6 +3,7 @@
 import { useQueryState } from 'nuqs'
 import Link from 'next/link'
 import { StatusBlock } from '@/components/ui/status-block'
+import { useFeedPending } from '@/components/feed/feed-pending-context'
 
 type Props = {
   q: string
@@ -12,20 +13,30 @@ type Props = {
 export function FeedEmpty({ q, hasTags }: Props) {
   const [, setQ] = useQueryState('q', { shallow: false })
   const [, setTags] = useQueryState('tags', { shallow: false })
+  const { beginFeedTransition } = useFeedPending()
 
   if (q) {
     return (
       <StatusBlock heading={`No nuggets match "${q}".`}>
         <div className="flex justify-center gap-4 mt-4">
           <button
-            onClick={() => setQ(null)}
+            onClick={() =>
+              beginFeedTransition(() => {
+                setQ(null)
+              })
+            }
             className="text-sm font-medium text-primary underline underline-offset-2"
           >
             Clear search
           </button>
           {hasTags && (
             <button
-              onClick={() => { setQ(null); setTags(null) }}
+              onClick={() =>
+                beginFeedTransition(() => {
+                  setQ(null)
+                  setTags(null)
+                })
+              }
               className="text-sm text-muted underline underline-offset-2"
             >
               Clear all filters
@@ -40,10 +51,12 @@ export function FeedEmpty({ q, hasTags }: Props) {
     return (
       <StatusBlock heading="No nuggets match these filters.">
         <button
-          onClick={() => {
-            setTags(null)
-            setQ(null)
-          }}
+          onClick={() =>
+            beginFeedTransition(() => {
+              setTags(null)
+              setQ(null)
+            })
+          }
           className="mt-4 text-sm font-medium text-primary underline underline-offset-2"
         >
           Clear filters

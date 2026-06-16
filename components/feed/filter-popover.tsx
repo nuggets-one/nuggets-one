@@ -7,10 +7,10 @@ import {
   useRef,
   useState,
   type MouseEvent,
-  useTransition,
 } from 'react'
 import { ChevronDown, SlidersHorizontal, X } from 'lucide-react'
 import { useQueryState } from 'nuqs'
+import { useFeedPending } from '@/components/feed/feed-pending-context'
 import type { TagSummary } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
 import {
@@ -190,7 +190,8 @@ export function FilterPopover({
     defaultValue: '',
     shallow: false,
   })
-  const [isPending, startTransition] = useTransition()
+  const { beginFeedTransition, showFeedSkeleton } = useFeedPending()
+  const isPending = showFeedSkeleton
   const dialogRef = useRef<HTMLDialogElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -296,11 +297,11 @@ export function FilterPopover({
   }, [])
 
   const applyLocal = useCallback(() => {
-    startTransition(() => {
+    beginFeedTransition(() => {
       setTagsParam(localSelected.length ? localSelected.join(',') : null)
       closeDialog()
     })
-  }, [closeDialog, localSelected, setTagsParam])
+  }, [beginFeedTransition, closeDialog, localSelected, setTagsParam])
 
   const toggleExpanded = useCallback((key: GroupKey) => {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }))
