@@ -40,7 +40,7 @@ export function FeedTopBar({
   const showScope = scopeEnabled && scopeCounts !== null
 
   return (
-    <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
+    <div className="-mx-4 -mt-6 mb-3 sm:mb-4 lg:mb-5 lg:-mx-6">
       <div className="hidden border-b border-border bg-header px-4 py-3 backdrop-blur-sm sm:flex sm:justify-start lg:px-6">
         <div className="flex w-full min-w-0 items-center gap-3 lg:justify-between">
           <StreamTabs
