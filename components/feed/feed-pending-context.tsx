@@ -77,6 +77,9 @@ export function FeedPendingProvider({ children }: { children: ReactNode }) {
   }, [isHome])
 
   const showFeedSkeleton = isHome && (feedPending || isTransitionPending)
+  const skeletonKey =
+    pendingSinceContentKeyRef.current ?? currentContentKeyRef.current
+  const showSkimSkeleton = skeletonKey.endsWith(':skim')
 
   return (
     <FeedPendingContext.Provider
@@ -96,7 +99,10 @@ export function FeedPendingProvider({ children }: { children: ReactNode }) {
           data-testid="feed-loading-skeleton"
         >
           <div className="mx-auto max-w-[90rem] px-4 pt-6 lg:px-6">
-            <FeedSkeleton count={6} />
+            <FeedSkeleton
+              count={showSkimSkeleton ? 8 : 6}
+              skimView={showSkimSkeleton}
+            />
           </div>
         </div>
       ) : null}
