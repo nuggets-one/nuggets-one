@@ -105,7 +105,7 @@ export function ArticleFormFields({
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-muted">Stream</span>
-            <div className="flex min-h-[42px] w-fit flex-wrap items-center rounded-xl border border-border bg-surface-raised p-1">
+            <div className="flex min-h-[42px] w-fit flex-wrap items-center gap-1 rounded-xl border border-border bg-rail/60 p-1">
               <SegmentedRadio name="content_stream" value="standard" label="Standard" defaultChecked={stream === 'standard'} />
               <SegmentedRadio name="content_stream" value="pulse" label="Pulse" defaultChecked={stream === 'pulse'} />
               <SegmentedRadio name="content_stream" value="charts" label="Charts" defaultChecked={stream === 'charts'} />
@@ -479,7 +479,7 @@ function SegmentedRadio({
   return (
     <label className="cursor-pointer">
       <input type="radio" name={name} value={value} defaultChecked={defaultChecked} className="peer sr-only" />
-      <span className="inline-flex min-h-8 items-center rounded-lg px-4 py-1.5 text-xs font-semibold text-muted transition-colors peer-checked:bg-surface peer-checked:text-primary peer-checked:shadow-sm">
+      <span className="inline-flex min-h-8 items-center rounded-lg border border-transparent px-4 py-1.5 text-xs font-semibold text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text peer-checked:border-chip-active-border peer-checked:bg-chip-active-bg peer-checked:text-chip-active-text peer-checked:shadow-chip-active">
         {label}
       </span>
     </label>
