@@ -48,12 +48,19 @@ const cachedPulseScopeCounts = unstable_cache(
   { revalidate: 3600, tags: [CACHE_TAGS.scopeCounts('pulse')] }
 )
 
+const cachedTechVcScopeCounts = unstable_cache(
+  () => fetchScopeCountsForStream('tech_vc'),
+  ['scope-counts', 'tech_vc'],
+  { revalidate: 3600, tags: [CACHE_TAGS.scopeCounts('tech_vc')] }
+)
+
 /**
- * Published article totals per scope for Nuggets or Market Pulse.
+ * Published article totals per scope for Nuggets, Market Pulse, or Tech x VC.
  */
 export async function getScopeCountsForStream(
-  stream: 'standard' | 'pulse'
+  stream: 'standard' | 'pulse' | 'tech_vc'
 ): Promise<ScopeCounts> {
   if (stream === 'pulse') return cachedPulseScopeCounts()
+  if (stream === 'tech_vc') return cachedTechVcScopeCounts()
   return cachedStandardScopeCounts()
 }

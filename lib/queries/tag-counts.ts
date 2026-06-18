@@ -81,6 +81,24 @@ const cachedChartsTagCounts = unstable_cache(
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('charts')] }
 )
 
+const cachedTechVcGlobalTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('tech_vc', 'global'),
+  [cacheKey('tech_vc', 'global')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('tech_vc:global')] }
+)
+
+const cachedTechVcIndiaTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('tech_vc', 'india'),
+  [cacheKey('tech_vc', 'india')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('tech_vc:india')] }
+)
+
+const cachedGeopoliticsTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('geopolitics'),
+  [cacheKey('geopolitics', 'all')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('geopolitics')] }
+)
+
 /**
  * Slug → count of published articles in the given stream (optionally scoped).
  * Cached for 1h; recomputed on cache miss via a single in-memory aggregation
@@ -91,11 +109,17 @@ export async function getTagCountsForStream(
   scope?: FeedScope
 ): Promise<TagCounts> {
   if (stream === 'charts') return cachedChartsTagCounts()
+  if (stream === 'geopolitics') return cachedGeopoliticsTagCounts()
   const effectiveScope = effectiveFeedScope(stream, scope) ?? 'global'
   if (stream === 'pulse') {
     return effectiveScope === 'india'
       ? cachedPulseIndiaTagCounts()
       : cachedPulseGlobalTagCounts()
+  }
+  if (stream === 'tech_vc') {
+    return effectiveScope === 'india'
+      ? cachedTechVcIndiaTagCounts()
+      : cachedTechVcGlobalTagCounts()
   }
   return effectiveScope === 'india'
     ? cachedStandardIndiaTagCounts()

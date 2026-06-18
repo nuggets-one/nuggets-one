@@ -13,8 +13,15 @@ export function parseFeedScope(raw: string | null | undefined): FeedScope {
   return 'global'
 }
 
-export function isScopeEnabledStream(stream: ContentStream): stream is 'standard' | 'pulse' {
-  return stream === 'standard' || stream === 'pulse'
+export function isScopeEnabledStream(
+  stream: ContentStream
+): stream is 'standard' | 'pulse' | 'tech_vc' {
+  return stream === 'standard' || stream === 'pulse' || stream === 'tech_vc'
+}
+
+/** Streams that ignore India/Global scope tabs (like Charts). */
+export function isScopeDisabledStream(stream: ContentStream): boolean {
+  return stream === 'charts' || stream === 'geopolitics'
 }
 
 /** Resolved scope for query/UI — undefined on Charts (scope ignored). */
@@ -53,7 +60,7 @@ export function buildStreamTabHref(
   targetStream: ContentStream,
   activeScope?: FeedScope
 ): string {
-  if (targetStream === 'charts') return '/?stream=charts'
+  if (isScopeDisabledStream(targetStream)) return `/?stream=${targetStream}`
   const scope = activeScope === 'india' ? 'india' : undefined
   return buildHomeHref(targetStream, scope)
 }
