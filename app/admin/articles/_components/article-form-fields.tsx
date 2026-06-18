@@ -10,7 +10,8 @@ import { convertClipboardHtmlToMarkdown } from '@/lib/markdown/html-clipboard-to
 import { describeCardCoverPreview, resolveArticleHeroFields } from '@/lib/ui/resolve-article-hero'
 import { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
 import { parseContentStream } from '@/lib/copy/streams'
-import type { TagDimension, TagSummary } from '@/types/article'
+import { inferContentStreamFromTags } from '@/lib/feed/stream-membership'
+import type { ContentStream, TagDimension, TagSummary } from '@/types/article'
 
 // S1-F1: moved from new/page.tsx — page files must only export the default page
 // component plus Next.js-approved named exports (metadata, generateMetadata, etc.).
@@ -44,8 +45,11 @@ export function ArticleFormFields({
   defaults?: ArticleFormDefaults
   tags?: TagOption[]
 }) {
-  const selectedTags = new Set(defaults?.tag_slugs ?? [])
-  const stream = parseContentStream(defaults?.content_stream ?? null)
+  const initialTagSlugs = defaults?.tag_slugs ?? []
+  const [selectedTagSlugs, setSelectedTagSlugs] = useState<string[]>(initialTagSlugs)
+  const selectedTags = useMemo(() => new Set(selectedTagSlugs), [selectedTagSlugs])
+  const initialStream = parseContentStream(defaults?.content_stream ?? null)
+  const [contentStream, setContentStream] = useState<ContentStream>(initialStream)
   const initialMediaUrls = defaults?.media_urls?.length
     ? defaults.media_urls
     : defaults?.hero_thumb_url
@@ -75,6 +79,15 @@ export function ArticleFormFields({
   const showCloudinaryEnvWarning =
     !hasCloudinaryCloudName() &&
     parseAdminMediaUrlList(mediaUrlsValue).some((url) => isImageUrl(url) && !isYouTubeUrl(url))
+
+  function handleTagToggle(slug: string, checked: boolean) {
+    const next = checked
+      ? [...new Set([...selectedTagSlugs, slug])]
+      : selectedTagSlugs.filter((value) => value !== slug)
+    setSelectedTagSlugs(next)
+    const inferred = inferContentStreamFromTags(next)
+    if (inferred) setContentStream(inferred)
+  }
 
   return (
     <div className="space-y-4 py-1">
@@ -106,10 +119,15 @@ export function ArticleFormFields({
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-muted">Stream</span>
             <div className="flex min-h-[42px] w-fit flex-wrap items-center gap-1 rounded-xl border border-border bg-rail/60 p-1">
-              <SegmentedRadio name="content_stream" value="standard" label="Standard" defaultChecked={stream === 'standard'} />
-              <SegmentedRadio name="content_stream" value="pulse" label="Pulse" defaultChecked={stream === 'pulse'} />
-              <SegmentedRadio name="content_stream" value="charts" label="Charts" defaultChecked={stream === 'charts'} />
+              <SegmentedRadio name="content_stream" value="standard" label="Standard" checked={contentStream === 'standard'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="pulse" label="Pulse" checked={contentStream === 'pulse'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="charts" label="Charts" checked={contentStream === 'charts'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="tech_vc" label="Tech x VC" checked={contentStream === 'tech_vc'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="geopolitics" label="Geopolitics" checked={contentStream === 'geopolitics'} onSelect={setContentStream} />
             </div>
+            <p className="text-[11px] leading-snug text-muted">
+              Tech x VC and Geopolitics require matching tags. If both apply, Geopolitics wins.
+            </p>
           </div>
 
           <label className="flex flex-col gap-1.5 lg:col-span-2">
@@ -172,6 +190,7 @@ export function ArticleFormFields({
                   labelClassName={group.color}
                   tags={groupTags}
                   selectedTags={selectedTags}
+                  onToggle={handleTagToggle}
                 />
               )
             })}
@@ -436,11 +455,13 @@ function TagGroup({
   labelClassName,
   tags,
   selectedTags,
+  onToggle,
 }: {
   label: string
   labelClassName: string
   tags: TagOption[]
   selectedTags: Set<string>
+  onToggle: (slug: string, checked: boolean) => void
 }) {
   return (
     <div className="rounded-xl border border-border bg-surface-raised px-3 py-2">
@@ -452,7 +473,8 @@ function TagGroup({
               type="checkbox"
               name="tag_slugs"
               value={tag.slug}
-              defaultChecked={selectedTags.has(tag.slug)}
+              checked={selectedTags.has(tag.slug)}
+              onChange={(event) => onToggle(tag.slug, event.target.checked)}
               className="peer sr-only"
             />
             <span className="inline-flex min-h-7 items-center rounded-full border border-chip-inactive-border bg-surface px-2.5 py-0.5 text-[11px] font-medium text-chip-inactive-text transition-colors peer-checked:border-chip-active-border peer-checked:bg-chip-active-bg peer-checked:text-chip-active-text hover:bg-chip-hover-bg hover:text-chip-hover-text">
@@ -469,16 +491,25 @@ function SegmentedRadio({
   name,
   value,
   label,
-  defaultChecked,
+  checked,
+  onSelect,
 }: {
   name: string
-  value: string
+  value: ContentStream
   label: string
-  defaultChecked: boolean
+  checked: boolean
+  onSelect: (stream: ContentStream) => void
 }) {
   return (
     <label className="cursor-pointer">
-      <input type="radio" name={name} value={value} defaultChecked={defaultChecked} className="peer sr-only" />
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        onChange={() => onSelect(value)}
+        className="peer sr-only"
+      />
       <span className="inline-flex min-h-8 items-center rounded-lg border border-transparent px-4 py-1.5 text-xs font-semibold text-chip-inactive-text transition-colors hover:bg-chip-hover-bg hover:text-chip-hover-text peer-checked:border-chip-active-border peer-checked:bg-chip-active-bg peer-checked:text-chip-active-text peer-checked:shadow-chip-active">
         {label}
       </span>

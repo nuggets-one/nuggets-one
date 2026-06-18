@@ -5,6 +5,7 @@ type ArticleFormShellProps = {
   description?: string
   statusLabel?: string
   statusTone?: 'draft' | 'published'
+  successMessage?: string
   errorMessage?: string
   /** Non-blocking warning after publish (e.g. notification fan-out). */
   warningMessage?: string
@@ -19,6 +20,7 @@ export function ArticleFormShell({
   description,
   statusLabel,
   statusTone = 'draft',
+  successMessage,
   errorMessage,
   warningMessage,
   noticeMessage,
@@ -63,6 +65,15 @@ export function ArticleFormShell({
           )}
         </div>
       </header>
+
+      {successMessage && (
+        <div
+          role="status"
+          className="mb-5 rounded-xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success-fg"
+        >
+          {successMessage}
+        </div>
+      )}
 
       {errorMessage && (
         <div className="mb-5 rounded-xl border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger-fg">

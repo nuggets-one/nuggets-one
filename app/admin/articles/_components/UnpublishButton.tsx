@@ -4,6 +4,7 @@
 // Follows the same confirm() pattern as DeleteArticleButton (acceptable PMF per S6-F12).
 
 import { unpublishArticleAction } from '@/lib/actions/admin'
+import { AdminSubmitButton } from './admin-submit-button'
 
 export function UnpublishButton({ id }: { id: string }) {
   return (
@@ -16,12 +17,11 @@ export function UnpublishButton({ id }: { id: string }) {
       }}
     >
       <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted hover:text-primary hover:bg-surface-raised transition-colors"
-      >
-        Unpublish
-      </button>
+      <AdminSubmitButton
+        label="Unpublish"
+        pendingLabel="Unpublishing…"
+        className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-raised hover:text-primary disabled:opacity-60"
+      />
     </form>
   )
 }

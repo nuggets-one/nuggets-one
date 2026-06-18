@@ -77,7 +77,9 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
   const alert = (() => {
     if (errorKey) {
       const msg =
-        errorKey === 'already_in_collection'
+        errorKey === 'delete_failed'
+          ? 'Could not delete this nugget. Please try again.'
+          : errorKey === 'already_in_collection'
           ? 'That nugget is already in the selected community collection.'
           : errorKey === 'not_published'
             ? 'Only published nuggets can be added to community collections.'
@@ -89,6 +91,14 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
       return (
         <div className="rounded-xl border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           {msg}
+        </div>
+      )
+    }
+
+    if (successKey === 'deleted') {
+      return (
+        <div className="rounded-xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success-fg">
+          Nugget deleted.
         </div>
       )
     }

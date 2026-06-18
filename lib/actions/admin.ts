@@ -17,10 +17,26 @@ import {
 import { syncArticleTags } from '@/lib/admin/sync-article-tags'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
 import { normalizePublishPayload } from '@/lib/validation/publish-article'
+import { validateStreamTagMembership } from '@/lib/feed/stream-membership'
 import { sanitizeDeleteRedirectTo } from '@/lib/auth/can-manage-article'
 import type { ContentStream, TagDimension } from '@/types/article'
 import { TAG_DIMENSIONS } from '@/types/article'
 import { ZodError } from 'zod'
+
+function redirectArticleEdit(id: string, params?: Record<string, string>) {
+  const qs = params ? `?${new URLSearchParams(params).toString()}` : ''
+  redirect(`/admin/articles/${id}${qs}`)
+}
+
+function assertStreamTagMembership(
+  stream: ContentStream,
+  tagSlugs: string[],
+  redirectUrl: string
+): void {
+  if (!validateStreamTagMembership(stream, tagSlugs)) {
+    redirect(`${redirectUrl}?error=stream_tag_mismatch`)
+  }
+}
 
 function isMissingCardPreviewError(message: string): boolean {
   return /card_preview/i.test(message)
@@ -233,6 +249,8 @@ export async function createArticleAction(formData: FormData) {
     }
   }
 
+  assertStreamTagMembership(content_stream, tag_slugs, '/admin/articles/new')
+
   const mediaError = await syncManualImageMedia(
     db,
     id,
@@ -246,7 +264,7 @@ export async function createArticleAction(formData: FormData) {
   }
 
   revalidateArticle(id)
-  redirect(`/admin/articles/${id}`)
+  redirectArticleEdit(id, { saved: 'created' })
 }
 
 export async function updateArticleAction(formData: FormData) {
@@ -309,6 +327,8 @@ export async function updateArticleAction(formData: FormData) {
     redirect(`/admin/articles/${id}?error=${encodeURIComponent(tagResult.code)}`)
   }
 
+  assertStreamTagMembership(content_stream, tag_slugs, `/admin/articles/${id}`)
+
   const mediaError = await syncManualImageMedia(
     db,
     id,
@@ -321,7 +341,7 @@ export async function updateArticleAction(formData: FormData) {
   }
 
   revalidateArticle(id)
-  redirect(`/admin/articles/${id}`)
+  redirectArticleEdit(id, { saved: 'saved' })
 }
 
 export async function publishArticleAction(formData: FormData) {
@@ -333,7 +353,7 @@ export async function publishArticleAction(formData: FormData) {
 
   const { data: existing } = await db
     .from('articles')
-    .select('published_at, content_stream, title, content_markdown, source_url, excerpt, hero_thumb_url')
+    .select('published_at, content_stream, title, content_markdown, source_url, excerpt, hero_thumb_url, tag_slugs')
     .eq('id', id)
     .single()
 
@@ -348,6 +368,7 @@ export async function publishArticleAction(formData: FormData) {
       content_stream: existing.content_stream as string | null,
       source_url: existing.source_url as string | null,
       excerpt: existing.excerpt as string | null,
+      tag_slugs: (existing.tag_slugs as string[] | null) ?? [],
     })
   } catch (error) {
     if (error instanceof ZodError) {
@@ -395,17 +416,16 @@ export async function publishArticleAction(formData: FormData) {
       })
     } catch (fanOutError) {
       console.error('[publishArticleAction] fan-out error:', fanOutError)
-      return redirect(`/admin/articles/${id}?warning=fanout_failed`)
+      return redirectArticleEdit(id, { saved: 'published', warning: 'fanout_failed' })
     }
 
-    const suffixParts: string[] = []
-    if (fanResult.mode === 'queued') suffixParts.push('notice=fanout_queued')
-    if (fanResult.pushError) suffixParts.push(`warning=push_failed`)
-    const suffix = suffixParts.length > 0 ? `?${suffixParts.join('&')}` : ''
-    return redirect(`/admin/articles/${id}${suffix}`)
+    const redirectParams: Record<string, string> = { saved: 'published' }
+    if (fanResult.mode === 'queued') redirectParams.notice = 'fanout_queued'
+    if (fanResult.pushError) redirectParams.warning = 'push_failed'
+    return redirectArticleEdit(id, redirectParams)
   }
 
-  return redirect(`/admin/articles/${id}`)
+  return redirectArticleEdit(id, { saved: 'published' })
 }
 
 export async function unpublishArticleAction(formData: FormData) {
@@ -413,19 +433,19 @@ export async function unpublishArticleAction(formData: FormData) {
   const db = createAdminClient()
 
   const id = formData.get('id') as string
-  if (!id) throw new Error('Missing article id')
+  if (!id) redirect('/admin/articles?error=unpublish_failed')
 
   const { error } = await db.from('articles').update({ status: 'draft' }).eq('id', id)
 
-  if (error) throw new Error(error.message)
+  if (error) redirectArticleEdit(id, { error: 'unpublish_failed' })
 
   revalidateArticle(id)
-  redirect(`/admin/articles/${id}`)
+  redirectArticleEdit(id, { saved: 'unpublished' })
 }
 
 export async function deleteArticleAction(formData: FormData) {
   const id = String(formData.get('id') ?? '').trim()
-  if (!id) throw new Error('Missing article id')
+  if (!id) redirect('/admin/articles?error=delete_failed')
 
   await requireArticleManager(id)
 
@@ -438,9 +458,17 @@ export async function deleteArticleAction(formData: FormData) {
   const db = createAdminClient()
   const { error } = await db.from('articles').delete().eq('id', id)
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    if (redirectTo === '/admin/articles') {
+      redirect('/admin/articles?error=delete_failed')
+    }
+    redirectArticleEdit(id, { error: 'delete_failed' })
+  }
 
   revalidateArticle(id)
+  if (redirectTo === '/admin/articles') {
+    redirect('/admin/articles?success=deleted')
+  }
   redirect(redirectTo)
 }
 

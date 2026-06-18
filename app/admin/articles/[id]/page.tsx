@@ -5,9 +5,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ArticleFormFields } from '../_components/article-form-fields'
 import type { ArticleFormDefaults } from '../_components/article-form-fields'
 import { ArticleFormShell } from '../_components/article-form-shell'
-import { updateArticleAction, publishArticleAction } from '@/lib/actions/admin'
+import { updateArticleAction } from '@/lib/actions/admin'
 import { DeleteArticleButton } from '../_components/DeleteArticleButton'
 import { UnpublishButton } from '../_components/UnpublishButton'
+import { PublishArticleControls } from '../_components/publish-article-controls'
 import type { TagSummary } from '@/types/article'
 import { TAG_DIMENSIONS } from '@/types/article'
 
@@ -27,6 +28,15 @@ const PUBLISH_ERRORS: Record<string, string> = {
   unknown_tags: 'One or more tag slugs were not found. Check Tags admin and retry.',
   tag_update_failed: 'Tag update failed. Please try again.',
   media_update_failed: 'Media URLs could not be saved. Please try again.',
+  unpublish_failed: 'Could not unpublish this nugget. Please try again.',
+  delete_failed: 'Could not delete this nugget. Please try again.',
+}
+
+const SUCCESS_MESSAGES: Record<string, string> = {
+  saved: 'Changes saved.',
+  published: 'Nugget published.',
+  unpublished: 'Nugget moved to draft.',
+  created: 'Draft created. You can publish when ready.',
 }
 
 const PUBLISH_WARNINGS: Record<string, string> = {
@@ -56,6 +66,9 @@ export default async function EditArticlePage({
   const noticeCode = Array.isArray(resolvedSearchParams.notice)
     ? resolvedSearchParams.notice[0]
     : resolvedSearchParams.notice
+  const savedCode = Array.isArray(resolvedSearchParams.saved)
+    ? resolvedSearchParams.saved[0]
+    : resolvedSearchParams.saved
   const db = createAdminClient()
 
   const [articleResult, tagsResult, mediaResult] = await Promise.all([
@@ -107,6 +120,7 @@ export default async function EditArticlePage({
       statusLabel={article.status as string}
       statusTone={isPublished ? 'published' : 'draft'}
       liveHref={isPublished ? `/nuggets/${id}/${article.slug as string}` : undefined}
+      successMessage={savedCode ? SUCCESS_MESSAGES[savedCode] : undefined}
       errorMessage={errorCode ? PUBLISH_ERRORS[errorCode] ?? PUBLISH_ERRORS.publish_validation_failed : undefined}
       warningMessage={
         warningCode ? PUBLISH_WARNINGS[warningCode] ?? `Warning: ${warningCode}` : undefined
@@ -122,23 +136,7 @@ export default async function EditArticlePage({
           {isPublished ? (
             <UnpublishButton id={id} />
           ) : (
-            <form action={publishArticleAction} className="flex flex-wrap items-center gap-3">
-              <input type="hidden" name="id" value={id} />
-              <label className="flex items-center gap-2 text-sm text-muted">
-                <input
-                  type="checkbox"
-                  name="push_notify_immediately"
-                  className="size-4 rounded border-border"
-                />
-                Send push immediately (skip digest)
-              </label>
-              <button
-                type="submit"
-                className="rounded-xl bg-success px-5 py-2.5 text-sm font-semibold text-inverse transition-colors hover:bg-success-hover"
-              >
-                Publish Nugget
-              </button>
-            </form>
+            <PublishArticleControls id={id} />
           )}
           <DeleteArticleButton id={id} />
         </div>
