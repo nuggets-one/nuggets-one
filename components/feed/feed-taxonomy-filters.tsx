@@ -23,6 +23,7 @@ import {
   INDIA_SUBTOPIC_SLUG,
   shouldHideIndiaTagSlug,
 } from '@/lib/feed/scope'
+import { shouldHideTagSlugForStream } from '@/lib/feed/stream-membership'
 import { FilterPopover } from '@/components/feed/filter-popover'
 import { FeedViewToggle } from '@/components/feed/feed-view-toggle'
 
@@ -68,8 +69,12 @@ export function FeedTaxonomyFilters({ stream, tags, counts }: Props) {
   const hasActiveTags = selected.length > 0
 
   const visibleTags = useMemo(() => {
-    if (!shouldHideIndiaTagSlug(stream)) return tags
-    return tags.filter((t) => t.slug !== INDIA_SUBTOPIC_SLUG)
+    return tags.filter((t) => {
+      if (shouldHideIndiaTagSlug(stream) && t.slug === INDIA_SUBTOPIC_SLUG) {
+        return false
+      }
+      return !shouldHideTagSlugForStream(stream, t.slug)
+    })
   }, [tags, stream])
 
   const grouped = useMemo(

@@ -42,7 +42,7 @@ export function FeedTopBar({
   return (
     <div className="-mx-4 -mt-6 mb-3 sm:mb-4 lg:mb-5 lg:-mx-6">
       <div className="hidden border-b border-border bg-header px-4 py-3 backdrop-blur-sm sm:flex sm:justify-start lg:px-6">
-        <div className="flex w-full min-w-0 items-center gap-3 lg:justify-between">
+        <div className="flex w-full min-w-0 items-center gap-3 overflow-x-auto">
           <StreamTabs
             activeStream={stream}
             activeScope={scopeEnabled ? activeScope : undefined}
@@ -51,20 +51,31 @@ export function FeedTopBar({
           />
 
           {showScope ? (
-            <div className="hidden shrink-0 items-center gap-3 lg:flex">
+            <>
               <span
-                className="h-7 w-px shrink-0 bg-border"
+                className="hidden h-7 w-px shrink-0 bg-border lg:block"
                 aria-hidden="true"
               />
-              <FeedScopeTabs
-                stream={stream}
-                activeScope={activeScope}
-                scopeCounts={scopeCounts}
-                inlineToolbar
-              />
-            </div>
+              <div className="hidden shrink-0 lg:flex">
+                <FeedScopeTabs
+                  stream={stream}
+                  activeScope={activeScope}
+                  scopeCounts={scopeCounts}
+                  inlineToolbar
+                />
+              </div>
+            </>
           ) : null}
         </div>
+      </div>
+
+      <div className="border-b border-border bg-header px-4 py-2 backdrop-blur-sm sm:hidden">
+        <StreamTabs
+          activeStream={stream}
+          activeScope={scopeEnabled ? activeScope : undefined}
+          streamCounts={streamCounts}
+          mobileScroll
+        />
       </div>
 
       {showScope ? (

@@ -13,7 +13,7 @@ const numberFmt = new Intl.NumberFormat(undefined, {
 })
 
 type Props = {
-  stream: 'standard' | 'pulse'
+  stream: 'standard' | 'pulse' | 'tech_vc'
   activeScope: FeedScope
   scopeCounts: ScopeCounts
   /** Tighter sizing when scope sits on the lg stream toolbar row. */

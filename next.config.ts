@@ -85,6 +85,16 @@ const nextConfig: NextConfig = {
         destination: '/?stream=charts',
         permanent: true,
       },
+      {
+        source: '/tech-x-vc',
+        destination: '/?stream=tech_vc',
+        permanent: true,
+      },
+      {
+        source: '/geopolitics',
+        destination: '/?stream=geopolitics',
+        permanent: true,
+      },
     ]
   },
 }

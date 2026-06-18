@@ -1,14 +1,13 @@
 'use client'
 
 import clsx from 'clsx'
-import { Activity, BarChart2, Bookmark, House, Layers, type LucideIcon } from 'lucide-react'
+import { Activity, BarChart2, Cpu, Globe, House, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
-import { useMemo, useSyncExternalStore } from 'react'
-import { useAuthStatus } from '@/components/layout/auth-status-provider'
+import { useSyncExternalStore } from 'react'
 import { useFeedPendingOptional } from '@/components/feed/feed-pending-context'
-import { parseContentStream, STREAM_INTRO_COPY } from '@/lib/copy/streams'
+import { parseContentStream, STREAM_INTRO_COPY, STREAM_NAV_ORDER } from '@/lib/copy/streams'
 import {
   buildStreamTabHref,
   parseFeedScope,
@@ -16,70 +15,25 @@ import {
 } from '@/lib/feed/scope'
 import { DEFAULT_STREAM, type ContentStream } from '@/types/article'
 
-function pathActive(pathname: string, base: string) {
-  return pathname === base || pathname.startsWith(`${base}/`)
+const STREAM_ICONS: Record<ContentStream, LucideIcon> = {
+  pulse: Activity,
+  tech_vc: Cpu,
+  standard: House,
+  charts: BarChart2,
+  geopolitics: Globe,
 }
 
-type NavItemId = 'nuggets' | 'pulse' | 'charts' | 'collections' | 'bookmarks'
-
-type NavItem = {
-  id: NavItemId
-  label: string
-  ariaLabel: string
-  icon: LucideIcon
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { id: 'nuggets', label: 'Nuggets', ariaLabel: 'Nuggets', icon: House },
-  {
-    id: 'pulse',
-    label: 'Pulse',
-    ariaLabel: STREAM_INTRO_COPY.pulse.label,
-    icon: Activity,
-  },
-  {
-    id: 'charts',
-    label: STREAM_INTRO_COPY.charts.shortLabel,
-    ariaLabel: STREAM_INTRO_COPY.charts.label,
-    icon: BarChart2,
-  },
-  { id: 'collections', label: 'Collections', ariaLabel: 'Collections', icon: Layers },
-  { id: 'bookmarks', label: 'Bookmarks', ariaLabel: 'Bookmarks', icon: Bookmark },
-]
-
-function isItemActive(
-  id: NavItemId,
+function isStreamActive(
+  streamId: ContentStream,
   pathname: string,
   stream: ContentStream,
 ): boolean {
-  const onHome = pathname === '/'
-  switch (id) {
-    case 'nuggets':
-      return onHome && stream === 'standard'
-    case 'pulse':
-      return onHome && stream === 'pulse'
-    case 'charts':
-      return onHome && stream === 'charts'
-    case 'collections':
-      return pathActive(pathname, '/collections')
-    case 'bookmarks':
-      return pathActive(pathname, '/bookmarks')
-  }
+  return pathname === '/' && stream === streamId
 }
 
-function hrefForNavItem(id: NavItemId, activeScope: FeedScope): string {
-  switch (id) {
-    case 'nuggets':
-      return buildStreamTabHref('standard', activeScope)
-    case 'pulse':
-      return buildStreamTabHref('pulse', activeScope)
-    case 'charts':
-      return '/?stream=charts'
-    case 'collections':
-      return '/collections'
-    case 'bookmarks':
-      return '/bookmarks'
-  }
+function hrefForStream(streamId: ContentStream, activeScope: FeedScope): string {
+  if (streamId === 'charts') return '/?stream=charts'
+  return buildStreamTabHref(streamId, activeScope)
 }
 
 export function MobileBottomNav() {
@@ -94,7 +48,6 @@ export function MobileBottomNav() {
     shallow: true,
   })
   const activeScope = parseFeedScope(scopeRaw || null)
-  const auth = useAuthStatus()
   const feedPending = useFeedPendingOptional()
   const navReady = useSyncExternalStore(
     () => () => {},
@@ -102,45 +55,26 @@ export function MobileBottomNav() {
     () => false,
   )
 
-  const visibleItems = useMemo(() => {
-    // Keep SSR and hydration markup identical, then reveal auth-only tabs.
-    if (!navReady || auth.status !== 'authenticated') {
-      return NAV_ITEMS.filter((item) => item.id !== 'bookmarks')
-    }
-    return NAV_ITEMS
-  }, [auth.status, navReady])
-
-  const gridCols =
-    visibleItems.length >= 5
-      ? 'grid-cols-5'
-      : visibleItems.length === 4
-        ? 'grid-cols-4'
-        : 'grid-cols-3'
-
   return (
     <nav
       role="navigation"
       aria-label="Primary destinations"
       className="fixed bottom-0 left-0 right-0 z-[75] border-t border-slate-200/80 bg-white/95 pb-[max(env(safe-area-inset-bottom),0px)] shadow-[0_-8px_20px_-16px_rgba(15,23,42,0.35)] backdrop-blur-lg transition-[transform,opacity] duration-300 ease-out dark:border-slate-800/80 dark:bg-slate-950/92 dark:shadow-black/40 lg:hidden"
     >
-      <div
-        className={clsx(
-          'grid min-h-[64px] items-stretch px-1 pb-1 pt-1 sm:px-2',
-          gridCols,
-        )}
-      >
-        {visibleItems.map(({ id, label, ariaLabel, icon: Icon }) => {
-          const active = navReady && isItemActive(id, pathname, stream)
-          const href = hrefForNavItem(id, activeScope)
-          const isHomeStreamNav = id === 'nuggets' || id === 'pulse' || id === 'charts'
+      <div className="grid min-h-[64px] grid-cols-5 items-stretch px-1 pb-1 pt-1 sm:px-2">
+        {STREAM_NAV_ORDER.map((streamId) => {
+          const { shortLabel: label, label: ariaLabel } = STREAM_INTRO_COPY[streamId]
+          const Icon = STREAM_ICONS[streamId]
+          const active = navReady && isStreamActive(streamId, pathname, stream)
+          const href = hrefForStream(streamId, activeScope)
           return (
             <Link
-              key={id}
+              key={streamId}
               href={href}
               aria-label={ariaLabel}
               aria-current={active ? 'page' : undefined}
               onClick={() => {
-                if (isHomeStreamNav && !active) {
+                if (!active) {
                   feedPending?.markFeedPending()
                 }
               }}

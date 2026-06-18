@@ -161,7 +161,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       getStreamArticleCounts().catch((error) => {
         const message = error instanceof Error ? error.message : String(error)
         console.error(`FeedGrid getStreamArticleCounts error: ${message}`)
-        return { standard: 0, pulse: 0, charts: 0 }
+        return { standard: 0, pulse: 0, charts: 0, tech_vc: 0, geopolitics: 0 }
       }),
       isScopeEnabledStream(stream)
         ? getScopeCountsForStream(stream).catch((error) => {

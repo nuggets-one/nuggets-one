@@ -2,33 +2,11 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { STREAM_INTRO_COPY } from '@/lib/copy/streams'
+import { STREAM_INTRO_COPY, STREAM_NAV_ORDER } from '@/lib/copy/streams'
 import { buildStreamTabHref, type FeedScope } from '@/lib/feed/scope'
 import { useFeedPending } from '@/components/feed/feed-pending-context'
 import type { ContentStream } from '@/types/article'
 import type { StreamArticleCounts } from '@/lib/queries/stream-counts'
-
-const STREAMS: {
-  value: ContentStream
-  shortLabel: string
-  fullLabel: string
-}[] = [
-  {
-    value: 'standard',
-    fullLabel: STREAM_INTRO_COPY.standard.label,
-    shortLabel: STREAM_INTRO_COPY.standard.shortLabel,
-  },
-  {
-    value: 'pulse',
-    fullLabel: STREAM_INTRO_COPY.pulse.label,
-    shortLabel: STREAM_INTRO_COPY.pulse.shortLabel,
-  },
-  {
-    value: 'charts',
-    fullLabel: STREAM_INTRO_COPY.charts.label,
-    shortLabel: STREAM_INTRO_COPY.charts.shortLabel,
-  },
-]
 
 const numberFmt = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 0,
@@ -38,8 +16,10 @@ type Props = {
   activeStream: ContentStream
   activeScope?: FeedScope
   streamCounts: StreamArticleCounts
-  /** When true, stream group sizes to content (for lg toolbar row with scope on the right). */
+  /** When true, stream group sizes to content (for lg toolbar row with scope adjacent). */
   inlineToolbar?: boolean
+  /** Compact horizontal scroll layout for mobile stream picker. */
+  mobileScroll?: boolean
 }
 
 function StreamTabLink({
@@ -49,6 +29,7 @@ function StreamTabLink({
   shortLabel,
   formattedCount,
   useShortOnMobile,
+  mobileScroll,
 }: {
   href: string
   active: boolean
@@ -56,6 +37,7 @@ function StreamTabLink({
   shortLabel: string
   formattedCount: string
   useShortOnMobile: boolean
+  mobileScroll?: boolean
 }) {
   const router = useRouter()
   const { markFeedPending } = useFeedPending()
@@ -71,7 +53,9 @@ function StreamTabLink({
         markFeedPending()
         router.push(href)
       }}
-      className={`flex min-h-[44px] flex-1 items-center justify-center rounded-md px-2 text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:px-3 lg:flex-none ${
+      className={`flex min-h-[44px] items-center justify-center rounded-md px-2 text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:px-3 ${
+        mobileScroll ? 'shrink-0 flex-none' : 'flex-1 sm:flex-none lg:flex-none'
+      } ${
         active
           ? 'border border-chip-active-border bg-chip-active-bg font-semibold text-chip-active-text shadow-chip-active'
           : 'font-medium text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text'
@@ -103,17 +87,25 @@ export function StreamTabs({
   activeScope,
   streamCounts,
   inlineToolbar = false,
+  mobileScroll = false,
 }: Props) {
   return (
     <nav
       aria-label="Content stream"
-      className="flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto lg:w-auto"
+      className={
+        mobileScroll
+          ? 'flex w-full gap-1 overflow-x-auto rounded-lg bg-rail p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+          : `flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto sm:overflow-x-auto lg:w-auto ${
+              inlineToolbar ? '' : 'sm:max-w-full'
+            }`
+      }
     >
-      {STREAMS.map(({ value, fullLabel, shortLabel }) => {
+      {STREAM_NAV_ORDER.map((value) => {
+        const { label: fullLabel, shortLabel } = STREAM_INTRO_COPY[value]
         const active = activeStream === value
         const count = streamCounts[value]
         const formattedCount = numberFmt.format(count)
-        const useShortOnMobile = shortLabel !== fullLabel
+        const useShortOnMobile = shortLabel !== fullLabel || mobileScroll
         const href = buildStreamTabHref(value, activeScope)
         return (
           <StreamTabLink
@@ -124,6 +116,7 @@ export function StreamTabs({
             shortLabel={shortLabel}
             formattedCount={formattedCount}
             useShortOnMobile={useShortOnMobile}
+            mobileScroll={mobileScroll}
           />
         )
       })}
