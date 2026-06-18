@@ -79,7 +79,7 @@ async function getRecipientsFallback(stream: ContentStream): Promise<string[]> {
 
   const { data: prefs, error: prefsError } = await adminClient
     .from('notification_preferences')
-    .select('user_id, mute_all, stream_standard, stream_pulse, stream_charts')
+    .select('user_id, mute_all, stream_standard, stream_pulse, stream_charts, stream_tech_vc, stream_geopolitics')
 
   if (prefsError) throw new Error(`getRecipients fallback prefs error: ${prefsError.message}`)
 

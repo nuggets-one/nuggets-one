@@ -1,6 +1,11 @@
 import type { ContentStream } from '@/types/article'
 
-export type StreamPrefColumn = 'stream_standard' | 'stream_pulse' | 'stream_charts'
+export type StreamPrefColumn =
+  | 'stream_standard'
+  | 'stream_pulse'
+  | 'stream_charts'
+  | 'stream_tech_vc'
+  | 'stream_geopolitics'
 
 export function streamPrefColumn(stream: ContentStream): StreamPrefColumn {
   switch (stream) {
@@ -8,6 +13,10 @@ export function streamPrefColumn(stream: ContentStream): StreamPrefColumn {
       return 'stream_pulse'
     case 'charts':
       return 'stream_charts'
+    case 'tech_vc':
+      return 'stream_tech_vc'
+    case 'geopolitics':
+      return 'stream_geopolitics'
     default:
       return 'stream_standard'
   }

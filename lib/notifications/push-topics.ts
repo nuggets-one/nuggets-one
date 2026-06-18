@@ -11,6 +11,8 @@ export const PUSH_TOPIC_BY_STREAM: Record<PushStream, string> = {
   standard: 'nuggets-stream-standard',
   pulse: 'nuggets-stream-pulse',
   charts: 'nuggets-stream-charts',
+  tech_vc: 'nuggets-stream-tech-vc',
+  geopolitics: 'nuggets-stream-geopolitics',
 }
 
 export function topicForStream(stream: PushStream): string {
@@ -22,6 +24,8 @@ export type PushPreferences = {
   stream_standard: boolean
   stream_pulse: boolean
   stream_charts: boolean
+  stream_tech_vc: boolean
+  stream_geopolitics: boolean
 }
 
 export function topicsForPreferences(prefs: PushPreferences): string[] {
@@ -30,6 +34,8 @@ export function topicsForPreferences(prefs: PushPreferences): string[] {
   if (prefs.stream_standard) topics.push(topicForStream('standard'))
   if (prefs.stream_pulse) topics.push(topicForStream('pulse'))
   if (prefs.stream_charts) topics.push(topicForStream('charts'))
+  if (prefs.stream_tech_vc) topics.push(topicForStream('tech_vc'))
+  if (prefs.stream_geopolitics) topics.push(topicForStream('geopolitics'))
   return topics
 }
 
@@ -37,7 +43,7 @@ export async function getPushPreferencesForUser(userId: string): Promise<PushPre
   const adminClient = getAdminClient()
   const { data, error } = await adminClient
     .from('notification_preferences')
-    .select('mute_all, stream_standard, stream_pulse, stream_charts')
+    .select('mute_all, stream_standard, stream_pulse, stream_charts, stream_tech_vc, stream_geopolitics')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -50,5 +56,7 @@ export async function getPushPreferencesForUser(userId: string): Promise<PushPre
     stream_standard: data?.stream_standard !== false,
     stream_pulse: data?.stream_pulse !== false,
     stream_charts: data?.stream_charts !== false,
+    stream_tech_vc: data?.stream_tech_vc !== false,
+    stream_geopolitics: data?.stream_geopolitics !== false,
   }
 }

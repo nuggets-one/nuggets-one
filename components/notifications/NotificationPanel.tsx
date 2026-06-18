@@ -21,6 +21,8 @@ type Prefs = {
   stream_standard: boolean
   stream_pulse: boolean
   stream_charts: boolean
+  stream_tech_vc: boolean
+  stream_geopolitics: boolean
 }
 
 type NotificationWithSlug = NotificationRow & {
@@ -310,6 +312,26 @@ function PreferencesSection({
         />
       </label>
       <label className="flex items-center justify-between gap-2 cursor-pointer">
+        <span className="text-sm text-primary">Tech x VC</span>
+        <input
+          type="checkbox"
+          checked={prefs.stream_tech_vc}
+          onChange={(e) => onChange({ stream_tech_vc: e.target.checked })}
+          className="w-4 h-4 accent-accent"
+          disabled={prefs.mute_all}
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 cursor-pointer">
+        <span className="text-sm text-primary">Geopolitics</span>
+        <input
+          type="checkbox"
+          checked={prefs.stream_geopolitics}
+          onChange={(e) => onChange({ stream_geopolitics: e.target.checked })}
+          className="w-4 h-4 accent-accent"
+          disabled={prefs.mute_all}
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 cursor-pointer">
         <span className="text-sm text-primary">Mute all</span>
         <input
           type="checkbox"
@@ -340,6 +362,8 @@ export function NotificationPanel({
     stream_standard: true,
     stream_pulse: true,
     stream_charts: true,
+    stream_tech_vc: true,
+    stream_geopolitics: true,
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

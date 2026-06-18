@@ -18,7 +18,9 @@ export function buildDigestBatchKey(
 }
 
 export function parseBatchKeyWindowEnd(batchKey: string, intervalHours: number): Date | null {
-  const match = batchKey.match(/^(standard|pulse|charts):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/)
+  const match = batchKey.match(
+    /^(standard|pulse|charts|tech_vc|geopolitics):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/
+  )
   if (!match) return null
   const [, , y, mo, d, hh] = match
   const start = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(hh), 0, 0, 0)
