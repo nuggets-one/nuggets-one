@@ -56,4 +56,28 @@ test.describe('mobile feed intro context', () => {
       page.getByText(STREAM_INTRO_COPY.charts.mobileSummary, { exact: true }),
     ).toBeVisible()
   })
+
+  test('switches to Tech via bottom nav', async ({ page }) => {
+    await page.goto('/?stream=standard', { waitUntil: 'domcontentloaded' })
+
+    const nav = page.getByRole('navigation', { name: 'Primary destinations' })
+    await nav.getByRole('link', { name: STREAM_INTRO_COPY.tech_vc.label }).click()
+
+    await expect(page).toHaveURL(/\?stream=tech_vc/)
+    await expect(
+      page.getByText(STREAM_INTRO_COPY.tech_vc.mobileSummary, { exact: true }),
+    ).toBeVisible()
+  })
+
+  test('switches to Geo via bottom nav', async ({ page }) => {
+    await page.goto('/?stream=standard', { waitUntil: 'domcontentloaded' })
+
+    const nav = page.getByRole('navigation', { name: 'Primary destinations' })
+    await nav.getByRole('link', { name: STREAM_INTRO_COPY.geopolitics.label }).click()
+
+    await expect(page).toHaveURL(/\?stream=geopolitics/)
+    await expect(
+      page.getByText(STREAM_INTRO_COPY.geopolitics.mobileSummary, { exact: true }),
+    ).toBeVisible()
+  })
 })

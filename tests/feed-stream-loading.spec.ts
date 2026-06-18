@@ -37,6 +37,22 @@ test('stream tab switch shows feed skeleton before new content', async ({ page }
   await expect(page).toHaveURL(/stream=pulse/)
 })
 
+test('tech x vc stream shows scope tabs', async ({ page }) => {
+  await page.goto('/?stream=tech_vc', { waitUntil: 'networkidle' })
+  await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
+
+  await expect(page.getByRole('link', { name: /Global/i }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /India/i }).first()).toBeVisible()
+})
+
+test('geopolitics stream hides scope tabs', async ({ page }) => {
+  await page.goto('/?stream=geopolitics', { waitUntil: 'networkidle' })
+  await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
+
+  await expect(page.getByRole('link', { name: /^Global,/i })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /^India,/i })).toHaveCount(0)
+})
+
 test('tag filter apply shows feed skeleton', async ({ page }) => {
   await page.route('**/*', async (route, request) => {
     const url = request.url()
