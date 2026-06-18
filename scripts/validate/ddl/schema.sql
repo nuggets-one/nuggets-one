@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS articles (
   excerpt text,
   content_markdown text,
   content_stream text NOT NULL DEFAULT 'standard'
-    CHECK (content_stream IN ('standard','pulse','charts')),
+    CHECK (content_stream IN ('standard','pulse','charts','tech_vc','geopolitics')),
   status text NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft','published')),
   published_at timestamptz,
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS user_notifications (
   article_id uuid REFERENCES articles(id) ON DELETE CASCADE,
   kind text NOT NULL CHECK (kind IN ('single','digest')),
   content_stream text CHECK (content_stream IS NULL OR 
-    content_stream IN ('standard','pulse','charts')),
+    content_stream IN ('standard','pulse','charts','tech_vc','geopolitics')),
   title text,
   body text,
   is_read boolean NOT NULL DEFAULT false,
