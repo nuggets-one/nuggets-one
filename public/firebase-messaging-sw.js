@@ -23,6 +23,7 @@ try {
         body,
         icon: payload.notification?.icon ?? 'https://nuggets.one/icons/icon-192.png',
         badge: 'https://nuggets.one/icons/badge-72.png',
+        image: payload.notification?.image ?? undefined,
         data,
         tag: data.articleId ? `article:${data.articleId}` : undefined,
       }

@@ -8,11 +8,13 @@ This keeps the high-volume path off Vercel cron and avoids per-device fan-out fo
 
 ## Topics
 
-| Stream | FCM topic |
-| --- | --- |
-| Nuggets | `nuggets-stream-standard` |
-| Market Pulse | `nuggets-stream-pulse` |
-| Charts of the Week | `nuggets-stream-charts` |
+| Stream | FCM topic | Preference column |
+| --- | --- | --- |
+| Nuggets | `nuggets-stream-standard` | `stream_standard` |
+| Market Pulse | `nuggets-stream-pulse` | `stream_pulse` |
+| Charts of the Week | `nuggets-stream-charts` | `stream_charts` |
+| Tech x VC | `nuggets-stream-tech-vc` | `stream_tech_vc` |
+| Geopolitics | `nuggets-stream-geopolitics` | `stream_geopolitics` |
 
 Device registration syncs topic membership from `notification_preferences`:
 
@@ -20,7 +22,15 @@ Device registration syncs topic membership from `notification_preferences`:
 - `stream_standard=false` unsubscribes from `nuggets-stream-standard`.
 - `stream_pulse=false` unsubscribes from `nuggets-stream-pulse`.
 - `stream_charts=false` unsubscribes from `nuggets-stream-charts`.
+- `stream_tech_vc=false` unsubscribes from `nuggets-stream-tech-vc`.
+- `stream_geopolitics=false` unsubscribes from `nuggets-stream-geopolitics`.
 - Guest installs default to all stream topics while notifications are enabled.
+
+After adding a new content stream, run a one-time topic resync so existing device tokens subscribe to the new FCM topic:
+
+```bash
+node scripts/resync-push-topics-all.mjs
+```
 
 ## Delivery Flow
 
@@ -38,7 +48,7 @@ Both paths use the same visible format on device:
 
 | Field | Value |
 | --- | --- |
-| `notification.title` | Stream label (`Nuggets`, `Market Pulse`, or `Charts of the Week`) |
+| `notification.title` | Stream label (`Nuggets`, `Market Pulse`, `Charts of the Week`, `Tech x VC`, or `Geopolitics`) |
 | `notification.body` | Article headline |
 | `data.articleId` / `data.slug` | Deep-link to `/nuggets/[id]/[slug]` |
 | `android.notification.tag` | `article:{articleId}` (per-article; notifications stack instead of replacing) |
@@ -141,3 +151,16 @@ Build generates `public/firebase-messaging-config.js` via `npm run generate:fire
 
 - `web-push` npm package / raw VAPID `PushSubscription` management — FCM Web SDK handles subscriptions.
 - Separate push preference columns — stream/mute toggles control both in-app bell rows and FCM topic membership.
+
+## Adding a new content stream (operator checklist)
+
+When introducing a sixth (or later) stream, update **all** of the following in one PR:
+
+1. **App types and copy** — `types/article.ts`, `lib/copy/streams.ts`, `lib/notifications/push-topics.ts`, `lib/notifications/stream-prefs.ts`.
+2. **DB migration** — extend `CHECK` constraints on every table that stores `content_stream` or `stream`, including `push_digest_buffer` (easy to miss; broke Tech x VC / Geopolitics digest push once).
+3. **`get_notification_recipients` RPC** — whitelist the new `stream_*` preference column.
+4. **`notification_preferences`** — add boolean column + partial index.
+5. **Edge Function** — `supabase/functions/push-topic-outbox/index.ts` topic map and labels.
+6. **Prefs UI** — account page and bell panel toggles.
+7. **Docs** — this file and product behavior docs.
+8. **Post-deploy** — apply migration, deploy Edge Function if changed, run `node scripts/resync-push-topics-all.mjs`, verify with `node scripts/migrate/verify-streams-migration.mjs`.

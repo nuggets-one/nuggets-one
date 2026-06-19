@@ -119,6 +119,7 @@ export function showForegroundWebPushNotification(
     body,
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-72.png',
+    image: payload.notification?.image ?? undefined,
     tag:
       typeof data?.articleId === 'string'
         ? `article:${data.articleId}`

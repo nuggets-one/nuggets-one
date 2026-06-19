@@ -16,6 +16,7 @@ import {
 } from '@/lib/admin/recompute-article-tag-slugs'
 import { syncArticleTags } from '@/lib/admin/sync-article-tags'
 import { fanOutOnPublish } from '@/lib/notifications/fan-out'
+import { resolvePushImageUrlForArticle } from '@/lib/notifications/push-image-url.server'
 import { normalizePublishPayload } from '@/lib/validation/publish-article'
 import { validateStreamTagMembership } from '@/lib/feed/stream-membership'
 import { sanitizeDeleteRedirectTo } from '@/lib/auth/can-manage-article'
@@ -206,6 +207,8 @@ export async function createArticleAction(formData: FormData) {
     redirect('/admin/articles/new?error=missing_title')
   }
 
+  assertStreamTagMembership(content_stream, tag_slugs, '/admin/articles/new')
+
   const id = crypto.randomUUID()
   const slug = generateArticleSlug(title, id)
 
@@ -249,8 +252,6 @@ export async function createArticleAction(formData: FormData) {
     }
   }
 
-  assertStreamTagMembership(content_stream, tag_slugs, '/admin/articles/new')
-
   const mediaError = await syncManualImageMedia(
     db,
     id,
@@ -291,6 +292,8 @@ export async function updateArticleAction(formData: FormData) {
     redirect(`/admin/articles/${id}?error=missing_title`)
   }
 
+  assertStreamTagMembership(content_stream, tag_slugs, `/admin/articles/${id}`)
+
   // Blueprint §2.a: slug regenerated on every save (title changes → new slug → 301 from old)
   const slug = generateArticleSlug(title, id)
 
@@ -326,8 +329,6 @@ export async function updateArticleAction(formData: FormData) {
   if (!tagResult.ok) {
     redirect(`/admin/articles/${id}?error=${encodeURIComponent(tagResult.code)}`)
   }
-
-  assertStreamTagMembership(content_stream, tag_slugs, `/admin/articles/${id}`)
 
   const mediaError = await syncManualImageMedia(
     db,
@@ -404,6 +405,11 @@ export async function publishArticleAction(formData: FormData) {
   if (publishPayload.content_stream && publishPayload.title) {
     const slug = generateArticleSlug(publishPayload.title, id)
     const pushNotifyImmediately = formData.get('push_notify_immediately') === 'on'
+    const pushImageUrl = await resolvePushImageUrlForArticle(
+      db,
+      id,
+      existing.hero_thumb_url as string | null
+    )
     let fanResult: Awaited<ReturnType<typeof fanOutOnPublish>>
     try {
       fanResult = await fanOutOnPublish({
@@ -411,7 +417,7 @@ export async function publishArticleAction(formData: FormData) {
         stream: publishPayload.content_stream as ContentStream,
         title: publishPayload.title,
         slug,
-        imageUrl: existing.hero_thumb_url as string | null,
+        imageUrl: pushImageUrl,
         pushNotifyImmediately,
       })
     } catch (fanOutError) {
@@ -492,8 +498,8 @@ function tagWriteErrorCode(error: { code?: string; message?: string }): string {
   return 'save_failed'
 }
 
-function redirectTagsAdminError(code: string, tagId?: string): never {
-  const base = tagId ? `/admin/tags/${tagId}` : '/admin/tags'
+function redirectTagsAdminError(code: string, tagId?: string, mode?: 'create'): never {
+  const base = tagId ? `/admin/tags/${tagId}` : mode === 'create' ? '/admin/tags/new' : '/admin/tags'
   redirect(`${base}?error=${encodeURIComponent(code)}`)
 }
 
@@ -514,16 +520,16 @@ export async function createTagAction(formData: FormData) {
   const dimensionRaw = formData.get('dimension')
   const dimensionValue = typeof dimensionRaw === 'string' ? dimensionRaw.trim() : ''
   if (dimensionValue && !parseTagDimension(dimensionRaw)) {
-    redirectTagsAdminError('invalid_dimension')
+    redirectTagsAdminError('invalid_dimension', undefined, 'create')
   }
   const dimension = parseTagDimension(dimensionRaw)
   const is_official = formData.get('is_official') === 'on'
 
-  if (!label) redirectTagsAdminError('missing_label')
+  if (!label) redirectTagsAdminError('missing_label', undefined, 'create')
 
   // S6-F5: use shared slugify — same function as ETL and article slug generation
   const slug = slugify(label)
-  if (!slug) redirectTagsAdminError('invalid_slug')
+  if (!slug) redirectTagsAdminError('invalid_slug', undefined, 'create')
 
   const { error } = await db.from('tags').insert({
     slug,
@@ -532,7 +538,7 @@ export async function createTagAction(formData: FormData) {
     is_official,
   })
 
-  if (error) redirectTagsAdminError(tagWriteErrorCode(error))
+  if (error) redirectTagsAdminError(tagWriteErrorCode(error), undefined, 'create')
 
   revalidateOfficialTags()
   redirect('/admin/tags')

@@ -9,6 +9,7 @@ import {
   utcDayStartIso,
 } from '@/lib/notifications/daily-cap'
 import { enqueuePushOnPublish } from '@/lib/notifications/push-publish'
+import { resolvePushImageUrl } from '@/lib/notifications/push-image-url'
 import { triggerPushTopicSender } from '@/lib/notifications/push-topic-sender'
 import { buildSingleNotificationRows } from '@/lib/notifications/single-rows'
 import { streamPrefColumn } from '@/lib/notifications/stream-prefs'
@@ -336,12 +337,10 @@ export async function fanOutOnPublish({
         stream,
         title,
         slug,
-        imageUrl,
+        imageUrl: resolvePushImageUrl(imageUrl),
         pushNotifyImmediately,
       })
-      if (pushResult.mode === 'digest') {
-        triggerPushTopicSender()
-      }
+      triggerPushTopicSender()
       return { pushMode: pushResult.mode }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
