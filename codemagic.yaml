@@ -1,0 +1,74 @@
+# Nuggets iOS — Capacitor hosted shell (loads https://www.nuggets.one)
+# Docs: docs/IOS_TESTFLIGHT.md
+#
+# Before first build:
+#   1. Apple Developer Program enrolled (India: via Apple Developer app on iPhone/iPad/Mac)
+#   2. Codemagic → Team integrations → App Store Connect API key
+#   3. Codemagic → Code signing identities (iOS cert + provisioning profile for nuggets.one)
+#   4. Environment variable GOOGLE_SERVICE_INFO_PLIST_BASE64 (base64 of GoogleService-Info.plist)
+#   5. Replace app_store_connect integration name and APP_STORE_APP_ID below
+#
+# Trigger manually until signing is configured — do not auto-publish on every push.
+
+workflows:
+  nuggets-ios-testflight:
+    name: Nuggets iOS TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    # triggering:
+    #   events:
+    #     - push
+    #   branch_patterns:
+    #     - pattern: main
+    #       include: true
+    integrations:
+      app_store_connect: codemagic # ← rename to your Codemagic ASC integration
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: nuggets.one
+      vars:
+        CAPACITOR_SERVER_URL: https://www.nuggets.one
+        XCODE_WORKSPACE: App.xcworkspace
+        XCODE_SCHEME: App
+        APP_STORE_APP_ID: 0 # ← App Store Connect → App → General → Apple ID (numeric)
+        # GOOGLE_SERVICE_INFO_PLIST_BASE64: set in Codemagic UI (encrypted), not here
+      xcode: latest
+      node: v20
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Bootstrap Capacitor iOS (hosted mode)
+        script: node scripts/capacitor/prepare-ios-ci.mjs
+      - name: CocoaPods install
+        script: |
+          cd ios/App
+          pod install
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Increment build number
+        script: |
+          cd ios/App
+          agvtool new-version -all "$BUILD_NUMBER"
+      - name: Build ipa
+        script: |
+          cd ios/App
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com # ← Codemagic build notifications
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers

@@ -89,6 +89,32 @@ Testers do **not** auto-update; upload each new `.aab` to **Internal testing** w
 - File uploads/camera access can require native permissions when tested on device.
 - Validate Supabase/auth/analytics network calls from inside Android WebView during QA.
 
+
+## Capacitor iOS (same repo, Codemagic for builds)
+
+iOS uses the same **hosted Capacitor shell** as Android (`CAPACITOR_SERVER_URL` → `https://www.nuggets.one`). Day-to-day vibecoding is on Windows; **Codemagic** compiles/signs/TestFlight when Apple Developer is ready.
+
+**India:** Apple Developer enrollment requires the **Apple Developer app** on an iPhone, iPad, or Mac (borrow a device for ~30 min). See [`docs/IOS_TESTFLIGHT.md`](docs/IOS_TESTFLIGHT.md).
+
+### Stash Firebase plist (do this now)
+
+```powershell
+npm run setup:ios-push -- --google-service-info "C:\path\to\GoogleService-Info.plist"
+npm run setup:ios-push -- --verify
+```
+
+### Repo prep
+- [`codemagic.yaml`](codemagic.yaml) — workflow `nuggets-ios-testflight` (manual trigger until signing configured)
+- `NativePushRegistration` — push for Android + iOS
+- `npm run ios:preflight` · `npm run icons:ios` · `secrets/` (gitignored, see `secrets/README.md`)
+
+### iOS scripts
+- `npm run setup:ios-push` — stash or copy `GoogleService-Info.plist`
+- `npm run cap:prepare:ios-ci` — CI bootstrap (used by Codemagic)
+- `npm run cap:open:ios` — open Xcode (Mac + existing `ios/`)
+
+Guide: [`docs/IOS_TESTFLIGHT.md`](docs/IOS_TESTFLIGHT.md)
+
 ## Launch-Critical Validation
 These are the repo-local checks to run before a production cutover:
 

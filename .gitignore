@@ -46,6 +46,9 @@ yarn-error.log*
 .env.vercel.*
 .env.example
 .env copy.local
+secrets/*
+!secrets/README.md
+GoogleService-Info.plist
 
 # vercel
 .vercel
@@ -83,3 +86,10 @@ android/app/src/main/res/xml/config.xml
 .vercel
 
 .env*
+# Capacitor iOS — secrets and machine-local build outputs (ios/ committed after bootstrap)
+ios/App/App/GoogleService-Info.plist
+ios/App/GoogleService-Info.plist
+ios/**/DerivedData/
+ios/**/build/
+ios/App/Pods/
+ios/capacitor-cordova-ios-plugins/

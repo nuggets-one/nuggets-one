@@ -43,7 +43,7 @@
     "backfill:cloudinary-heroes": "npm --prefix scripts/migrate run backfill:cloudinary-heroes",
     "icons:generate": "node scripts/generate-brand-icons.mjs",
     "icons:android": "node scripts/capacitor/generate-android-icons.mjs",
-    "icons:all": "npm run icons:generate && npm run icons:android",
+    "icons:all": "npm run icons:generate && npm run icons:android && npm run icons:ios",
     "icons:validate": "node scripts/validate-brand-assets.mjs",
     "store:screenshots": "node scripts/capture-play-store-screenshots.mjs",
     "validate:og": "node scripts/validate-og.mjs",
@@ -57,7 +57,13 @@
     "test:detail-visual": "playwright test tests/detail-visual.spec.ts",
     "test:detail-visual:update": "playwright test tests/detail-visual.spec.ts --update-snapshots",
     "verify:google-oauth": "node scripts/verify-google-oauth.mjs",
-    "release:check": "npm run lint && npm run check:banned-imports && npm run build && npm run check:bundle-budget && npm run test:handoff"
+    "release:check": "npm run lint && npm run check:banned-imports && npm run build && npm run check:bundle-budget && npm run test:handoff",
+    "cap:open:ios": "npx cap open ios",
+    "cap:ios": "npm run cap:sync && npm run cap:open:ios",
+    "ios:preflight": "node scripts/ios-release-preflight.mjs",
+    "icons:ios": "node scripts/capacitor/generate-ios-icons.mjs",
+    "setup:ios-push": "node scripts/setup-ios-push.mjs",
+    "cap:prepare:ios-ci": "node scripts/capacitor/prepare-ios-ci.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.3.4",
@@ -93,6 +99,7 @@
   "devDependencies": {
     "@capacitor/android": "^8.3.4",
     "@capacitor/cli": "^8.3.4",
+    "@capacitor/ios": "^8.4.0",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^20",
