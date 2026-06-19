@@ -10,7 +10,7 @@ import { convertClipboardHtmlToMarkdown } from '@/lib/markdown/html-clipboard-to
 import { describeCardCoverPreview, resolveArticleHeroFields } from '@/lib/ui/resolve-article-hero'
 import { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
 import { parseContentStream } from '@/lib/copy/streams'
-import { inferContentStreamFromTags } from '@/lib/feed/stream-membership'
+import { inferContentStreamFromTags, validateStreamTagMembership } from '@/lib/feed/stream-membership'
 import type { ContentStream, TagDimension, TagSummary } from '@/types/article'
 
 // S1-F1: moved from new/page.tsx — page files must only export the default page
@@ -86,7 +86,11 @@ export function ArticleFormFields({
       : selectedTagSlugs.filter((value) => value !== slug)
     setSelectedTagSlugs(next)
     const inferred = inferContentStreamFromTags(next)
-    if (inferred) setContentStream(inferred)
+    if (inferred) {
+      setContentStream(inferred)
+    } else if (!validateStreamTagMembership(contentStream, next)) {
+      setContentStream('standard')
+    }
   }
 
   return (

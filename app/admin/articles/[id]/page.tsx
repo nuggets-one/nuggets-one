@@ -22,6 +22,8 @@ const PUBLISH_ERRORS: Record<string, string> = {
   stream_required: 'Select a stream before publishing.',
   source_url_invalid: 'Source URL must be a valid http(s) link.',
   publish_validation_failed: 'Article could not be published. Fix the required fields and retry.',
+  stream_tag_mismatch:
+    'This stream requires matching tags. Tech x VC needs Technology, PE/VC, AI, or Semiconductors. Geopolitics needs the Geopolitics tag. Change the stream or re-add a matching tag.',
   missing_title: 'Title is required before saving.',
   save_failed: 'Could not save changes. Please try again.',
   // S6-F4: tag resolution errors from upsert_article_tags RPC

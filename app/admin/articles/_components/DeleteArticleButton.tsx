@@ -12,12 +12,13 @@ export function DeleteArticleButton({
 }) {
   const buttonClass =
     variant === 'compact'
-      ? 'text-sm text-danger-fg underline underline-offset-2 hover:text-danger-fg/80 disabled:opacity-60'
+      ? 'w-full rounded-lg border border-danger-border px-3 py-2 text-sm font-medium text-danger-fg transition-colors hover:bg-danger-soft disabled:opacity-60'
       : 'rounded-lg border border-danger-border px-4 py-2 text-sm font-medium text-danger-fg transition-colors hover:bg-danger-soft disabled:opacity-60'
 
   return (
     <form
       action={deleteArticleAction}
+      className={variant === 'compact' ? 'w-full' : undefined}
       onSubmit={(e) => {
         if (!confirm('Delete this article? This cannot be undone.')) e.preventDefault()
       }}
