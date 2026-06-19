@@ -69,7 +69,7 @@ export function FeedTopBar({
         </div>
       </div>
 
-      <div className="border-b border-border bg-header px-4 py-2 backdrop-blur-sm sm:hidden">
+      <div className="border-b border-border bg-header px-2 py-2 backdrop-blur-sm sm:hidden">
         <StreamTabs
           activeStream={stream}
           activeScope={scopeEnabled ? activeScope : undefined}
