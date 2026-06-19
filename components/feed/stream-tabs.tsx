@@ -55,7 +55,7 @@ function StreamTabLink({
       }}
       className={`flex min-h-[44px] items-center justify-center rounded-md text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] ${
         mobileScroll
-          ? 'min-w-0 px-0.5 text-[11px] leading-tight'
+          ? 'w-full min-w-0 px-0.5 text-[11px] leading-tight'
           : 'flex-1 px-2 sm:flex-none sm:px-3 lg:flex-none'
       } ${
         active
@@ -96,7 +96,7 @@ export function StreamTabs({
       aria-label="Content stream"
       className={
         mobileScroll
-          ? 'grid w-full grid-cols-5 gap-0.5 rounded-lg bg-rail p-1'
+          ? 'grid w-full grid-cols-5 items-stretch gap-px rounded-lg bg-rail p-1'
           : `flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto sm:overflow-x-auto lg:w-auto ${
               inlineToolbar ? '' : 'sm:max-w-full'
             }`
