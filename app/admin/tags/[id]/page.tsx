@@ -1,22 +1,16 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { updateTagAction } from '@/lib/actions/admin'
-import { getTagAdminById } from '@/lib/queries/tags-admin'
+import {
+  getTagErrorMessage,
+  TagErrorAlert,
+  TagSuccessAlert,
+} from '@/app/admin/tags/_components/tag-alerts'
+import { getDimensionLabel } from '@/app/admin/tags/_components/tag-dimension-badge'
+import { TagEditForm } from '@/app/admin/tags/_components/tag-edit-form'
 import { DeleteTagButton } from '@/app/admin/tags/_components/DeleteTagButton'
-import { TagFormFields } from '@/app/admin/tags/_components/TagFormFields'
+import { getTagAdminById } from '@/lib/queries/tags-admin'
 
 export const dynamic = 'force-dynamic'
-
-const TAG_ERRORS: Record<string, string> = {
-  missing_label: 'Label is required.',
-  invalid_slug: 'Slug must use lowercase letters, numbers, and hyphens only.',
-  invalid_dimension: 'That dimension is not supported.',
-  duplicate_slug: 'Another tag already uses that slug.',
-  dimension_not_supported:
-    'The database does not accept the Source dimension yet. Apply migration 20240001000027_tag_dimension_source.sql, then retry.',
-  not_found: 'Tag not found.',
-  save_failed: 'Could not save the tag. Please try again.',
-}
 
 type Props = {
   params: Promise<{ id: string }>
@@ -28,57 +22,46 @@ export default async function AdminTagEditPage({ params, searchParams }: Props) 
   const resolved = (await searchParams) ?? {}
   const saved = resolved.saved === '1'
   const errorCode = Array.isArray(resolved.error) ? resolved.error[0] : resolved.error
+  const errorMessage = getTagErrorMessage(errorCode, 'edit')
 
   const tag = await getTagAdminById(id)
   if (!tag) notFound()
 
+  const dimensionLabel = getDimensionLabel(tag.dimension)
+  const officialLabel = tag.is_official ? 'Official' : 'Not official'
+
   return (
-    <div className="max-w-2xl space-y-8">
-      <div>
+    <div className="max-w-2xl space-y-10">
+      <div className="border-b border-border pb-5">
         <Link
           href="/admin/tags"
           className="mb-2 inline-flex text-xs font-medium text-muted underline-offset-4 hover:text-primary hover:underline"
         >
           Back to tags
         </Link>
-        <h1 className="text-xl font-bold text-primary">Edit tag</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-primary">{tag.label}</h1>
         <p className="mt-1 text-sm text-muted">
-          {tag.article_count} nugget{tag.article_count === 1 ? '' : 's'} use this tag
+          {tag.article_count} nugget{tag.article_count === 1 ? '' : 's'} · {dimensionLabel} ·{' '}
+          {officialLabel}
         </p>
       </div>
 
-      {saved && (
-        <div className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-primary">
-          Tag saved.
+      {saved ? <TagSuccessAlert message="Tag saved." /> : null}
+      {errorMessage ? <TagErrorAlert message={errorMessage} /> : null}
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-primary">Tag details</h2>
+        <TagEditForm tag={tag} />
+      </section>
+
+      <section className="rounded-xl border border-danger-border/40 bg-danger-soft/30 p-4">
+        <h2 className="text-sm font-semibold text-danger-fg">Danger zone</h2>
+        <p className="mt-1 text-sm text-muted">
+          Deleting removes this tag from every nugget that uses it and updates feed filters.
+        </p>
+        <div className="mt-4">
+          <DeleteTagButton id={id} label={tag.label} articleCount={tag.article_count} />
         </div>
-      )}
-
-      {errorCode ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger-fg"
-        >
-          {TAG_ERRORS[errorCode] ?? 'Something went wrong. Please try again.'}
-        </div>
-      ) : null}
-
-      <form
-        action={updateTagAction}
-        className="flex flex-col gap-3 p-4 rounded-xl border border-border bg-surface-raised"
-      >
-        <input type="hidden" name="id" value={id} />
-        <TagFormFields tag={tag} />
-        <button
-          type="submit"
-          className="self-start px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:bg-accent-hover transition-colors"
-        >
-          Save tag
-        </button>
-      </form>
-
-      <section className="border-t border-border pt-6">
-        <h2 className="text-sm font-semibold text-danger-fg mb-3">Danger zone</h2>
-        <DeleteTagButton id={id} label={tag.label} articleCount={tag.article_count} />
       </section>
     </div>
   )

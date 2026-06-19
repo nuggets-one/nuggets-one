@@ -8,64 +8,86 @@ const DIMENSION_OPTIONS = [
   { value: 'source', label: 'Source — Chart/data provider' },
 ] as const
 
-export function TagFormFields({ tag }: { tag?: Pick<TagSummary, 'label' | 'slug' | 'dimension' | 'is_official'> }) {
+const inputClassName =
+  'mt-1 w-full rounded-xl border border-border bg-bg px-4 py-2.5 text-sm text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30'
+
+function DimensionField({ dimension }: { dimension: string }) {
+  return (
+    <label className="flex flex-col">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted">Dimension</span>
+      <select name="dimension" defaultValue={dimension} className={inputClassName}>
+        {DIMENSION_OPTIONS.map((opt) => (
+          <option key={opt.value || 'none'} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+export function TagFormFields({
+  tag,
+}: {
+  tag?: Pick<TagSummary, 'label' | 'slug' | 'dimension' | 'is_official'>
+}) {
   const dimension = tag?.dimension ?? ''
 
   return (
-    <>
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-muted">Label *</span>
-        <input
-          type="text"
-          name="label"
-          required
-          defaultValue={tag?.label ?? ''}
-          placeholder="Fintech"
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:ring-2 focus:ring-accent/40"
-        />
-      </label>
-
-      {tag ? (
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted">Slug</span>
+    <div className="space-y-4">
+      <div className={`grid gap-4 ${tag ? 'sm:grid-cols-1' : 'sm:grid-cols-2'}`}>
+        <label className="flex flex-col">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Label *</span>
           <input
             type="text"
-            name="slug"
-            defaultValue={tag.slug}
-            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-            className="rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-primary outline-none focus:ring-2 focus:ring-accent/40"
+            name="label"
+            required
+            defaultValue={tag?.label ?? ''}
+            placeholder="Fintech"
+            className={inputClassName}
           />
-          <span className="text-xs text-muted">
-            Changing the slug updates every nugget that uses this tag. Use lowercase letters, numbers, and hyphens
-            only.
-          </span>
         </label>
+
+        {!tag ? <DimensionField dimension={dimension} /> : null}
+      </div>
+
+      {tag ? (
+        <>
+          <label className="flex flex-col">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Slug</span>
+            <input
+              type="text"
+              name="slug"
+              defaultValue={tag.slug}
+              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+              className={`${inputClassName} font-mono`}
+            />
+            <span className="mt-1 text-xs text-muted">
+              Changing the slug updates every nugget that uses this tag. Use lowercase letters,
+              numbers, and hyphens only.
+            </span>
+          </label>
+          <DimensionField dimension={dimension} />
+        </>
       ) : null}
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-muted">Dimension</span>
-        <select
-          name="dimension"
-          defaultValue={dimension}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary outline-none focus:ring-2 focus:ring-accent/40"
-        >
-          {DIMENSION_OPTIONS.map((opt) => (
-            <option key={opt.value || 'none'} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="flex items-center gap-2 text-sm text-primary cursor-pointer">
-        <input
-          type="checkbox"
-          name="is_official"
-          defaultChecked={tag?.is_official ?? false}
-          className="rounded"
-        />
-        Show on Home chip rail (official)
-      </label>
-    </>
+      <div className="rounded-xl border border-border bg-bg px-4 py-3">
+        <label className="flex cursor-pointer items-start gap-3 text-sm text-primary">
+          <input
+            type="checkbox"
+            name="is_official"
+            defaultChecked={tag?.is_official ?? false}
+            className="mt-0.5 rounded"
+          />
+          <span>
+            <span className="font-medium">Show on Home chip rail (official)</span>
+            <span className="mt-1 block text-xs text-muted">
+              Official tags with a dimension appear on the Home quick filter rail and in the article
+              editor picker.
+            </span>
+          </span>
+        </label>
+      </div>
+    </div>
   )
 }
