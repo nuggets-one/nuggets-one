@@ -120,6 +120,8 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   stream_standard boolean NOT NULL DEFAULT true,
   stream_pulse boolean NOT NULL DEFAULT true,
   stream_charts boolean NOT NULL DEFAULT true,
+  stream_tech_vc boolean NOT NULL DEFAULT true,
+  stream_geopolitics boolean NOT NULL DEFAULT true,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -174,6 +176,14 @@ CREATE INDEX IF NOT EXISTS idx_articles_feed_charts
   ON articles (published_at DESC, id DESC)
   WHERE status = 'published' AND content_stream = 'charts';
 
+CREATE INDEX IF NOT EXISTS idx_articles_feed_tech_vc
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND content_stream = 'tech_vc';
+
+CREATE INDEX IF NOT EXISTS idx_articles_feed_geopolitics
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND content_stream = 'geopolitics';
+
 CREATE INDEX IF NOT EXISTS idx_articles_search_vector
   ON articles USING gin(search_vector);
 
@@ -191,6 +201,25 @@ CREATE INDEX IF NOT EXISTS idx_notification_prefs_pulse
 CREATE INDEX IF NOT EXISTS idx_notification_prefs_charts
   ON notification_preferences (user_id)
   WHERE mute_all = false AND stream_charts = true;
+
+CREATE INDEX IF NOT EXISTS idx_notification_prefs_active_tech_vc
+  ON notification_preferences (user_id)
+  WHERE mute_all = false AND stream_tech_vc = true;
+
+CREATE INDEX IF NOT EXISTS idx_notification_prefs_active_geopolitics
+  ON notification_preferences (user_id)
+  WHERE mute_all = false AND stream_geopolitics = true;
+
+-- push_digest_buffer (digest-mode push batching)
+CREATE TABLE IF NOT EXISTS push_digest_buffer (
+  batch_key text PRIMARY KEY,
+  content_stream text NOT NULL
+    CHECK (content_stream IN ('standard','pulse','charts','tech_vc','geopolitics')),
+  article_count int NOT NULL DEFAULT 0,
+  sample_title text NOT NULL DEFAULT '',
+  interval_hours int NOT NULL DEFAULT 1 CHECK (interval_hours IN (1, 2, 3)),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_user_notifications_user_article_single
   ON user_notifications (user_id, article_id)
