@@ -10,8 +10,10 @@ type AuthStatus = {
   authenticated: boolean
 }
 
-function isCapacitorAndroid(): boolean {
-  if (typeof window === 'undefined') return false
+type NativePushPlatform = 'android' | 'ios'
+
+function getNativePushPlatform(): NativePushPlatform | null {
+  if (typeof window === 'undefined') return null
 
   const injected = (
     window as Window & {
@@ -20,10 +22,16 @@ function isCapacitorAndroid(): boolean {
   ).Capacitor
 
   if (injected?.isNativePlatform?.()) {
-    return injected.getPlatform?.() === 'android'
+    const platform = injected.getPlatform?.()
+    if (platform === 'android' || platform === 'ios') return platform
+    return null
   }
 
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+  if (!Capacitor.isNativePlatform()) return null
+
+  const platform = Capacitor.getPlatform()
+  if (platform === 'android' || platform === 'ios') return platform
+  return null
 }
 
 async function fetchAuthStatus(): Promise<AuthStatus> {
@@ -32,7 +40,7 @@ async function fetchAuthStatus(): Promise<AuthStatus> {
   return (await res.json()) as AuthStatus
 }
 
-export function AndroidPushRegistration() {
+export function NativePushRegistration() {
   const router = useRouter()
   const tokenRef = useRef<string | null>(null)
   const authenticatedRef = useRef(false)
@@ -40,7 +48,8 @@ export function AndroidPushRegistration() {
   const listenersReadyRef = useRef(false)
 
   useEffect(() => {
-    if (!isCapacitorAndroid()) return
+    const platform = getNativePushPlatform()
+    if (!platform) return
 
     let cancelled = false
     let removeListeners: (() => void) | undefined
@@ -52,7 +61,7 @@ export function AndroidPushRegistration() {
 
       const onToken = async (token: string) => {
         tokenRef.current = token
-        await registerPushToken({ token })
+        await registerPushToken({ token, platform })
       }
 
       const regHandle = await PushNotifications.addListener('registration', (event) => {
@@ -129,7 +138,7 @@ export function AndroidPushRegistration() {
       authenticatedRef.current = auth.authenticated
 
       if (tokenRef.current) {
-        await registerPushToken({ token: tokenRef.current })
+        await registerPushToken({ token: tokenRef.current, platform })
       } else {
         void setupPush()
       }

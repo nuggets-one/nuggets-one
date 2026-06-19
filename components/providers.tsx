@@ -1,7 +1,7 @@
 'use client';
 
 import { ThemeProvider } from 'next-themes';
-import { AndroidPushRegistration } from '@/components/push/android-push-registration';
+import { NativePushRegistration } from '@/components/push/native-push-registration';
 import { WebPushRegistration } from '@/components/push/web-push-registration';
 import { PushDebugPanel } from '@/components/push/push-debug-panel';
 
@@ -14,7 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       {children}
-      <AndroidPushRegistration />
+      <NativePushRegistration />
       <WebPushRegistration />
       <PushDebugPanel />
     </ThemeProvider>
