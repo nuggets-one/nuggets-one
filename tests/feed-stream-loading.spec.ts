@@ -26,15 +26,52 @@ test('stream tab switch shows feed skeleton before new content', async ({ page }
 
   await pulseTab.click()
 
-  await expect(page.locator('[data-testid="feed-loading-skeleton"]')).toBeVisible({
+  const overlay = page.locator('[data-testid="feed-loading-skeleton"]')
+  await expect(overlay).toBeVisible({
     timeout: 5_000,
   })
+  await expect(overlay.locator('.animate-pulse').first()).toBeVisible()
 
-  await expect(page.locator('[data-testid="feed-loading-skeleton"]')).toBeHidden({
+  await expect(overlay).toBeHidden({
     timeout: 15_000,
   })
 
   await expect(page).toHaveURL(/stream=pulse/)
+})
+
+test('scope tab switch shows feed skeleton before new content', async ({ page }) => {
+  await page.route('**/*', async (route, request) => {
+    const url = request.url()
+    const headers = request.headers()
+    if (
+      isRscRequest(headers) &&
+      url.includes('scope=india') &&
+      !url.includes('/api/')
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 800))
+    }
+    await route.continue()
+  })
+
+  await page.goto('/?stream=pulse', { waitUntil: 'networkidle' })
+  await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
+
+  const indiaTab = page.getByRole('link', { name: /India/i }).first()
+  await expect(indiaTab).toBeVisible()
+
+  await indiaTab.click()
+
+  const overlay = page.locator('[data-testid="feed-loading-skeleton"]')
+  await expect(overlay).toBeVisible({
+    timeout: 5_000,
+  })
+  await expect(overlay.locator('.animate-pulse').first()).toBeVisible()
+
+  await expect(overlay).toBeHidden({
+    timeout: 15_000,
+  })
+
+  await expect(page).toHaveURL(/scope=india/)
 })
 
 test('tech x vc stream shows scope tabs', async ({ page }) => {
@@ -77,7 +114,9 @@ test('tag filter apply shows feed skeleton', async ({ page }) => {
 
   await expect(page).toHaveURL(/tags=technology/)
 
-  await expect(page.locator('[data-testid="feed-loading-skeleton"]')).toBeVisible({
+  const overlay = page.locator('[data-testid="feed-loading-skeleton"]')
+  await expect(overlay).toBeVisible({
     timeout: 5_000,
   })
+  await expect(overlay.locator('.animate-pulse').first()).toBeVisible()
 })
