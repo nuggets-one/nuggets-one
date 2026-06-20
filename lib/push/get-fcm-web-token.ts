@@ -115,7 +115,7 @@ export function showForegroundWebPushNotification(
   const data = payload.data as Record<string, unknown> | undefined
   const targetUrl = resolveNotificationUrl(data)
 
-  const notification = new Notification(title, {
+  const notificationOptions: NotificationOptions & { image?: string } = {
     body,
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-72.png',
@@ -125,7 +125,9 @@ export function showForegroundWebPushNotification(
         ? `article:${data.articleId}`
         : undefined,
     data: { ...data, targetUrl },
-  })
+  }
+
+  const notification = new Notification(title, notificationOptions)
 
   notification.onclick = () => {
     notification.close()
