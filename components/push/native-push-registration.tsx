@@ -48,8 +48,9 @@ export function NativePushRegistration() {
   const listenersReadyRef = useRef(false)
 
   useEffect(() => {
-    const platform = getNativePushPlatform()
-    if (!platform) return
+    const maybePlatform = getNativePushPlatform()
+    if (maybePlatform !== 'android' && maybePlatform !== 'ios') return
+    const platform: NativePushPlatform = maybePlatform
 
     let cancelled = false
     let removeListeners: (() => void) | undefined
