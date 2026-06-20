@@ -280,7 +280,7 @@ export default async function HomePage({ searchParams }: Props) {
       fallback={
         <>
           <div className="-mx-4 -mt-6 mb-5 lg:-mx-6">
-            <div className="min-h-[44px] border-b border-border bg-header px-4 pt-2 backdrop-blur-sm lg:px-6">
+            <div className="hidden min-h-[44px] border-b border-border bg-header px-4 pt-2 backdrop-blur-sm lg:block lg:px-6">
               <div className="flex h-11 w-full gap-1 sm:inline-flex sm:w-auto lg:w-[32rem]">
                 <div className="h-9 min-h-[44px] flex-1 animate-pulse rounded-md bg-border/40 sm:flex-none sm:h-9 sm:w-24 lg:flex-1 lg:basis-0 lg:min-w-0" />
                 <div className="h-9 min-h-[44px] flex-1 animate-pulse rounded-md bg-border/40 sm:flex-none sm:h-9 sm:w-36 lg:flex-1 lg:basis-0 lg:min-w-0" />
