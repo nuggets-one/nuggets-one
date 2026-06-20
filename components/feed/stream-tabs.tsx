@@ -18,8 +18,6 @@ type Props = {
   streamCounts: StreamArticleCounts
   /** When true, stream group sizes to content (for lg toolbar row with scope adjacent). */
   inlineToolbar?: boolean
-  /** Compact horizontal scroll layout for mobile stream picker. */
-  mobileScroll?: boolean
 }
 
 function StreamTabLink({
@@ -29,7 +27,6 @@ function StreamTabLink({
   shortLabel,
   formattedCount,
   useShortOnMobile,
-  mobileScroll,
 }: {
   href: string
   active: boolean
@@ -37,7 +34,6 @@ function StreamTabLink({
   shortLabel: string
   formattedCount: string
   useShortOnMobile: boolean
-  mobileScroll?: boolean
 }) {
   const router = useRouter()
   const { markFeedPending } = useFeedPending()
@@ -53,11 +49,7 @@ function StreamTabLink({
         markFeedPending()
         router.push(href)
       }}
-      className={`flex min-h-[44px] items-center justify-center rounded-md text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] ${
-        mobileScroll
-          ? 'w-full min-w-0 px-0.5 text-[11px] leading-tight'
-          : 'flex-1 px-2 sm:flex-none sm:px-3 lg:flex-none'
-      } ${
+      className={`flex min-h-[44px] flex-1 items-center justify-center rounded-md px-2 text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:px-3 lg:flex-none ${
         active
           ? 'border border-chip-active-border bg-chip-active-bg font-semibold text-chip-active-text shadow-chip-active'
           : 'font-medium text-chip-inactive-text hover:bg-chip-hover-bg hover:text-chip-hover-text'
@@ -89,25 +81,20 @@ export function StreamTabs({
   activeScope,
   streamCounts,
   inlineToolbar = false,
-  mobileScroll = false,
 }: Props) {
   return (
     <nav
       aria-label="Content stream"
-      className={
-        mobileScroll
-          ? 'grid w-full grid-cols-5 items-stretch gap-px rounded-lg bg-rail p-1'
-          : `flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto sm:overflow-x-auto lg:w-auto ${
-              inlineToolbar ? '' : 'sm:max-w-full'
-            }`
-      }
+      className={`flex w-full gap-1 rounded-lg bg-rail p-1 sm:inline-flex sm:w-auto sm:overflow-x-auto lg:w-auto ${
+        inlineToolbar ? '' : 'sm:max-w-full'
+      }`}
     >
       {STREAM_NAV_ORDER.map((value) => {
         const { label: fullLabel, shortLabel } = STREAM_INTRO_COPY[value]
         const active = activeStream === value
         const count = streamCounts[value]
         const formattedCount = numberFmt.format(count)
-        const useShortOnMobile = shortLabel !== fullLabel || mobileScroll
+        const useShortOnMobile = shortLabel !== fullLabel
         const href = buildStreamTabHref(value, activeScope)
         return (
           <StreamTabLink
@@ -118,7 +105,6 @@ export function StreamTabs({
             shortLabel={shortLabel}
             formattedCount={formattedCount}
             useShortOnMobile={useShortOnMobile}
-            mobileScroll={mobileScroll}
           />
         )
       })}
