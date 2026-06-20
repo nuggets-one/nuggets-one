@@ -163,11 +163,18 @@ export function FeedPager({
       ) : null}
 
       {isLoading && skimView ? (
-        <div className="-mx-4 mt-4 flex flex-col md:hidden">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <ArticleSkimRowSkeleton key={i} />
-          ))}
-        </div>
+        <>
+          <div className="-mx-4 mt-4 flex flex-col md:hidden">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ArticleSkimRowSkeleton key={i} />
+            ))}
+          </div>
+          <div className={`${gridClassesDesktopOnly} mt-4`}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ArticleCardSkeleton key={i} />
+            ))}
+          </div>
+        </>
       ) : null}
 
       {isLoading && !skimView ? (
