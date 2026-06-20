@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { flushSync } from 'react-dom'
 import { usePathname } from 'next/navigation'
+import { FeedLoadingChrome } from '@/components/feed/feed-loading-chrome'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
 
 type FeedPendingContextValue = {
@@ -99,6 +100,7 @@ export function FeedPendingProvider({ children }: { children: ReactNode }) {
           data-testid="feed-loading-skeleton"
         >
           <div className="mx-auto max-w-[90rem] px-4 pt-6 lg:px-6">
+            <FeedLoadingChrome skimView={showSkimSkeleton} />
             <FeedSkeleton
               count={showSkimSkeleton ? 8 : 6}
               skimView={showSkimSkeleton}
