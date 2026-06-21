@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { indexOfLightboxImage } from '@/lib/ui/build-lightbox-images'
 import {
@@ -343,11 +343,13 @@ function LightboxSlide({
   const imgRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
-    setLoaded(false)
-    const img = imgRef.current
-    if (img?.complete && img.naturalWidth > 0) {
-      setLoaded(true)
-    }
+    startTransition(() => {
+      setLoaded(false)
+      const img = imgRef.current
+      if (img?.complete && img.naturalWidth > 0) {
+        setLoaded(true)
+      }
+    })
   }, [resolvedUrl])
 
   if (!resolvedUrl) {

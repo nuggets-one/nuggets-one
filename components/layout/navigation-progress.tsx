@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, startTransition } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
 const SHOW_DELAY_MS = 150
@@ -94,12 +94,16 @@ export function NavigationProgress() {
     }
 
     if (!visible) {
-      setCompleting(false)
-      setStage(1)
+      startTransition(() => {
+        setCompleting(false)
+        setStage(1)
+      })
       return
     }
 
-    setCompleting(true)
+    startTransition(() => {
+      setCompleting(true)
+    })
     const hideTimer = setTimeout(() => {
       setVisible(false)
       setCompleting(false)

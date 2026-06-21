@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { BrowserPushToggle } from '@/components/push/browser-push-toggle'
@@ -370,12 +370,12 @@ export function NotificationPanel({
 
   const panelRef = useRef<HTMLDivElement>(null)
   const mobileSheetRef = useRef<HTMLDivElement>(null)
-  const [portalReady, setPortalReady] = useState(false)
+  const portalReady = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    setPortalReady(true)
-  }, [])
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true)

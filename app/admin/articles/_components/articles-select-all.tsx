@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, startTransition } from 'react'
 
 const CHECKBOX_SELECTOR = '[data-articles-bulk-checkbox]'
 
@@ -27,7 +27,9 @@ export function useArticlesBulkSelection() {
   }, [])
 
   useEffect(() => {
-    syncFromDom()
+    startTransition(() => {
+      syncFromDom()
+    })
 
     const onChange = (e: Event) => {
       const target = e.target as HTMLInputElement | null
@@ -83,7 +85,9 @@ export function ArticlesSelectAll() {
   }, [])
 
   useEffect(() => {
-    updateState()
+    startTransition(() => {
+      updateState()
+    })
     document.addEventListener('change', updateState)
     return () => document.removeEventListener('change', updateState)
   }, [updateState])
