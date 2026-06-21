@@ -9,7 +9,6 @@ import { X } from 'lucide-react'
 import type { ContentStream } from '@/types/article'
 import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
 import {
-  buildStreamTabHref,
   effectiveFeedScope,
   isScopeEnabledStream,
   parseFeedScope,
@@ -70,6 +69,7 @@ type SearchFieldProps = {
   onClear: () => void
   showCloseButton?: boolean
   onClose?: () => void
+  suggestionsListId: string
 }
 
 function SearchField({
@@ -83,6 +83,7 @@ function SearchField({
   onClear,
   showCloseButton,
   onClose,
+  suggestionsListId,
 }: SearchFieldProps) {
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -103,6 +104,7 @@ function SearchField({
         <input
           ref={inputRef}
           type="search"
+          role="combobox"
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={onKeyDown}
@@ -110,7 +112,9 @@ function SearchField({
           placeholder="Search nuggets…"
           aria-label="Search nuggets"
           aria-autocomplete="list"
+          aria-haspopup="listbox"
           aria-expanded={suggestPanelOpen}
+          aria-controls={suggestPanelOpen ? suggestionsListId : undefined}
           aria-activedescendant={activeIndex >= 0 ? `suggestion-${activeIndex}` : undefined}
           className="min-w-0 h-full flex-1 bg-transparent text-sm text-primary placeholder:text-muted outline-none"
         />
@@ -140,6 +144,7 @@ function SearchField({
 }
 
 type SuggestionsListProps = {
+  listId: string
   suggestPanelOpen: boolean
   suggestionsPending: boolean
   trimmed: string
@@ -150,6 +155,7 @@ type SuggestionsListProps = {
 }
 
 function SuggestionsList({
+  listId,
   suggestPanelOpen,
   suggestionsPending,
   trimmed,
@@ -161,7 +167,7 @@ function SuggestionsList({
   if (!suggestPanelOpen) return null
 
   return (
-    <ul role="listbox" aria-label="Search suggestions" className={className}>
+    <ul id={listId} role="listbox" aria-label="Search suggestions" className={className}>
       {suggestionsPending ? (
         <li className="px-4 py-3 text-sm text-muted">Searching…</li>
       ) : null}
@@ -203,6 +209,8 @@ type Props = {
   utilities: ReactNode
 }
 
+const SEARCH_SUGGESTIONS_LIST_ID = 'header-search-suggestions'
+
 export function HeaderSearch({ utilities }: Props) {
   const router = useRouter()
   const { setExpanded: setMobileSearchExpanded } = useMobileSearchControls()
@@ -225,7 +233,7 @@ export function HeaderSearch({ utilities }: Props) {
     ? effectiveFeedScope(stream, parseFeedScope(scopeRaw || null))
     : undefined
 
-  const [inputValue, setInputValue] = useState(committedQ)
+  const [draftValue, setDraftValue] = useState(committedQ)
   const [suggestions, setSuggestions] = useState<SuggestionRow[]>([])
   const [suggestionsPending, setSuggestionsPending] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
@@ -242,18 +250,19 @@ export function HeaderSearch({ utilities }: Props) {
   const suggestAbortRef = useRef<AbortController | null>(null)
   const lastSuggestQueryRef = useRef('')
 
-  const debouncedInput = useDebounce(inputValue, DEBOUNCE_MS)
+  const debouncedInput = useDebounce(draftValue, DEBOUNCE_MS)
 
   const trimmed = debouncedInput.trim()
   const hasActiveSearch = committedQ.trim().length > 0
   const suggestPanelOpen = isFocused && trimmed.length >= 2
+  const inputValue = isFocused ? draftValue : committedQ
 
   useScrollLock(isExpanded)
 
   const collapseMobileSearch = useCallback(() => {
     setIsExpanded(false)
     setIsFocused(false)
-    setInputValue(committedQ)
+    setDraftValue(committedQ)
     setSuggestions([])
     setSuggestionsPending(false)
     setActiveIndex(-1)
@@ -268,12 +277,6 @@ export function HeaderSearch({ utilities }: Props) {
     setMobileSearchExpanded(isExpanded)
     return () => setMobileSearchExpanded(false)
   }, [isExpanded, setMobileSearchExpanded])
-
-  useEffect(() => {
-    if (!isFocused) {
-      setInputValue(committedQ)
-    }
-  }, [committedQ, isFocused])
 
   useEffect(() => {
     if (!isExpanded) return
@@ -301,9 +304,6 @@ export function HeaderSearch({ utilities }: Props) {
       suggestAbortRef.current?.abort()
       suggestAbortRef.current = null
       lastSuggestQueryRef.current = ''
-      setSuggestionsPending(false)
-      setSuggestions([])
-      setActiveIndex(-1)
       return
     }
 
@@ -377,7 +377,7 @@ export function HeaderSearch({ utilities }: Props) {
       } else {
         applyCommit()
       }
-      setInputValue(trimmedValue)
+      setDraftValue(trimmedValue)
       setSuggestions([])
       setSuggestionsPending(false)
       setActiveIndex(-1)
@@ -388,7 +388,7 @@ export function HeaderSearch({ utilities }: Props) {
   )
 
   const handleInputChange = useCallback((next: string) => {
-    setInputValue(next)
+    setDraftValue(next)
     if (next.trim().length < 2) {
       setSuggestions([])
       setSuggestionsPending(false)
@@ -407,7 +407,7 @@ export function HeaderSearch({ utilities }: Props) {
     } else {
       applyClear()
     }
-    setInputValue('')
+    setDraftValue('')
     setSuggestions([])
     setSuggestionsPending(false)
     setIsFocused(true)
@@ -416,7 +416,7 @@ export function HeaderSearch({ utilities }: Props) {
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Escape') {
-      setInputValue(committedQ)
+      setDraftValue(committedQ)
       setIsFocused(false)
       setIsExpanded(false)
       inputRef.current?.blur()
@@ -459,13 +459,18 @@ export function HeaderSearch({ utilities }: Props) {
     inputValue,
     onInputChange: handleInputChange,
     onKeyDown: handleKeyDown,
-    onFocus: () => setIsFocused(true),
+    onFocus: () => {
+      setDraftValue(committedQ)
+      setIsFocused(true)
+    },
     suggestPanelOpen,
     activeIndex,
     onClear: handleClearInput,
+    suggestionsListId: SEARCH_SUGGESTIONS_LIST_ID,
   }
 
   const suggestionsProps: SuggestionsListProps = {
+    listId: SEARCH_SUGGESTIONS_LIST_ID,
     suggestPanelOpen,
     suggestionsPending,
     trimmed,
