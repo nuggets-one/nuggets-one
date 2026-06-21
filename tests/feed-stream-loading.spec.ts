@@ -74,12 +74,55 @@ test('scope tab switch shows feed skeleton before new content', async ({ page })
   await expect(page).toHaveURL(/scope=india/)
 })
 
-test('tech x vc stream shows scope tabs', async ({ page }) => {
+test('pulse stream shows charts scope tab', async ({ page }) => {
+  await page.goto('/?stream=pulse', { waitUntil: 'networkidle' })
+  await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
+
+  await expect(page.getByRole('link', { name: /Charts of the Week/i }).first()).toBeVisible()
+})
+
+test('charts scope tab switch shows feed skeleton before new content', async ({ page }) => {
+  await page.route('**/*', async (route, request) => {
+    const url = request.url()
+    const headers = request.headers()
+    if (
+      isRscRequest(headers) &&
+      url.includes('scope=charts') &&
+      !url.includes('/api/')
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 800))
+    }
+    await route.continue()
+  })
+
+  await page.goto('/?stream=pulse', { waitUntil: 'networkidle' })
+  await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
+
+  const chartsTab = page.getByRole('link', { name: /Charts of the Week/i }).first()
+  await expect(chartsTab).toBeVisible()
+
+  await chartsTab.click()
+
+  const overlay = page.locator('[data-testid="feed-loading-skeleton"]')
+  await expect(overlay).toBeVisible({
+    timeout: 5_000,
+  })
+  await expect(overlay.locator('.animate-pulse').first()).toBeVisible()
+
+  await expect(overlay).toBeHidden({
+    timeout: 15_000,
+  })
+
+  await expect(page).toHaveURL(/scope=charts/)
+})
+
+test('tech x vc stream shows scope tabs without charts', async ({ page }) => {
   await page.goto('/?stream=tech_vc', { waitUntil: 'networkidle' })
   await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
 
   await expect(page.getByRole('link', { name: /Global/i }).first()).toBeVisible()
   await expect(page.getByRole('link', { name: /India/i }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /Charts of the Week/i })).toHaveCount(0)
 })
 
 test('geopolitics stream hides scope tabs', async ({ page }) => {

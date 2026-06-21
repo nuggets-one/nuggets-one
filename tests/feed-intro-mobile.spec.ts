@@ -22,12 +22,21 @@ test.describe('mobile feed intro context', () => {
     ).toBeVisible()
   })
 
-  test('shows Charts stream summary on charts stream', async ({ page }) => {
-    await page.goto('/?stream=charts', { waitUntil: 'domcontentloaded' })
+  test('shows Market Pulse summary on charts scope under pulse', async ({ page }) => {
+    await page.goto('/?stream=pulse&scope=charts', { waitUntil: 'domcontentloaded' })
 
     await expect(
-      page.getByText(STREAM_INTRO_COPY.charts.mobileSummary, { exact: true }),
+      page.getByText(STREAM_INTRO_COPY.pulse.mobileSummary, { exact: true }),
     ).toBeVisible()
+    await expect(
+      page.getByText('Charts', { exact: true }),
+    ).toBeVisible()
+  })
+
+  test('redirects legacy charts stream URL to pulse charts scope', async ({ page }) => {
+    await page.goto('/?stream=charts', { waitUntil: 'domcontentloaded' })
+
+    await expect(page).toHaveURL(/\?stream=pulse&scope=charts/)
   })
 
   test('updates intro when switching streams via bottom nav', async ({ page }) => {
@@ -45,15 +54,15 @@ test.describe('mobile feed intro context', () => {
     ).toBeVisible()
   })
 
-  test('switches to Charts via bottom nav', async ({ page }) => {
-    await page.goto('/?stream=standard', { waitUntil: 'domcontentloaded' })
+  test('switches to Charts via pulse scope tab', async ({ page }) => {
+    await page.goto('/?stream=pulse', { waitUntil: 'domcontentloaded' })
 
-    const nav = page.getByRole('navigation', { name: 'Primary destinations' })
-    await nav.getByRole('link', { name: STREAM_INTRO_COPY.charts.label }).click()
+    const chartsTab = page.getByRole('link', { name: /Charts of the Week/i }).first()
+    await chartsTab.click()
 
-    await expect(page).toHaveURL(/\?stream=charts/)
+    await expect(page).toHaveURL(/\?stream=pulse&scope=charts/)
     await expect(
-      page.getByText(STREAM_INTRO_COPY.charts.mobileSummary, { exact: true }),
+      page.getByText(STREAM_INTRO_COPY.pulse.mobileSummary, { exact: true }),
     ).toBeVisible()
   })
 
