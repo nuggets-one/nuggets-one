@@ -320,6 +320,7 @@ export function HeaderSearch({ utilities }: Props) {
 
     const params = new URLSearchParams({ q: qTrim, stream })
     if (feedScope === 'india') params.set('scope', 'india')
+    if (feedScope === 'charts') params.set('scope', 'charts')
     fetch(`/api/search/suggest?${params}`, { signal: controller.signal })
       .then(async (r) => {
         if (cancelled) return

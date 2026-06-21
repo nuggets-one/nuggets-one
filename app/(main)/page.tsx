@@ -17,8 +17,11 @@ import { FeedLoadingChrome } from '@/components/feed/feed-loading-chrome'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
 import { FEED_VIEW_STORAGE_KEY, isSkimFeedView } from '@/lib/feed/feed-view'
 import {
+  effectiveFeedScope,
+  isPulseChartsScope,
   isScopeEnabledStream,
   normalizeTagsAndScope,
+  parseFeedScope,
   type FeedScope,
 } from '@/lib/feed/scope'
 import { FeedPager } from '@/components/feed/feed-pager'
@@ -42,13 +45,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const params = await searchParams
   const stream = parseContentStream(params.stream)
-  const intro = STREAM_INTRO_COPY[stream]
+  const scope = parseFeedScope(params.scope)
+  const isPulseCharts = isPulseChartsScope(stream, scope)
+  const metaStream = isPulseCharts ? 'charts' : stream
+  const intro = STREAM_INTRO_COPY[metaStream]
   const title =
-    stream === 'standard' ? HOME_METADATA.title : intro.title
+    metaStream === 'standard' ? HOME_METADATA.title : intro.title
   const description =
-    stream === 'standard' ? HOME_METADATA.description : intro.tagline
+    metaStream === 'standard' ? HOME_METADATA.description : intro.tagline
   const ogDescription =
-    stream === 'standard' ? HOME_METADATA.ogDescription : intro.mobileSummary
+    metaStream === 'standard' ? HOME_METADATA.ogDescription : intro.mobileSummary
+
+  const canonicalUrl = isPulseCharts
+    ? `${getSiteUrl()}/?stream=pulse&scope=charts`
+    : stream === 'standard'
+      ? getSiteUrl()
+      : `${getSiteUrl()}/?stream=${stream}`
 
   return {
     title: { absolute: title },
@@ -56,7 +68,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description: ogDescription,
-      url: stream === 'standard' ? getSiteUrl() : `${getSiteUrl()}/?stream=${stream}`,
+      url: canonicalUrl,
       siteName: 'Nuggets',
       type: 'website',
       images: [
@@ -92,6 +104,20 @@ type Props = {
 const MAX_TAGS = 5
 const MAX_Q_LENGTH = 200
 
+function buildLegacyChartsRedirectUrl(
+  tags: string[],
+  q: string,
+  view?: string
+): string {
+  const params = new URLSearchParams()
+  params.set('stream', 'pulse')
+  params.set('scope', 'charts')
+  if (tags.length > 0) params.set('tags', tags.join(','))
+  if (q) params.set('q', q)
+  if (view) params.set('view', view)
+  return `/?${params.toString()}`
+}
+
 function buildLegacyIndiaRedirectUrl(
   stream: ReturnType<typeof parseContentStream>,
   tags: string[],
@@ -118,6 +144,11 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       .slice(0, MAX_TAGS)
     : []
   const q = (searchParams.q ?? '').trim().slice(0, MAX_Q_LENGTH)
+
+  if (stream === 'charts') {
+    redirect(buildLegacyChartsRedirectUrl(parsedTags, q, searchParams.view))
+  }
+
   const { tags, scope, hadLegacyIndiaTag } = normalizeTagsAndScope(
     stream,
     parsedTags,
@@ -133,13 +164,13 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const skimView = isSkimFeedView(searchParams.view, storedFeedView)
 
   // Filtered or search URLs must never be served from stale ISR cache.
-  const hasFilters = !!(tags.length > 0 || q || scope === 'india')
+  const hasFilters = !!(tags.length > 0 || q || scope === 'india' || scope === 'charts')
   if (hasFilters) {
     unstable_noStore()
   }
 
   const feedScope: FeedScope | undefined = isScopeEnabledStream(stream)
-    ? scope ?? 'global'
+    ? effectiveFeedScope(stream, scope)
     : undefined
 
   const [feedResult, officialTags, tagCounts, streamCounts, scopeCounts] =
@@ -168,7 +199,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
         ? getScopeCountsForStream(stream).catch((error) => {
             const message = error instanceof Error ? error.message : String(error)
             console.error(`FeedGrid getScopeCountsForStream error: ${message}`)
-            return { global: 0, india: 0 }
+            return { global: 0, india: 0, charts: 0 }
           })
         : Promise.resolve(null),
     ])

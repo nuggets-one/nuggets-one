@@ -2,11 +2,16 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { buildHomeHref, getScopeLabel, type FeedScope } from '@/lib/feed/scope'
+import {
+  buildHomeHref,
+  getScopeAriaLabel,
+  getScopeLabel,
+  getScopesForStream,
+  type FeedScope,
+} from '@/lib/feed/scope'
+import { STREAM_INTRO_COPY } from '@/lib/copy/streams'
 import { useFeedPending } from '@/components/feed/feed-pending-context'
 import type { ScopeCounts } from '@/lib/queries/scope-counts'
-
-const SCOPES: FeedScope[] = ['global', 'india']
 
 const numberFmt = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 0,
@@ -20,16 +25,25 @@ type Props = {
   inlineToolbar?: boolean
 }
 
+function getScopeDisplayLabel(scope: FeedScope): string {
+  if (scope === 'charts') return STREAM_INTRO_COPY.charts.label
+  return getScopeLabel(scope)
+}
+
 function ScopeTabLink({
   href,
   active,
   label,
+  ariaLabel,
   formattedCount,
+  useShortChartsLabel,
 }: {
   href: string
   active: boolean
   label: string
+  ariaLabel: string
   formattedCount: string
+  useShortChartsLabel: boolean
 }) {
   const router = useRouter()
   const { markFeedPending } = useFeedPending()
@@ -38,7 +52,7 @@ function ScopeTabLink({
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
-      aria-label={`${label}, ${formattedCount} published articles`}
+      aria-label={`${ariaLabel}, ${formattedCount} published articles`}
       onClick={(event) => {
         if (active) return
         event.preventDefault()
@@ -52,7 +66,14 @@ function ScopeTabLink({
       }`}
     >
       <span className="inline-flex items-baseline justify-center gap-1.5">
-        <span>{label}</span>
+        {useShortChartsLabel ? (
+          <>
+            <span className="lg:hidden">{getScopeLabel('charts')}</span>
+            <span className="hidden lg:inline">{label}</span>
+          </>
+        ) : (
+          <span>{label}</span>
+        )}
         <span
           className={`hidden font-normal tabular-nums lg:inline ${
             active ? 'text-chip-active-text/75' : 'text-chip-inactive-text/70'
@@ -71,6 +92,8 @@ export function FeedScopeTabs({
   scopeCounts,
   inlineToolbar = false,
 }: Props) {
+  const scopes = getScopesForStream(stream)
+
   return (
     <nav
       aria-label="Content scope"
@@ -80,18 +103,21 @@ export function FeedScopeTabs({
           : 'w-full gap-1 sm:inline-flex sm:w-auto'
       }`}
     >
-      {SCOPES.map((scope) => {
+      {scopes.map((scope) => {
         const active = activeScope === scope
         const count = scopeCounts[scope]
         const formattedCount = numberFmt.format(count)
-        const label = getScopeLabel(scope)
+        const label = getScopeDisplayLabel(scope)
+        const ariaLabel = getScopeAriaLabel(scope)
         return (
           <ScopeTabLink
             key={scope}
             href={buildHomeHref(stream, scope)}
             active={active}
             label={label}
+            ariaLabel={ariaLabel}
             formattedCount={formattedCount}
+            useShortChartsLabel={scope === 'charts'}
           />
         )
       })}

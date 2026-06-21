@@ -82,7 +82,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/charts-of-the-week',
-        destination: '/?stream=charts',
+        destination: '/?stream=pulse&scope=charts',
         permanent: true,
       },
       {

@@ -14,6 +14,7 @@ import {
 import type { NotificationRow } from '@/lib/queries/notifications'
 import { readResponseJson } from '@/lib/http/parse-json-response'
 import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
+import { buildFeedHrefForContentStream } from '@/lib/feed/scope'
 import { useScrollLock } from '@/lib/ui/use-scroll-lock'
 
 type Prefs = {
@@ -484,7 +485,7 @@ export function NotificationPanel({
         }
       } else if (row.content_stream) {
         closePanel()
-        router.push(`/?stream=${row.content_stream}`)
+        router.push(buildFeedHrefForContentStream(row.content_stream))
       }
     },
     [router, closePanel]
