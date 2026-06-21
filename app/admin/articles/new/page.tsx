@@ -15,7 +15,7 @@ const TAG_ERRORS: Record<string, string> = {
   media_update_failed: 'Media URLs could not be saved. Please try again.',
   missing_title: 'Title is required.',
   stream_tag_mismatch:
-    'This stream requires matching tags. Tech x VC needs Technology, PE/VC, AI, or Semiconductors. Geopolitics needs the Geopolitics tag. Change the stream or re-add a matching tag.',
+    'This stream requires matching tags. Tech x VC needs Technology, PE/VC, AI, or Semiconductors. Leadership needs Leaders, Investors & Entrepreneurs. Geopolitics needs the Geopolitics tag. Change the stream or re-add a matching tag.',
   create_failed: 'Could not create the draft. Check required fields and try again.',
 }
 

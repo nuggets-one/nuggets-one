@@ -60,7 +60,6 @@ export function ArticleFormFields({
       : []
   const [sourceUrl, setSourceUrl] = useState(defaults?.source_url ?? '')
   const [title, setTitle] = useState(defaults?.title ?? '')
-  const [excerpt, setExcerpt] = useState(defaults?.excerpt ?? '')
   const [mediaUrlsValue, setMediaUrlsValue] = useState(initialMediaUrls.join('\n'))
   const [thumbnailUrl, setThumbnailUrl] = useState(defaults?.hero_thumb_url ?? initialMediaUrls[0] ?? '')
   const [body, setBody] = useState(defaults?.content_markdown ?? '')
@@ -103,15 +102,6 @@ export function ArticleFormFields({
         if (metadata.title) setTitle(metadata.title)
       }
 
-      const excerptValue =
-        metadata.provider === 'youtube' && metadata.author
-          ? metadata.author
-          : metadata.description
-
-      if (mode === 'replace_all' || !excerpt.trim()) {
-        if (excerptValue) setExcerpt(excerptValue)
-      }
-
       if (metadata.provider !== 'youtube' && metadata.imageUrl) {
         const existing = parseAdminMediaUrlList(mediaUrlsValue)
         if (!existing.includes(metadata.imageUrl)) {
@@ -145,7 +135,6 @@ export function ArticleFormFields({
     [
       body,
       effectiveThumbnailUrl,
-      excerpt,
       mediaUrlsValue,
       prefillBodyTemplate,
       sourceUrl,
@@ -281,8 +270,8 @@ export function ArticleFormFields({
               </button>
             </div>
             <p className="text-[11px] leading-snug text-muted">
-              Paste a link first — we fetch title, summary, and cover when possible. For YouTube, the video poster
-              becomes the feed cover automatically.
+              Paste a link first — we fetch title and cover when possible. For YouTube, the video poster becomes the
+              feed cover automatically.
             </p>
             {sourceIsYouTube ? (
               <p className="text-[11px] font-medium text-primary">
@@ -327,8 +316,7 @@ export function ArticleFormFields({
               name="excerpt"
               rows={2}
               placeholder="Optional card summary..."
-              value={excerpt}
-              onChange={(event) => setExcerpt(event.target.value)}
+              defaultValue={defaults?.excerpt ?? ''}
               className="resize-none rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </label>
@@ -381,11 +369,12 @@ export function ArticleFormFields({
               <SegmentedRadio name="content_stream" value="pulse" label="Pulse" checked={contentStream === 'pulse'} onSelect={setContentStream} />
               <SegmentedRadio name="content_stream" value="charts" label="Charts" checked={contentStream === 'charts'} onSelect={setContentStream} />
               <SegmentedRadio name="content_stream" value="tech_vc" label="Tech x VC" checked={contentStream === 'tech_vc'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="leadership" label="Leadership" checked={contentStream === 'leadership'} onSelect={setContentStream} />
               <SegmentedRadio name="content_stream" value="geopolitics" label="Geopolitics" checked={contentStream === 'geopolitics'} onSelect={setContentStream} />
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[11px] leading-snug text-muted">
-                Tech x VC and Geopolitics require matching tags. If both apply, Geopolitics wins.
+                Tech x VC, Leadership, and Geopolitics require matching domain tags.
               </p>
               {suggestedStream && suggestedStream !== contentStream ? (
                 <button
