@@ -3,13 +3,14 @@ import type { ContentStream } from '@/types/article'
 /** Official subtopic slug for India geography scope. */
 export const INDIA_SUBTOPIC_SLUG = 'india' as const
 
-export const FEED_SCOPES = ['global', 'india'] as const
+export const FEED_SCOPES = ['global', 'india', 'charts'] as const
 export type FeedScope = (typeof FEED_SCOPES)[number]
 
 export const DEFAULT_FEED_SCOPE: FeedScope = 'global'
 
 export function parseFeedScope(raw: string | null | undefined): FeedScope {
   if (raw === 'india') return 'india'
+  if (raw === 'charts') return 'charts'
   return 'global'
 }
 
@@ -19,12 +20,28 @@ export function isScopeEnabledStream(
   return stream === 'standard' || stream === 'pulse' || stream === 'tech_vc'
 }
 
-/** Streams that ignore India/Global scope tabs (like Charts). */
+/** Streams that ignore India/Global scope tabs (legacy top-level charts URL redirects). */
 export function isScopeDisabledStream(stream: ContentStream): boolean {
   return stream === 'charts' || stream === 'geopolitics'
 }
 
-/** Resolved scope for query/UI — undefined on Charts (scope ignored). */
+export function isPulseChartsScope(
+  stream: ContentStream,
+  scope?: FeedScope
+): boolean {
+  return stream === 'pulse' && scope === 'charts'
+}
+
+/** When pulse + charts scope, query the charts corpus. */
+export function resolveEffectiveContentStream(
+  stream: ContentStream,
+  scope?: FeedScope
+): ContentStream {
+  if (isPulseChartsScope(stream, scope)) return 'charts'
+  return stream
+}
+
+/** Resolved scope for query/UI — undefined on legacy charts stream (redirects). */
 export function resolveFeedScope(
   stream: ContentStream,
   rawScope: string | null | undefined
@@ -39,21 +56,44 @@ export function effectiveFeedScope(
   scope?: FeedScope
 ): FeedScope | undefined {
   if (!isScopeEnabledStream(stream)) return undefined
-  return scope ?? DEFAULT_FEED_SCOPE
+  const resolved = scope ?? DEFAULT_FEED_SCOPE
+  if (resolved === 'charts' && stream !== 'pulse') return DEFAULT_FEED_SCOPE
+  return resolved
 }
 
 export function getScopeLabel(scope: FeedScope): string {
-  return scope === 'india' ? 'India' : 'Global'
+  if (scope === 'india') return 'India'
+  if (scope === 'charts') return 'Charts'
+  return 'Global'
+}
+
+export function getScopeAriaLabel(scope: FeedScope): string {
+  if (scope === 'charts') return 'Charts of the Week'
+  return getScopeLabel(scope)
+}
+
+function appendScopeParam(
+  params: URLSearchParams,
+  stream: ContentStream,
+  scope?: FeedScope
+): void {
+  if (scope === 'india' && isScopeEnabledStream(stream)) {
+    params.set('scope', 'india')
+  } else if (scope === 'charts' && stream === 'pulse') {
+    params.set('scope', 'charts')
+  }
 }
 
 export function buildHomeHref(stream: ContentStream, scope?: FeedScope): string {
   const params = new URLSearchParams()
   if (stream !== 'standard') params.set('stream', stream)
-  if (scope === 'india' && isScopeEnabledStream(stream)) {
-    params.set('scope', 'india')
-  }
+  appendScopeParam(params, stream, scope)
   const qs = params.toString()
   return qs ? `/?${qs}` : '/'
+}
+
+export function buildChartsScopeHref(): string {
+  return '/?stream=pulse&scope=charts'
 }
 
 export function buildStreamTabHref(
@@ -61,8 +101,20 @@ export function buildStreamTabHref(
   activeScope?: FeedScope
 ): string {
   if (isScopeDisabledStream(targetStream)) return `/?stream=${targetStream}`
-  const scope = activeScope === 'india' ? 'india' : undefined
+  const scope =
+    activeScope === 'india'
+      ? 'india'
+      : activeScope === 'charts' && targetStream === 'pulse'
+        ? 'charts'
+        : undefined
   return buildHomeHref(targetStream, scope)
+}
+
+/** Deep-link from article content_stream or notification batch row. */
+export function buildFeedHrefForContentStream(stream: ContentStream): string {
+  if (stream === 'charts') return buildChartsScopeHref()
+  if (stream === 'standard') return '/'
+  return `/?stream=${stream}`
 }
 
 /**
@@ -93,6 +145,14 @@ export function shouldHideIndiaTagSlug(stream: ContentStream): boolean {
   return isScopeEnabledStream(stream)
 }
 
+/** Scope tabs shown for the given stream. */
+export function getScopesForStream(
+  stream: 'standard' | 'pulse' | 'tech_vc'
+): FeedScope[] {
+  if (stream === 'pulse') return ['global', 'india', 'charts']
+  return ['global', 'india']
+}
+
 type ScopeQueryable = {
   contains(column: string, value: string[]): ScopeQueryable
   not(column: string, operator: string, value: string): ScopeQueryable
@@ -104,18 +164,18 @@ export function applyFeedScopeFilter<T extends ScopeQueryable>(
   stream: ContentStream,
   scope: FeedScope | undefined
 ): T {
-  if (!scope || !isScopeEnabledStream(stream)) return query
+  if (!scope || !isScopeEnabledStream(stream) || scope === 'charts') return query
   if (scope === 'india') {
     return query.contains('tag_slugs', [INDIA_SUBTOPIC_SLUG]) as T
   }
   return query.not('tag_slugs', 'cs', `{${INDIA_SUBTOPIC_SLUG}}`) as T
 }
 
-/** Scope param for search RPC — null when scope does not apply. */
+/** Scope param for search RPC — null when scope does not apply or is charts. */
 export function scopeToRpcParam(
   stream: ContentStream,
   scope: FeedScope | undefined
 ): string | null {
-  if (!scope || !isScopeEnabledStream(stream)) return null
+  if (!scope || !isScopeEnabledStream(stream) || scope === 'charts') return null
   return scope
 }

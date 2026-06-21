@@ -1,5 +1,6 @@
 import { parseContentStream } from '@/lib/copy/streams'
 import {
+  effectiveFeedScope,
   isScopeEnabledStream,
   normalizeTagsAndScope,
   type FeedScope,
@@ -27,7 +28,7 @@ export function buildFeedContentKey(searchParams: URLSearchParams): string {
     searchParams.get('scope') ?? undefined
   )
   const feedScope: FeedScope | undefined = isScopeEnabledStream(stream)
-    ? scope ?? 'global'
+    ? effectiveFeedScope(stream, scope)
     : undefined
   const scopeKey = feedScope ?? 'none'
   const skimView = isSkimFeedView(searchParams.get('view') ?? undefined, null)

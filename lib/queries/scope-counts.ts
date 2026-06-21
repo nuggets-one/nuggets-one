@@ -4,11 +4,27 @@ import { INDIA_SUBTOPIC_SLUG } from '@/lib/feed/scope'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
 
-export type ScopeCounts = { global: number; india: number }
+export type ScopeCounts = { global: number; india: number; charts: number }
 
 const PENDING_MIGRATION_CODES = new Set(['PGRST205', '42P01'])
 
-async function fetchScopeCountsForStream(stream: ContentStream): Promise<ScopeCounts> {
+async function fetchChartsStreamCount(): Promise<number> {
+  const supabase = getPublicClient()
+  const { count, error } = await supabase
+    .from('articles')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'published')
+    .eq('content_stream', 'charts')
+
+  if (error && !PENDING_MIGRATION_CODES.has(error.code ?? '')) {
+    console.error('fetchChartsStreamCount:', error.message)
+  }
+  return count ?? 0
+}
+
+async function fetchScopeCountsForStream(
+  stream: ContentStream
+): Promise<Pick<ScopeCounts, 'global' | 'india'>> {
   const supabase = getPublicClient()
 
   const base = () =>
@@ -36,20 +52,38 @@ async function fetchScopeCountsForStream(stream: ContentStream): Promise<ScopeCo
   }
 }
 
+const cachedChartsScopeCount = unstable_cache(
+  fetchChartsStreamCount,
+  ['scope-counts', 'charts'],
+  { revalidate: 3600, tags: [CACHE_TAGS.scopeCounts('charts')] }
+)
+
 const cachedStandardScopeCounts = unstable_cache(
-  () => fetchScopeCountsForStream('standard'),
+  async () => {
+    const counts = await fetchScopeCountsForStream('standard')
+    return { ...counts, charts: 0 }
+  },
   ['scope-counts', 'standard'],
   { revalidate: 3600, tags: [CACHE_TAGS.scopeCounts('standard')] }
 )
 
 const cachedPulseScopeCounts = unstable_cache(
-  () => fetchScopeCountsForStream('pulse'),
+  async () => {
+    const [counts, charts] = await Promise.all([
+      fetchScopeCountsForStream('pulse'),
+      cachedChartsScopeCount(),
+    ])
+    return { ...counts, charts }
+  },
   ['scope-counts', 'pulse'],
   { revalidate: 3600, tags: [CACHE_TAGS.scopeCounts('pulse')] }
 )
 
 const cachedTechVcScopeCounts = unstable_cache(
-  () => fetchScopeCountsForStream('tech_vc'),
+  async () => {
+    const counts = await fetchScopeCountsForStream('tech_vc')
+    return { ...counts, charts: 0 }
+  },
   ['scope-counts', 'tech_vc'],
   { revalidate: 3600, tags: [CACHE_TAGS.scopeCounts('tech_vc')] }
 )

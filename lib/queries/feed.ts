@@ -1,5 +1,10 @@
 import { getPublicClient } from '@/lib/supabase/public'
-import { applyFeedScopeFilter, effectiveFeedScope, scopeToRpcParam } from '@/lib/feed/scope'
+import {
+  applyFeedScopeFilter,
+  effectiveFeedScope,
+  resolveEffectiveContentStream,
+  scopeToRpcParam,
+} from '@/lib/feed/scope'
 import type { FeedScope } from '@/lib/feed/scope'
 import { normalizeCuratorDisplayNameOnRows } from '@/lib/queries/normalize-curator-display-name'
 import { attachTagLabelsToRows } from '@/lib/queries/card-tag-labels'
@@ -174,11 +179,12 @@ async function getFeedTotalCount({
   q: string
   scope?: FeedScope
 }): Promise<number> {
+  const effectiveStream = resolveEffectiveContentStream(stream, scope)
   let query = supabase
     .from('articles')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'published')
-    .eq('content_stream', stream)
+    .eq('content_stream', effectiveStream)
 
   query = applyFeedScopeFilter(query, stream, scope)
 
@@ -216,12 +222,14 @@ async function getFeedPageByCursor({
   limit: number
   scope?: FeedScope
 }): Promise<FeedPage> {
+  const effectiveStream = resolveEffectiveContentStream(stream, scope)
+
   async function runQuery(selectClause: string) {
     let query = supabase
       .from('articles')
       .select(selectClause)
       .eq('status', 'published')
-      .eq('content_stream', stream)
+      .eq('content_stream', effectiveStream)
       .order('published_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(limit)
@@ -285,13 +293,14 @@ async function getFeedPageBySearch({
   limit: number
   scope?: FeedScope
 }): Promise<FeedPage> {
+  const effectiveStream = resolveEffectiveContentStream(stream, scope)
   const safeCursorRank = typeof cursor?.rank === 'number' ? cursor.rank : null
   const safeCursorPublishedAt = cursor?.published_at ?? null
   const safeCursorId = cursor?.id ?? null
   const rpcClient = supabase as unknown as RpcClient
 
   const { data, error } = await rpcClient.rpc('search_articles_ranked', {
-    p_stream: stream,
+    p_stream: effectiveStream,
     p_tags: tags,
     p_q: q,
     p_limit: limit,
@@ -356,12 +365,14 @@ async function getFeedPageBySearchLegacy({
   limit: number
   scope?: FeedScope
 }): Promise<FeedPage> {
+  const effectiveStream = resolveEffectiveContentStream(stream, scope)
+
   async function runQuery(selectClause: string) {
     let query = supabase
       .from('articles')
       .select(selectClause)
       .eq('status', 'published')
-      .eq('content_stream', stream)
+      .eq('content_stream', effectiveStream)
       .textSearch('search_vector', q, {
         type: 'websearch',
         config: 'english',

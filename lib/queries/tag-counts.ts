@@ -1,6 +1,11 @@
 import { unstable_cache } from 'next/cache'
 import { CACHE_TAGS } from '@/lib/cache'
-import { applyFeedScopeFilter, effectiveFeedScope } from '@/lib/feed/scope'
+import {
+  applyFeedScopeFilter,
+  effectiveFeedScope,
+  isPulseChartsScope,
+  resolveEffectiveContentStream,
+} from '@/lib/feed/scope'
 import type { FeedScope } from '@/lib/feed/scope'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
@@ -15,12 +20,13 @@ async function fetchTagCountsForStream(
 ): Promise<TagCounts> {
   const supabase = getPublicClient()
   const effectiveScope = effectiveFeedScope(stream, scope)
+  const effectiveStream = resolveEffectiveContentStream(stream, scope)
 
   let query = supabase
     .from('articles')
     .select('tag_slugs')
     .eq('status', 'published')
-    .eq('content_stream', stream)
+    .eq('content_stream', effectiveStream)
 
   query = applyFeedScopeFilter(query, stream, effectiveScope)
 
@@ -110,6 +116,7 @@ export async function getTagCountsForStream(
 ): Promise<TagCounts> {
   if (stream === 'charts') return cachedChartsTagCounts()
   if (stream === 'geopolitics') return cachedGeopoliticsTagCounts()
+  if (isPulseChartsScope(stream, scope)) return cachedChartsTagCounts()
   const effectiveScope = effectiveFeedScope(stream, scope) ?? 'global'
   if (stream === 'pulse') {
     return effectiveScope === 'india'

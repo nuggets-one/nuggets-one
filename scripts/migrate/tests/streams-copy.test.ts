@@ -11,7 +11,14 @@ import {
   TECH_VC_TAG_SLUGS,
   validateStreamTagMembership,
 } from '../../../lib/feed/stream-membership'
-import { isScopeEnabledStream, isScopeDisabledStream } from '../../../lib/feed/scope'
+import {
+  isScopeEnabledStream,
+  isScopeDisabledStream,
+  resolveEffectiveContentStream,
+  buildFeedHrefForContentStream,
+  buildChartsScopeHref,
+  getScopesForStream,
+} from '../../../lib/feed/scope'
 
 test('parseContentStream accepts all streams and defaults unknown to standard', () => {
   assert.equal(parseContentStream('charts'), 'charts')
@@ -48,4 +55,24 @@ test('scope helpers include tech_vc only for India/Global streams', () => {
   assert.equal(isScopeEnabledStream('geopolitics'), false)
   assert.equal(isScopeDisabledStream('geopolitics'), true)
   assert.equal(isScopeDisabledStream('tech_vc'), false)
+  assert.equal(isScopeDisabledStream('charts'), true)
+})
+
+test('resolveEffectiveContentStream maps pulse charts scope to charts corpus', () => {
+  assert.equal(resolveEffectiveContentStream('pulse', 'charts'), 'charts')
+  assert.equal(resolveEffectiveContentStream('pulse', 'global'), 'pulse')
+  assert.equal(resolveEffectiveContentStream('pulse', 'india'), 'pulse')
+  assert.equal(resolveEffectiveContentStream('standard', 'charts'), 'standard')
+})
+
+test('charts scope tab only on pulse stream', () => {
+  assert.deepEqual(getScopesForStream('pulse'), ['global', 'india', 'charts'])
+  assert.deepEqual(getScopesForStream('standard'), ['global', 'india'])
+  assert.deepEqual(getScopesForStream('tech_vc'), ['global', 'india'])
+})
+
+test('buildFeedHrefForContentStream routes charts under pulse', () => {
+  assert.equal(buildFeedHrefForContentStream('charts'), buildChartsScopeHref())
+  assert.equal(buildFeedHrefForContentStream('pulse'), '/?stream=pulse')
+  assert.equal(buildFeedHrefForContentStream('standard'), '/')
 })

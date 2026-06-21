@@ -59,7 +59,6 @@ export const STREAM_NAV_ORDER = [
   'pulse',
   'tech_vc',
   'standard',
-  'charts',
   'geopolitics',
 ] as const satisfies readonly ContentStream[]
 

@@ -2,6 +2,7 @@ import { getPublicClient } from '@/lib/supabase/public'
 import {
   applyFeedScopeFilter,
   effectiveFeedScope,
+  resolveEffectiveContentStream,
   scopeToRpcParam,
 } from '@/lib/feed/scope'
 import type { FeedScope } from '@/lib/feed/scope'
@@ -86,9 +87,10 @@ export async function suggestArticles({
   const supabase = getPublicClient()
   const rpcClient = supabase as unknown as RpcClient
   const effectiveScope = effectiveFeedScope(stream, scope)
+  const effectiveStream = resolveEffectiveContentStream(stream, scope)
 
   const { data, error } = await rpcClient.rpc('search_suggestions_ranked', {
-    p_stream: stream,
+    p_stream: effectiveStream,
     p_q: q.trim(),
     p_limit: Math.min(limit, SEARCH_SUGGEST_ROW_CAP),
     p_scope: scopeToRpcParam(stream, effectiveScope),
@@ -100,7 +102,7 @@ export async function suggestArticles({
         .from('articles')
         .select('id, slug, title, content_stream, published_at')
         .eq('status', 'published')
-        .eq('content_stream', stream)
+        .eq('content_stream', effectiveStream)
         .textSearch('search_vector', q.trim(), {
           type: 'websearch',
           config: 'english',
