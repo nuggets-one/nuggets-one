@@ -12,6 +12,7 @@ export const CACHE_TAGS = {
   feedCharts:      'feed:charts',
   feedTechVc:      'feed:tech_vc',
   feedGeopolitics: 'feed:geopolitics',
+  feedLeadership:  'feed:leadership',
   article:         (id: string) => `article:${id}`,
   streamCounts:    'counts:streams',
   scopeCounts:     (stream: string) => `counts:scope:${stream}`,
@@ -43,6 +44,7 @@ export function revalidateArticle(id: string): void {
   revalidateTag(CACHE_TAGS.feedCharts, HARD_BUST)
   revalidateTag(CACHE_TAGS.feedTechVc, HARD_BUST)
   revalidateTag(CACHE_TAGS.feedGeopolitics, HARD_BUST)
+  revalidateTag(CACHE_TAGS.feedLeadership, HARD_BUST)
   revalidateTag(CACHE_TAGS.article(id), HARD_BUST)
   revalidateTag(CACHE_TAGS.streamCounts, HARD_BUST)
   revalidateTag(CACHE_TAGS.scopeCounts('standard'), HARD_BUST)
@@ -58,6 +60,7 @@ export function revalidateArticle(id: string): void {
   revalidateTag(CACHE_TAGS.tagCounts('tech_vc:global'), HARD_BUST)
   revalidateTag(CACHE_TAGS.tagCounts('tech_vc:india'), HARD_BUST)
   revalidateTag(CACHE_TAGS.tagCounts('geopolitics'), HARD_BUST)
+  revalidateTag(CACHE_TAGS.tagCounts('leadership'), HARD_BUST)
 }
 
 /**

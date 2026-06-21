@@ -9,6 +9,7 @@ const CONTENT_STREAM_VALUES = [
   'charts',
   'tech_vc',
   'geopolitics',
+  'leadership',
 ] as const
 export const publishArticleSchema = z.object({
   title: z.string().trim().min(1, 'title_required').max(300, 'title_too_long'),

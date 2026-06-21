@@ -22,7 +22,7 @@ export function isScopeEnabledStream(
 
 /** Streams that ignore India/Global scope tabs (legacy top-level charts URL redirects). */
 export function isScopeDisabledStream(stream: ContentStream): boolean {
-  return stream === 'charts' || stream === 'geopolitics'
+  return stream === 'charts' || stream === 'geopolitics' || stream === 'leadership'
 }
 
 export function isPulseChartsScope(

@@ -105,6 +105,12 @@ const cachedGeopoliticsTagCounts = unstable_cache(
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('geopolitics')] }
 )
 
+const cachedLeadershipTagCounts = unstable_cache(
+  () => fetchTagCountsForStream('leadership'),
+  [cacheKey('leadership', 'all')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('leadership')] }
+)
+
 /**
  * Slug → count of published articles in the given stream (optionally scoped).
  * Cached for 1h; recomputed on cache miss via a single in-memory aggregation
@@ -116,6 +122,7 @@ export async function getTagCountsForStream(
 ): Promise<TagCounts> {
   if (stream === 'charts') return cachedChartsTagCounts()
   if (stream === 'geopolitics') return cachedGeopoliticsTagCounts()
+  if (stream === 'leadership') return cachedLeadershipTagCounts()
   if (isPulseChartsScope(stream, scope)) return cachedChartsTagCounts()
   const effectiveScope = effectiveFeedScope(stream, scope) ?? 'global'
   if (stream === 'pulse') {

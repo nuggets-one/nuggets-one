@@ -7,6 +7,7 @@ import {
 } from '../../../lib/copy/streams'
 import {
   GEOPOLITICS_TAG_SLUG,
+  LEADERSHIP_TAG_SLUG,
   inferContentStreamFromTags,
   TECH_VC_TAG_SLUGS,
   validateStreamTagMembership,
@@ -19,19 +20,30 @@ import {
   buildChartsScopeHref,
   getScopesForStream,
 } from '../../../lib/feed/scope'
+import { STREAM_NAV_ORDER } from '../../../lib/copy/streams'
 
 test('parseContentStream accepts all streams and defaults unknown to standard', () => {
   assert.equal(parseContentStream('charts'), 'charts')
   assert.equal(parseContentStream('tech_vc'), 'tech_vc')
   assert.equal(parseContentStream('geopolitics'), 'geopolitics')
+  assert.equal(parseContentStream('leadership'), 'leadership')
   assert.equal(parseContentStream('invalid'), 'standard')
+})
+
+test('STREAM_NAV_ORDER includes leadership in charts former slot', () => {
+  assert.deepEqual(STREAM_NAV_ORDER, ['pulse', 'tech_vc', 'standard', 'leadership', 'geopolitics'])
 })
 
 test('getStreamLabel returns full and short labels for new streams', () => {
   assert.equal(getStreamLabel('tech_vc'), 'Tech x VC')
   assert.equal(getStreamLabel('tech_vc', 'short'), 'Tech')
   assert.equal(getStreamLabel('geopolitics'), 'Geopolitics')
+  assert.equal(getStreamLabel('leadership'), 'Leadership')
   assert.equal(STREAM_INTRO_COPY.geopolitics.shortLabel, 'Geo')
+})
+
+test('inferContentStreamFromTags does not auto-assign leadership', () => {
+  assert.equal(inferContentStreamFromTags([LEADERSHIP_TAG_SLUG]), null)
 })
 
 test('inferContentStreamFromTags prefers geopolitics over tech tags', () => {
@@ -46,6 +58,8 @@ test('inferContentStreamFromTags prefers geopolitics over tech tags', () => {
 test('validateStreamTagMembership enforces stream tag rules', () => {
   assert.equal(validateStreamTagMembership('geopolitics', [GEOPOLITICS_TAG_SLUG]), true)
   assert.equal(validateStreamTagMembership('geopolitics', ['technology']), false)
+  assert.equal(validateStreamTagMembership('leadership', [LEADERSHIP_TAG_SLUG]), true)
+  assert.equal(validateStreamTagMembership('leadership', ['technology']), false)
   assert.equal(validateStreamTagMembership('tech_vc', [TECH_VC_TAG_SLUGS[0]]), true)
   assert.equal(validateStreamTagMembership('standard', []), true)
 })
@@ -53,7 +67,9 @@ test('validateStreamTagMembership enforces stream tag rules', () => {
 test('scope helpers include tech_vc only for India/Global streams', () => {
   assert.equal(isScopeEnabledStream('tech_vc'), true)
   assert.equal(isScopeEnabledStream('geopolitics'), false)
+  assert.equal(isScopeEnabledStream('leadership'), false)
   assert.equal(isScopeDisabledStream('geopolitics'), true)
+  assert.equal(isScopeDisabledStream('leadership'), true)
   assert.equal(isScopeDisabledStream('tech_vc'), false)
   assert.equal(isScopeDisabledStream('charts'), true)
 })
@@ -73,6 +89,7 @@ test('charts scope tab only on pulse stream', () => {
 
 test('buildFeedHrefForContentStream routes charts under pulse', () => {
   assert.equal(buildFeedHrefForContentStream('charts'), buildChartsScopeHref())
+  assert.equal(buildFeedHrefForContentStream('leadership'), '/?stream=leadership')
   assert.equal(buildFeedHrefForContentStream('pulse'), '/?stream=pulse')
   assert.equal(buildFeedHrefForContentStream('standard'), '/')
 })

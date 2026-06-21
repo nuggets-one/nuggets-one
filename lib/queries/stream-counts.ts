@@ -9,6 +9,7 @@ export type StreamArticleCounts = {
   charts: number
   tech_vc: number
   geopolitics: number
+  leadership: number
 }
 
 const PENDING_MIGRATION_CODES = new Set(['PGRST205', '42P01'])
@@ -33,14 +34,15 @@ async function fetchStreamArticleCount(stream: ContentStream): Promise<number> {
 }
 
 async function fetchStreamArticleCounts(): Promise<StreamArticleCounts> {
-  const [standard, pulse, charts, tech_vc, geopolitics] = await Promise.all([
+  const [standard, pulse, charts, tech_vc, geopolitics, leadership] = await Promise.all([
     fetchStreamArticleCount('standard'),
     fetchStreamArticleCount('pulse'),
     fetchStreamArticleCount('charts'),
     fetchStreamArticleCount('tech_vc'),
     fetchStreamArticleCount('geopolitics'),
+    fetchStreamArticleCount('leadership'),
   ])
-  return { standard, pulse, charts, tech_vc, geopolitics }
+  return { standard, pulse, charts, tech_vc, geopolitics, leadership }
 }
 
 const cachedStreamArticleCounts = unstable_cache(

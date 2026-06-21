@@ -132,9 +132,9 @@ export type TagSummary = {
 
 // ─── Shared enums ────────────────────────────────────────────────────
 
-export type ContentStream = 'standard' | 'pulse' | 'charts' | 'tech_vc' | 'geopolitics'
+export type ContentStream = 'standard' | 'pulse' | 'charts' | 'tech_vc' | 'geopolitics' | 'leadership'
 
-export const CONTENT_STREAMS = ['standard', 'pulse', 'charts', 'tech_vc', 'geopolitics'] as const
+export const CONTENT_STREAMS = ['standard', 'pulse', 'charts', 'tech_vc', 'geopolitics', 'leadership'] as const
 
 export const DEFAULT_STREAM: ContentStream = 'standard'
 

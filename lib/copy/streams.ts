@@ -52,6 +52,15 @@ export const STREAM_INTRO_COPY: Record<ContentStream, StreamIntroCopy> = {
     tagline: 'Global power, conflict, and policy — the stories reshaping the world order.',
     mobileSummary: 'Global power, conflict, and policy intelligence',
   },
+  leadership: {
+    label: 'Leadership',
+    shortLabel: 'Leadership',
+    title: 'Leadership | Leaders, Investors & Entrepreneurs',
+    tagline:
+      'Profiles, playbooks, and lessons from leaders, investors, and founders.',
+    mobileSummary:
+      'Profiles, playbooks, and lessons from leaders, investors, and founders',
+  },
 }
 
 /** Display order for stream navigation (feed tabs, bottom nav). */
@@ -59,6 +68,7 @@ export const STREAM_NAV_ORDER = [
   'pulse',
   'tech_vc',
   'standard',
+  'leadership',
   'geopolitics',
 ] as const satisfies readonly ContentStream[]
 
@@ -87,6 +97,6 @@ export function parseContentStream(raw: string | null | undefined): ContentStrea
 
 export const HOME_METADATA = {
   title: 'Nuggets: The Knowledge App',
-  description: `${STREAM_INTRO_COPY.standard.tagline} Browse Nuggets, Market Pulse, Charts of the Week, Tech x VC, and Geopolitics.`,
+  description: `${STREAM_INTRO_COPY.standard.tagline} Browse Nuggets, Market Pulse, Tech x VC, Leadership, and Geopolitics.`,
   ogDescription: STREAM_INTRO_COPY.standard.mobileSummary,
 } as const

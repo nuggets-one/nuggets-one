@@ -5,6 +5,8 @@ export const TECH_VC_TAG_SLUGS = ['technology', 'pe-vc', 'ai', 'semiconductors']
 
 export const GEOPOLITICS_TAG_SLUG = 'geopolitics' as const
 
+export const LEADERSHIP_TAG_SLUG = 'leaders-investors-entrepreneurs' as const
+
 export function tagsOverlapsAny(
   tagSlugs: string[],
   candidates: readonly string[]
@@ -27,6 +29,9 @@ export function validateStreamTagMembership(
   if (stream === 'geopolitics') {
     return tagSlugs.includes(GEOPOLITICS_TAG_SLUG)
   }
+  if (stream === 'leadership') {
+    return tagSlugs.includes(LEADERSHIP_TAG_SLUG)
+  }
   if (stream === 'tech_vc') {
     return tagsOverlapsAny(tagSlugs, TECH_VC_TAG_SLUGS)
   }
@@ -35,6 +40,7 @@ export function validateStreamTagMembership(
 
 export function shouldHideTagSlugForStream(stream: ContentStream, slug: string): boolean {
   if (stream === 'geopolitics' && slug === GEOPOLITICS_TAG_SLUG) return true
+  if (stream === 'leadership' && slug === LEADERSHIP_TAG_SLUG) return true
   if (stream === 'tech_vc' && (TECH_VC_TAG_SLUGS as readonly string[]).includes(slug)) {
     return true
   }
