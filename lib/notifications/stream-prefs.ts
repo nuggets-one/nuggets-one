@@ -6,6 +6,7 @@ export type StreamPrefColumn =
   | 'stream_charts'
   | 'stream_tech_vc'
   | 'stream_geopolitics'
+  | 'stream_leadership'
 
 export function streamPrefColumn(stream: ContentStream): StreamPrefColumn {
   switch (stream) {
@@ -17,6 +18,8 @@ export function streamPrefColumn(stream: ContentStream): StreamPrefColumn {
       return 'stream_tech_vc'
     case 'geopolitics':
       return 'stream_geopolitics'
+    case 'leadership':
+      return 'stream_leadership'
     default:
       return 'stream_standard'
   }

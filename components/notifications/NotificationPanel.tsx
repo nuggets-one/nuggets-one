@@ -24,6 +24,7 @@ type Prefs = {
   stream_charts: boolean
   stream_tech_vc: boolean
   stream_geopolitics: boolean
+  stream_leadership: boolean
 }
 
 type NotificationWithSlug = NotificationRow & {
@@ -323,6 +324,16 @@ function PreferencesSection({
         />
       </label>
       <label className="flex items-center justify-between gap-2 cursor-pointer">
+        <span className="text-sm text-primary">Leadership</span>
+        <input
+          type="checkbox"
+          checked={prefs.stream_leadership}
+          onChange={(e) => onChange({ stream_leadership: e.target.checked })}
+          className="w-4 h-4 accent-accent"
+          disabled={prefs.mute_all}
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 cursor-pointer">
         <span className="text-sm text-primary">Geopolitics</span>
         <input
           type="checkbox"
@@ -365,6 +376,7 @@ export function NotificationPanel({
     stream_charts: true,
     stream_tech_vc: true,
     stream_geopolitics: true,
+    stream_leadership: true,
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

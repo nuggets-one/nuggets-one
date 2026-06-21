@@ -32,7 +32,7 @@ export async function GET() {
 
     supabase
       .from('notification_preferences')
-      .select('mute_all, stream_standard, stream_pulse, stream_charts, stream_tech_vc, stream_geopolitics')
+      .select('mute_all, stream_standard, stream_pulse, stream_charts, stream_tech_vc, stream_geopolitics, stream_leadership')
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
@@ -44,6 +44,7 @@ export async function GET() {
     stream_charts: true,
     stream_tech_vc: true,
     stream_geopolitics: true,
+    stream_leadership: true,
   }
 
   return NextResponse.json(

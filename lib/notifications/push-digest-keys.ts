@@ -19,7 +19,7 @@ export function buildDigestBatchKey(
 
 export function parseBatchKeyWindowEnd(batchKey: string, intervalHours: number): Date | null {
   const match = batchKey.match(
-    /^(standard|pulse|charts|tech_vc|geopolitics):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/
+    /^(standard|pulse|charts|tech_vc|geopolitics|leadership):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/
   )
   if (!match) return null
   const [, , y, mo, d, hh] = match

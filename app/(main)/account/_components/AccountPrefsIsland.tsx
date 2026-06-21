@@ -12,6 +12,7 @@ type Prefs = {
   stream_charts: boolean
   stream_tech_vc: boolean
   stream_geopolitics: boolean
+  stream_leadership: boolean
 }
 
 type Props = {
@@ -65,6 +66,16 @@ export function AccountPrefsIsland({ initialPrefs }: Props) {
           type="checkbox"
           checked={prefs.stream_tech_vc}
           onChange={(e) => handleChange({ stream_tech_vc: e.target.checked })}
+          disabled={prefs.mute_all}
+          className="w-4 h-4 accent-accent"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-4 cursor-pointer">
+        <span className="text-sm text-primary">{STREAM_INTRO_COPY.leadership.label} stream</span>
+        <input
+          type="checkbox"
+          checked={prefs.stream_leadership}
+          onChange={(e) => handleChange({ stream_leadership: e.target.checked })}
           disabled={prefs.mute_all}
           className="w-4 h-4 accent-accent"
         />

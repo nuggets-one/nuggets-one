@@ -37,16 +37,20 @@ test('streamPushLabel maps streams', () => {
   assert.equal(streamPushLabel('charts'), 'Charts of the Week')
   assert.equal(streamPushLabel('tech_vc'), 'Tech x VC')
   assert.equal(streamPushLabel('geopolitics'), 'Geopolitics')
+  assert.equal(streamPushLabel('leadership'), 'Leadership')
 })
 
-test('buildDigestBatchKey supports tech_vc and geopolitics batch keys', () => {
+test('buildDigestBatchKey supports tech_vc, geopolitics, and leadership batch keys', () => {
   const techKey = buildDigestBatchKey('tech_vc', new Date('2026-06-11T10:45:00.000Z'), 3)
   assert.equal(techKey, 'tech_vc:2026-06-11 09:00')
-  assert.match(techKey, /^(standard|pulse|charts|tech_vc|geopolitics):\d{4}-\d{2}-\d{2} \d{2}:00$/)
+  assert.match(techKey, /^(standard|pulse|charts|tech_vc|geopolitics|leadership):\d{4}-\d{2}-\d{2} \d{2}:00$/)
 
   const geoKey = buildDigestBatchKey('geopolitics', new Date('2026-06-11T14:20:00.000Z'), 2)
   assert.equal(geoKey, 'geopolitics:2026-06-11 14:00')
   assert.equal(isDigestWindowClosed(geoKey, 2, new Date('2026-06-11T16:00:00.000Z')), true)
+
+  const leadershipKey = buildDigestBatchKey('leadership', new Date('2026-06-11T14:20:00.000Z'), 2)
+  assert.equal(leadershipKey, 'leadership:2026-06-11 14:00')
 })
 
 test('digest topic push uses per-article android tag and collapse key', () => {

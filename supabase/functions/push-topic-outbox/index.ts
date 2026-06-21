@@ -17,7 +17,7 @@ function topicPushWebDeepLink(
 ): string {
   const base = WEB_PUSH_NOTIFICATION.siteUrl.replace(/\/$/, '')
   if (articleId && slug) return `${base}/nuggets/${articleId}/${slug}`
-  if (stream === 'standard' || stream === 'pulse' || stream === 'charts' || stream === 'tech_vc' || stream === 'geopolitics') {
+  if (stream === 'standard' || stream === 'pulse' || stream === 'charts' || stream === 'tech_vc' || stream === 'geopolitics' || stream === 'leadership') {
     return `${base}/?stream=${stream}`
   }
   return base
@@ -43,7 +43,7 @@ function buildTopicWebpushBlock(row: TopicOutboxRow, imageUrl?: string) {
   }
 }
 
-type DigestStream = 'standard' | 'pulse' | 'charts' | 'tech_vc' | 'geopolitics'
+type DigestStream = 'standard' | 'pulse' | 'charts' | 'tech_vc' | 'geopolitics' | 'leadership'
 
 type TopicOutboxRow = {
   id: string
@@ -82,6 +82,7 @@ const PUSH_TOPIC_BY_STREAM: Record<DigestStream, string> = {
   charts: 'nuggets-stream-charts',
   tech_vc: 'nuggets-stream-tech-vc',
   geopolitics: 'nuggets-stream-geopolitics',
+  leadership: 'nuggets-stream-leadership',
 }
 
 function topicForStream(stream: DigestStream): string {
@@ -93,12 +94,13 @@ function streamPushLabel(stream: DigestStream): string {
   if (stream === 'charts') return 'Charts of the Week'
   if (stream === 'tech_vc') return 'Tech x VC'
   if (stream === 'geopolitics') return 'Geopolitics'
+  if (stream === 'leadership') return 'Leadership'
   return 'Nuggets'
 }
 
 function parseBatchKeyWindowEnd(batchKey: string, intervalHours: number): Date | null {
   const match = batchKey.match(
-    /^(standard|pulse|charts|tech_vc|geopolitics):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/
+    /^(standard|pulse|charts|tech_vc|geopolitics|leadership):(\d{4})-(\d{2})-(\d{2}) (\d{2}):00$/
   )
   if (!match) return null
   const [, , y, mo, d, hh] = match

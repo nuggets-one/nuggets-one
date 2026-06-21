@@ -62,6 +62,7 @@ export async function lazyCreatePreferencesAction(): Promise<void> {
         stream_charts: true,
         stream_tech_vc: true,
         stream_geopolitics: true,
+        stream_leadership: true,
       },
       { onConflict: 'user_id', ignoreDuplicates: true }
     )
@@ -74,6 +75,7 @@ export async function updatePreferencesAction(prefs: {
   stream_charts?: boolean
   stream_tech_vc?: boolean
   stream_geopolitics?: boolean
+  stream_leadership?: boolean
 }): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -94,7 +96,7 @@ export async function updatePreferencesAction(prefs: {
   const adminClient = getAdminClient()
   const { data } = await adminClient
     .from('notification_preferences')
-    .select('mute_all, stream_standard, stream_pulse, stream_charts, stream_tech_vc, stream_geopolitics')
+    .select('mute_all, stream_standard, stream_pulse, stream_charts, stream_tech_vc, stream_geopolitics, stream_leadership')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -105,5 +107,6 @@ export async function updatePreferencesAction(prefs: {
     stream_charts: data?.stream_charts !== false,
     stream_tech_vc: data?.stream_tech_vc !== false,
     stream_geopolitics: data?.stream_geopolitics !== false,
+    stream_leadership: data?.stream_leadership !== false,
   })
 }
