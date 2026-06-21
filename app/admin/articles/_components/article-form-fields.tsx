@@ -1,8 +1,11 @@
 'use client'
 
-import { useMemo, useRef, useState, type ClipboardEvent, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type MouseEvent } from 'react'
 import { AdminCardImagePreview } from './admin-card-image-preview'
 import { CardCoverPreviewPanel } from './card-cover-preview'
+import { SourceMetadataPreview } from './source-metadata-preview'
+import type { SourceMetadata } from '@/lib/admin/source-metadata-types'
+import { suggestStreamFromText, suggestTagsFromText } from '@/lib/admin/suggest-tags-from-text'
 import { hasCloudinaryCloudName } from '@/lib/ui/cloudinary-fetch'
 import { isYouTubeUrl } from '@/lib/ui/excerpt-card'
 import { isImageUrl } from '@/lib/ui/is-image-url'
@@ -56,10 +59,19 @@ export function ArticleFormFields({
       ? [defaults.hero_thumb_url]
       : []
   const [sourceUrl, setSourceUrl] = useState(defaults?.source_url ?? '')
+  const [title, setTitle] = useState(defaults?.title ?? '')
+  const [excerpt, setExcerpt] = useState(defaults?.excerpt ?? '')
   const [mediaUrlsValue, setMediaUrlsValue] = useState(initialMediaUrls.join('\n'))
   const [thumbnailUrl, setThumbnailUrl] = useState(defaults?.hero_thumb_url ?? initialMediaUrls[0] ?? '')
   const [body, setBody] = useState(defaults?.content_markdown ?? '')
+  const [prefillBodyTemplate, setPrefillBodyTemplate] = useState(false)
   const [pasteStatus, setPasteStatus] = useState<string | null>(null)
+  const [fetchedMetadata, setFetchedMetadata] = useState<SourceMetadata | null>(null)
+  const [fetchStatus, setFetchStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [suggestedTagSlugs, setSuggestedTagSlugs] = useState<string[]>([])
+  const [suggestedStream, setSuggestedStream] = useState<ContentStream | null>(null)
+  const lastFetchedUrlRef = useRef<string | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const mediaPreviewUrls = useMemo(() => parseUrls(mediaUrlsValue), [mediaUrlsValue])
   const effectiveThumbnailUrl = mediaPreviewUrls.includes(thumbnailUrl)
@@ -80,6 +92,141 @@ export function ArticleFormFields({
     !hasCloudinaryCloudName() &&
     parseAdminMediaUrlList(mediaUrlsValue).some((url) => isImageUrl(url) && !isYouTubeUrl(url))
 
+  const visibleSuggestedTags = useMemo(
+    () => suggestedTagSlugs.filter((slug) => !selectedTags.has(slug)),
+    [suggestedTagSlugs, selectedTags],
+  )
+
+  const applyMetadata = useCallback(
+    (metadata: SourceMetadata, mode: 'empty_only' | 'replace_all') => {
+      if (mode === 'replace_all' || !title.trim()) {
+        if (metadata.title) setTitle(metadata.title)
+      }
+
+      const excerptValue =
+        metadata.provider === 'youtube' && metadata.author
+          ? metadata.author
+          : metadata.description
+
+      if (mode === 'replace_all' || !excerpt.trim()) {
+        if (excerptValue) setExcerpt(excerptValue)
+      }
+
+      if (metadata.provider !== 'youtube' && metadata.imageUrl) {
+        const existing = parseAdminMediaUrlList(mediaUrlsValue)
+        if (!existing.includes(metadata.imageUrl)) {
+          const next = [...existing, metadata.imageUrl]
+          setMediaUrlsValue(next.join('\n'))
+          setThumbnailUrl(metadata.imageUrl)
+        } else if (mode === 'replace_all' || !effectiveThumbnailUrl) {
+          setThumbnailUrl(metadata.imageUrl)
+        }
+      }
+
+      if (prefillBodyTemplate && (mode === 'replace_all' || !body.trim())) {
+        const template = buildBodyTemplate(metadata, sourceUrl.trim())
+        if (template) setBody(template)
+      }
+
+      const suggestionText = [metadata.title, metadata.description, metadata.author]
+        .filter(Boolean)
+        .join(' ')
+      setSuggestedTagSlugs(
+        suggestTagsFromText(
+          suggestionText,
+          tags.map((tag) => ({
+            slug: tag.slug,
+            label: tag.label,
+            dimension: tag.dimension,
+          })),
+        ),
+      )
+      setSuggestedStream(suggestStreamFromText(suggestionText))
+    },
+    [
+      body,
+      effectiveThumbnailUrl,
+      excerpt,
+      mediaUrlsValue,
+      prefillBodyTemplate,
+      sourceUrl,
+      tags,
+      title,
+    ],
+  )
+
+  const fetchMetadata = useCallback(
+    async (url: string, options?: { autoApply?: boolean }) => {
+      if (!looksLikeFetchableUrl(url)) return
+
+      setFetchStatus('loading')
+      setFetchError(null)
+
+      try {
+        const response = await fetch('/api/admin/source-metadata', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        })
+        const payload = (await response.json()) as {
+          metadata?: SourceMetadata
+          code?: string
+          error?: string
+        }
+
+        if (!response.ok || !payload.metadata) {
+          const code = payload.code ?? payload.error ?? 'fetch_failed'
+          setFetchStatus('error')
+          setFetchError(metadataErrorMessage(code))
+          setFetchedMetadata(null)
+          return
+        }
+
+        lastFetchedUrlRef.current = url
+        setFetchedMetadata(payload.metadata)
+        setFetchStatus('idle')
+        if (options?.autoApply) {
+          applyMetadata(payload.metadata, 'empty_only')
+        }
+      } catch {
+        setFetchStatus('error')
+        setFetchError('Could not fetch metadata. Check the URL and try again.')
+        setFetchedMetadata(null)
+      }
+    },
+    [applyMetadata],
+  )
+
+  function handleSourceUrlChange(value: string) {
+    setSourceUrl(value)
+    const trimmed = value.trim()
+    if (!looksLikeFetchableUrl(trimmed)) {
+      setFetchStatus('idle')
+      setFetchError(null)
+      if (!trimmed) {
+        setFetchedMetadata(null)
+        lastFetchedUrlRef.current = null
+      }
+    }
+  }
+
+  useEffect(() => {
+    const trimmed = sourceUrl.trim()
+    if (!looksLikeFetchableUrl(trimmed)) {
+      return
+    }
+
+    if (trimmed === lastFetchedUrlRef.current) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      void fetchMetadata(trimmed, { autoApply: true })
+    }, 600)
+
+    return () => window.clearTimeout(timeout)
+  }, [sourceUrl, fetchMetadata])
+
   function handleTagToggle(slug: string, checked: boolean) {
     const next = checked
       ? [...new Set([...selectedTagSlugs, slug])]
@@ -93,68 +240,73 @@ export function ArticleFormFields({
     }
   }
 
+  function applySuggestedTag(slug: string) {
+    handleTagToggle(slug, true)
+    setSuggestedTagSlugs((current) => current.filter((value) => value !== slug))
+  }
+
+  function applySuggestedStream() {
+    if (suggestedStream) {
+      setContentStream(suggestedStream)
+      setSuggestedStream(null)
+    }
+  }
+
   return (
     <div className="space-y-4 py-1">
       {defaults?.id && <input type="hidden" name="id" value={defaults.id} />}
       <input type="hidden" name="hero_thumb_url" value={effectiveThumbnailUrl} />
       <input type="hidden" name="hero_alt_text" value={defaults?.hero_alt_text ?? ''} />
+      {sourceIsYouTube ? <input type="hidden" name="media_urls" value={mediaUrlsValue} /> : null}
 
       <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-        <div className="grid items-end gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="space-y-3">
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-muted">Source URL</span>
-            <input
-              type="url"
-              name="source_url"
-              placeholder="https://example.com/article or YouTube link"
-              value={sourceUrl}
-              onChange={(event) => setSourceUrl(event.target.value)}
-              className="rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
-            />
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="url"
+                name="source_url"
+                placeholder="https://example.com/article or YouTube link"
+                value={sourceUrl}
+                onChange={(event) => handleSourceUrlChange(event.target.value)}
+                className="min-w-[min(100%,20rem)] flex-1 rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
+              />
+              <button
+                type="button"
+                disabled={!looksLikeFetchableUrl(sourceUrl.trim()) || fetchStatus === 'loading'}
+                onClick={() => void fetchMetadata(sourceUrl.trim())}
+                className="rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-xs font-semibold text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {fetchStatus === 'loading' ? 'Fetching…' : 'Fetch metadata'}
+              </button>
+            </div>
             <p className="text-[11px] leading-snug text-muted">
-              Outbound link on the card (View Source). For podcasts and videos, paste the YouTube URL here — we
-              use it as the feed cover and detail player.
+              Paste a link first — we fetch title, summary, and cover when possible. For YouTube, the video poster
+              becomes the feed cover automatically.
             </p>
             {sourceIsYouTube ? (
-              <p className="text-[11px] font-medium text-primary">YouTube detected — card cover will use the video poster.</p>
+              <p className="text-[11px] font-medium text-primary">
+                YouTube detected — card cover will use the video poster.
+              </p>
+            ) : null}
+            {fetchStatus === 'loading' ? (
+              <p className="text-[11px] text-muted">Fetching metadata…</p>
+            ) : null}
+            {fetchError ? (
+              <p className="text-[11px] font-medium text-red-600 dark:text-red-400">{fetchError}</p>
             ) : null}
           </label>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-muted">Stream</span>
-            <div className="flex min-h-[42px] w-fit flex-wrap items-center gap-1 rounded-xl border border-border bg-rail/60 p-1">
-              <SegmentedRadio name="content_stream" value="standard" label="Standard" checked={contentStream === 'standard'} onSelect={setContentStream} />
-              <SegmentedRadio name="content_stream" value="pulse" label="Pulse" checked={contentStream === 'pulse'} onSelect={setContentStream} />
-              <SegmentedRadio name="content_stream" value="charts" label="Charts" checked={contentStream === 'charts'} onSelect={setContentStream} />
-              <SegmentedRadio name="content_stream" value="tech_vc" label="Tech x VC" checked={contentStream === 'tech_vc'} onSelect={setContentStream} />
-              <SegmentedRadio name="content_stream" value="geopolitics" label="Geopolitics" checked={contentStream === 'geopolitics'} onSelect={setContentStream} />
-            </div>
-            <p className="text-[11px] leading-snug text-muted">
-              Tech x VC and Geopolitics require matching tags. If both apply, Geopolitics wins.
-            </p>
-          </div>
-
-          <label className="flex flex-col gap-1.5 lg:col-span-2">
-            <span className="text-xs font-bold uppercase tracking-wide text-muted">Card images (optional)</span>
-            <textarea
-              name="media_urls"
-              rows={2}
-              value={mediaUrlsValue}
-              onChange={(event) => setMediaUrlsValue(event.target.value)}
-              placeholder="Image URLs — one per line (or comma between URLs). Not YouTube links."
-              className="w-full resize-y rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
+          {fetchedMetadata ? (
+            <SourceMetadataPreview
+              metadata={fetchedMetadata}
+              applyEmptyOnly
+              onApply={() => applyMetadata(fetchedMetadata, 'empty_only')}
+              onReplaceAll={() => applyMetadata(fetchedMetadata, 'replace_all')}
             />
-            <p className="text-[11px] leading-snug text-muted">
-              Optional images for the feed card gallery. Pick one as the card cover below. YouTube covers come from
-              Source URL, not this field.
-            </p>
-          </label>
+          ) : null}
         </div>
-
-        <CardCoverPreviewPanel
-          preview={cardCoverPreview}
-          showCloudinaryEnvWarning={showCloudinaryEnvWarning}
-        />
 
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <label className="flex flex-col gap-1.5">
@@ -164,7 +316,8 @@ export function ArticleFormFields({
               name="title"
               required
               placeholder="Enter a title for your nugget..."
-              defaultValue={defaults?.title ?? ''}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
               className="rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </label>
@@ -175,37 +328,117 @@ export function ArticleFormFields({
               name="excerpt"
               rows={2}
               placeholder="Optional card summary..."
-              defaultValue={defaults?.excerpt ?? ''}
+              value={excerpt}
+              onChange={(event) => setExcerpt(event.target.value)}
               className="resize-none rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </label>
         </div>
 
-        <div className="space-y-2 border-t border-border pt-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted">Classification Tags</p>
-          <div className="space-y-2">
-            {TAG_GROUPS.map((group) => {
-              const groupTags = tags.filter((tag) => tag.dimension === group.key)
-              if (groupTags.length === 0) return null
-              return (
-                <TagGroup
-                  key={group.key}
-                  label={group.label}
-                  labelClassName={group.color}
-                  tags={groupTags}
-                  selectedTags={selectedTags}
-                  onToggle={handleTagToggle}
-                />
-              )
-            })}
+        <div className="grid items-end gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="space-y-2 border-t border-border pt-3 lg:col-span-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">Classification Tags</p>
+            {visibleSuggestedTags.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted">Suggested</span>
+                {visibleSuggestedTags.map((slug) => {
+                  const tag = tags.find((item) => item.slug === slug)
+                  if (!tag) return null
+                  return (
+                    <button
+                      key={slug}
+                      type="button"
+                      onClick={() => applySuggestedTag(slug)}
+                      className="rounded-full border border-dashed border-accent/60 bg-surface px-2.5 py-0.5 text-[11px] font-medium text-primary transition hover:bg-chip-active-bg"
+                    >
+                      + {tag.label}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              {TAG_GROUPS.map((group) => {
+                const groupTags = tags.filter((tag) => tag.dimension === group.key)
+                if (groupTags.length === 0) return null
+                return (
+                  <TagGroup
+                    key={group.key}
+                    label={group.label}
+                    labelClassName={group.color}
+                    tags={groupTags}
+                    selectedTags={selectedTags}
+                    onToggle={handleTagToggle}
+                  />
+                )
+              })}
+            </div>
           </div>
+
+          <div className="flex flex-col gap-1.5 lg:col-span-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-muted">Stream</span>
+            <div className="flex min-h-[42px] w-fit flex-wrap items-center gap-1 rounded-xl border border-border bg-rail/60 p-1">
+              <SegmentedRadio name="content_stream" value="standard" label="Standard" checked={contentStream === 'standard'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="pulse" label="Pulse" checked={contentStream === 'pulse'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="charts" label="Charts" checked={contentStream === 'charts'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="tech_vc" label="Tech x VC" checked={contentStream === 'tech_vc'} onSelect={setContentStream} />
+              <SegmentedRadio name="content_stream" value="geopolitics" label="Geopolitics" checked={contentStream === 'geopolitics'} onSelect={setContentStream} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] leading-snug text-muted">
+                Tech x VC and Geopolitics require matching tags. If both apply, Geopolitics wins.
+              </p>
+              {suggestedStream && suggestedStream !== contentStream ? (
+                <button
+                  type="button"
+                  onClick={applySuggestedStream}
+                  className="rounded-full border border-dashed border-accent/60 px-2.5 py-0.5 text-[11px] font-medium text-primary"
+                >
+                  Suggest: {suggestedStream === 'charts' ? 'Charts' : suggestedStream}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {!sourceIsYouTube ? (
+            <label className="flex flex-col gap-1.5 lg:col-span-2">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted">Card images (optional)</span>
+              <textarea
+                name="media_urls"
+                rows={2}
+                value={mediaUrlsValue}
+                onChange={(event) => setMediaUrlsValue(event.target.value)}
+                placeholder="Image URLs — one per line (or comma between URLs). Not YouTube links."
+                className="w-full resize-y rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
+              />
+              <p className="text-[11px] leading-snug text-muted">
+                Optional images for the feed card gallery. Pick one as the card cover below. Fetched OG images are
+                added here automatically.
+              </p>
+            </label>
+          ) : null}
         </div>
+
+        <CardCoverPreviewPanel
+          preview={cardCoverPreview}
+          showCloudinaryEnvWarning={showCloudinaryEnvWarning}
+        />
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-3 py-2 text-sm text-muted">
           <span className="text-xs font-semibold uppercase tracking-wide">Markdown Body</span>
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted">
+              <input
+                type="checkbox"
+                checked={prefillBodyTemplate}
+                onChange={(event) => setPrefillBodyTemplate(event.target.checked)}
+                className="rounded border-border"
+              />
+              Pre-fill body template from source
+            </label>
+            <div className="flex flex-wrap items-center gap-1">
             <ToolbarButton label="B" title="Bold" onClick={() => applyMarkdown('bold')} />
             <ToolbarButton label="I" title="Italic" onClick={() => applyMarkdown('italic')} />
             <ToolbarButton label="H1" title="Heading 1" onClick={() => applyMarkdown('h1')} />
@@ -214,6 +447,7 @@ export function ArticleFormFields({
             <ToolbarButton label="Quote" title="Quote" onClick={() => applyMarkdown('quote')} />
             <ToolbarButton label="Code" title="Inline code" onClick={() => applyMarkdown('code')} />
             <ToolbarButton label="Link" title="Link" onClick={() => applyMarkdown('link')} />
+            </div>
           </div>
         </div>
         <textarea
@@ -530,5 +764,36 @@ function parseUrls(value: string): string[] {
       return false
     }
   })
+}
+
+function looksLikeFetchableUrl(value: string): boolean {
+  if (!value) return false
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function buildBodyTemplate(metadata: SourceMetadata, source: string): string {
+  const parts: string[] = []
+
+  if (metadata.provider === 'youtube') {
+    if (metadata.author) parts.push(`Video by ${metadata.author}.`)
+    if (source) parts.push(`[Watch on YouTube](${source})`)
+  } else {
+    if (metadata.description) parts.push(metadata.description)
+    if (source) parts.push(`[View source](${source})`)
+  }
+
+  return parts.join('\n\n')
+}
+
+function metadataErrorMessage(code: string): string {
+  if (code === 'invalid_url') return 'Enter a valid http or https URL.'
+  if (code === 'blocked_host') return 'That URL cannot be fetched for security reasons.'
+  if (code === 'no_metadata') return 'No metadata found on that page.'
+  return 'Could not fetch metadata. Try again or fill fields manually.'
 }
 
