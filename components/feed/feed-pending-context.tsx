@@ -30,18 +30,23 @@ export function FeedPendingProvider({ children }: { children: ReactNode }) {
   const isHome = pathname === '/'
 
   const [feedPending, setFeedPending] = useState(false)
+  const [displayContentKey, setDisplayContentKey] = useState('')
+  const [pendingSinceContentKey, setPendingSinceContentKey] = useState<string | null>(
+    null,
+  )
   const [isTransitionPending, startTransition] = useTransition()
   const currentContentKeyRef = useRef('')
-  const pendingSinceContentKeyRef = useRef<string | null>(null)
 
   const registerFeedContentKey = useCallback((contentKey: string) => {
     currentContentKeyRef.current = contentKey
+    setDisplayContentKey(contentKey)
   }, [])
 
   const markFeedPending = useCallback(() => {
     if (!isHome) return
+    const key = currentContentKeyRef.current
     flushSync(() => {
-      pendingSinceContentKeyRef.current = currentContentKeyRef.current
+      setPendingSinceContentKey(key)
       setFeedPending(true)
     })
   }, [isHome])
@@ -49,37 +54,43 @@ export function FeedPendingProvider({ children }: { children: ReactNode }) {
   const beginFeedTransition = useCallback(
     (fn: () => void) => {
       if (isHome) {
+        const key = currentContentKeyRef.current
         flushSync(() => {
-          pendingSinceContentKeyRef.current = currentContentKeyRef.current
+          setPendingSinceContentKey(key)
           setFeedPending(true)
         })
       }
       startTransition(fn)
     },
-    [isHome, startTransition]
+    [isHome, startTransition],
   )
 
-  const resolveFeedPending = useCallback((contentKey: string) => {
-    if (!feedPending) return
-    if (
-      pendingSinceContentKeyRef.current !== null &&
-      contentKey !== pendingSinceContentKeyRef.current
-    ) {
-      setFeedPending(false)
-      pendingSinceContentKeyRef.current = null
-    }
-  }, [feedPending])
+  const resolveFeedPending = useCallback(
+    (contentKey: string) => {
+      if (!feedPending) return
+      if (
+        pendingSinceContentKey !== null &&
+        contentKey !== pendingSinceContentKey
+      ) {
+        setFeedPending(false)
+        setPendingSinceContentKey(null)
+      }
+    },
+    [feedPending, pendingSinceContentKey],
+  )
 
   useEffect(() => {
     if (!isHome) {
-      setFeedPending(false)
-      pendingSinceContentKeyRef.current = null
+      startTransition(() => {
+        setFeedPending(false)
+        setPendingSinceContentKey(null)
+      })
     }
   }, [isHome])
 
-  const showFeedSkeleton = isHome && (feedPending || isTransitionPending)
-  const skeletonKey =
-    pendingSinceContentKeyRef.current ?? currentContentKeyRef.current
+  const activeFeedPending = isHome && feedPending
+  const showFeedSkeleton = isHome && (activeFeedPending || isTransitionPending)
+  const skeletonKey = (isHome ? pendingSinceContentKey : null) ?? displayContentKey
   const showSkimSkeleton = skeletonKey.endsWith(':skim')
 
   return (
