@@ -78,6 +78,18 @@ test.describe('mobile feed intro context', () => {
     ).toBeVisible()
   })
 
+  test('switches to Leadership via bottom nav', async ({ page }) => {
+    await page.goto('/?stream=standard', { waitUntil: 'domcontentloaded' })
+
+    const nav = page.getByRole('navigation', { name: 'Primary destinations' })
+    await nav.getByRole('link', { name: STREAM_INTRO_COPY.leadership.label }).click()
+
+    await expect(page).toHaveURL(/\?stream=leadership/)
+    await expect(
+      page.getByText(STREAM_INTRO_COPY.leadership.mobileSummary, { exact: true }),
+    ).toBeVisible()
+  })
+
   test('switches to Geo via bottom nav', async ({ page }) => {
     await page.goto('/?stream=standard', { waitUntil: 'domcontentloaded' })
 

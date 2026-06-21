@@ -133,6 +133,15 @@ test('geopolitics stream hides scope tabs', async ({ page }) => {
   await expect(page.getByRole('link', { name: /^India,/i })).toHaveCount(0)
 })
 
+test('leadership stream hides scope tabs', async ({ page }) => {
+  await page.goto('/?stream=leadership', { waitUntil: 'networkidle' })
+  await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
+
+  await expect(page.getByRole('link', { name: /^Global,/i })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /^India,/i })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /Leadership/i }).first()).toBeVisible()
+})
+
 test('tag filter apply shows feed skeleton', async ({ page }) => {
   await page.route('**/*', async (route, request) => {
     const url = request.url()
