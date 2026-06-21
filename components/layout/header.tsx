@@ -13,7 +13,7 @@ import type { LegalFooterLink } from '@/lib/queries/legal-pages'
 /** Legal links are loaded in `(main)/layout` so this shell stays synchronous under `NuqsAdapter` (nuqs context + Next App Router SSR). */
 export function Header({ legalLinks }: { legalLinks: LegalFooterLink[] }) {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-header backdrop-blur-sm">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-header backdrop-blur-sm pt-[env(safe-area-inset-top,0px)]">
       <div className="relative mx-auto h-14 max-w-[90rem] px-4 lg:px-6">
         <div className="grid h-full w-full grid-cols-[1fr_auto] items-center gap-3 md:grid-cols-[auto_1fr_auto]">
           <div className="col-start-1 flex min-w-0 shrink-0 items-center gap-2">

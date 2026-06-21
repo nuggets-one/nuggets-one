@@ -4,7 +4,7 @@
 
 :root {
   /* Layout */
-  --header-height: 56px; /* matches h-14 */
+  --header-height: calc(56px + env(safe-area-inset-top, 0px)); /* h-14 + top inset */
 
   /* Background */
   --color-bg: theme('colors.slate.50');
