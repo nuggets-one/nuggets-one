@@ -95,6 +95,11 @@ const nextConfig: NextConfig = {
         destination: '/?stream=geopolitics',
         permanent: true,
       },
+      {
+        source: '/leadership',
+        destination: '/?stream=leadership',
+        permanent: true,
+      },
     ]
   },
 }
