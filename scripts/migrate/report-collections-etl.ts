@@ -82,7 +82,6 @@ async function main() {
     if (!pgByLegacy.has(legacyId)) missingInPg.push(title)
   }
 
-  const emptyCollections = (pgCols ?? []).filter(async () => false)
   const { data: entryRows } = await db
     .from('community_collection_entries')
     .select('collection_id')

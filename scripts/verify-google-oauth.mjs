@@ -139,7 +139,7 @@ console.log('\n=== Redirect URL allowlist probe (apex vs www) ===\n')
 
 for (const site of [EXPECTED_SITE, 'https://www.nuggets.one']) {
   const to = `${site}/auth/callback?next=${encodeURIComponent('/')}`
-  const { data: d, error: e } = await supabase.auth.signInWithOAuth({
+  const { error: e } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: to, skipBrowserRedirect: true },
   })

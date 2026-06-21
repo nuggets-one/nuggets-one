@@ -40,12 +40,6 @@ const legacy = {
   NEXT_PUBLIC_FIREBASE_APP_ID: env.appId,
 }
 
-const keys = [
-  ...Object.keys(legacy),
-  'NEXT_PUBLIC_FIREBASE_VAPID_KEY',
-  ...Object.keys(legacy).map((k) => k),
-]
-
 for (const key of [
   'apiKey',
   'authDomain',

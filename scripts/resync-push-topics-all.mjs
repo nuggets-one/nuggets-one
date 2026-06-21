@@ -160,7 +160,6 @@ async function main() {
   let skipped = 0
 
   while (true) {
-    const end = offset + pageSize - 1
     const rows = await restGet(
       'push_device_tokens',
       `notifications_enabled=eq.true&select=token,user_id,platform&order=updated_at.desc&offset=${offset}&limit=${pageSize}`

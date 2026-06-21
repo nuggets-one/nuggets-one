@@ -6,7 +6,15 @@ const typescript = require("eslint-config-next/typescript");
 
 const eslintConfig = [
   {
-    ignores: ["tailwind.config.js", "postcss.config.js", ".tmp-*"],
+    ignores: [
+      "tailwind.config.js",
+      "postcss.config.js",
+      ".tmp-*",
+      ".next/**",
+      "public/firebase/**",
+      "android/**/build/**",
+      ".preview-brand-assets/**",
+    ],
   },
   ...coreWebVitals,
   ...typescript,
