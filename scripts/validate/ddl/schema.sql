@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS articles (
   excerpt text,
   content_markdown text,
   content_stream text NOT NULL DEFAULT 'standard'
-    CHECK (content_stream IN ('standard','pulse','charts','tech_vc','geopolitics')),
+    CHECK (content_stream IN ('standard','pulse','charts','tech_vc','geopolitics','leadership')),
   status text NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft','published')),
   published_at timestamptz,
@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   stream_charts boolean NOT NULL DEFAULT true,
   stream_tech_vc boolean NOT NULL DEFAULT true,
   stream_geopolitics boolean NOT NULL DEFAULT true,
+  stream_leadership boolean NOT NULL DEFAULT true,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -184,6 +185,10 @@ CREATE INDEX IF NOT EXISTS idx_articles_feed_geopolitics
   ON articles (published_at DESC, id DESC)
   WHERE status = 'published' AND content_stream = 'geopolitics';
 
+CREATE INDEX IF NOT EXISTS idx_articles_feed_leadership
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND content_stream = 'leadership';
+
 CREATE INDEX IF NOT EXISTS idx_articles_search_vector
   ON articles USING gin(search_vector);
 
@@ -210,11 +215,15 @@ CREATE INDEX IF NOT EXISTS idx_notification_prefs_active_geopolitics
   ON notification_preferences (user_id)
   WHERE mute_all = false AND stream_geopolitics = true;
 
+CREATE INDEX IF NOT EXISTS idx_notification_prefs_active_leadership
+  ON notification_preferences (user_id)
+  WHERE mute_all = false AND stream_leadership = true;
+
 -- push_digest_buffer (digest-mode push batching)
 CREATE TABLE IF NOT EXISTS push_digest_buffer (
   batch_key text PRIMARY KEY,
   content_stream text NOT NULL
-    CHECK (content_stream IN ('standard','pulse','charts','tech_vc','geopolitics')),
+    CHECK (content_stream IN ('standard','pulse','charts','tech_vc','geopolitics','leadership')),
   article_count int NOT NULL DEFAULT 0,
   sample_title text NOT NULL DEFAULT '',
   interval_hours int NOT NULL DEFAULT 1 CHECK (interval_hours IN (1, 2, 3)),
