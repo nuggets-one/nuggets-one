@@ -10,10 +10,6 @@ export type AdminArticlesListParams = AdminArticlesListFilters & {
   page?: number
 }
 
-function escapeIlike(q: string): string {
-  return q.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
-}
-
 export function parseAdminArticlesFilters(
   resolved: Record<string, string | string[] | undefined>,
 ): AdminArticlesListFilters {

@@ -1,7 +1,6 @@
 export type TagSuggestionInput = {
   slug: string
   label: string
-  dimension: string
 }
 
 type KeywordRule = {

@@ -137,7 +137,6 @@ export function ArticleFormFields({
           tags.map((tag) => ({
             slug: tag.slug,
             label: tag.label,
-            dimension: tag.dimension,
           })),
         ),
       )

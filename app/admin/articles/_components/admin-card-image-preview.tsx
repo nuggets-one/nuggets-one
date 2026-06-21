@@ -17,7 +17,7 @@ function NoPreviewTile() {
 }
 
 /** Admin thumbnail / cover preview — same proxy path as feed CardMedia. */
-export function AdminCardImagePreview({ url, className = 'h-full w-full object-cover' }: Props) {
+export function AdminCardImagePreview({ url }: Props) {
   const displayUrl = resolveCardPreviewDisplayUrl(url)
 
   if (!displayUrl) {

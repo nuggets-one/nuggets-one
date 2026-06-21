@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getFeedPage } from '@/lib/queries/feed'
 import { effectiveFeedScope, isScopeEnabledStream, parseFeedScope } from '@/lib/feed/scope'
 import { parseContentStream } from '@/lib/copy/streams'
-import type { ContentStream } from '@/types/article'
 
 const MAX_Q_LENGTH = 200
 const MAX_TAGS = 5
