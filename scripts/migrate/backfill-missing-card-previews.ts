@@ -24,6 +24,7 @@ import {
 } from '../../lib/ui/youtube-video-id'
 import { youTubePosterHqUrl } from '../../lib/ui/excerpt-card'
 import { isImageUrl } from '../../lib/ui/is-image-url'
+import { parseOgImageFromHtml } from '../../lib/admin/parse-og-tags'
 
 const isDryRun = process.argv.includes('--dry-run')
 
@@ -36,25 +37,7 @@ async function fetchOgImage(pageUrl: string): Promise<string | null> {
     })
     if (!res.ok) return null
     const html = await res.text()
-    const patterns = [
-      /<meta[^>]+property=["']og:image(?::url)?["'][^>]+content=["']([^"']+)["']/i,
-      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::url)?["']/i,
-      /<meta[^>]+name=["']twitter:image(?::src)?["'][^>]+content=["']([^"']+)["']/i,
-    ]
-    for (const re of patterns) {
-      const m = html.match(re)
-      const raw = m?.[1]?.trim()
-      if (!raw) continue
-      try {
-        const absolute = new URL(raw, pageUrl).href
-        if (isImageUrl(absolute) || absolute.includes('cloudinary') || absolute.includes('ytimg')) {
-          return absolute
-        }
-      } catch {
-        continue
-      }
-    }
-    return null
+    return parseOgImageFromHtml(html, pageUrl)
   } catch {
     return null
   }
