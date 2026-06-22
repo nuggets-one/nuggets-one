@@ -11,6 +11,7 @@
     "backfill:legacy-media": "tsx backfill-legacy-media-heroes.ts",
     "backfill:cloudinary-heroes": "tsx backfill-external-heroes-to-cloudinary.ts",
     "backfill:missing-previews": "tsx backfill-missing-card-previews.ts",
+    "backfill:visible-streams": "tsx backfill-visible-streams.ts",
     "backfill:youtube-timestamp-links": "tsx backfill-youtube-timestamp-links.ts",
     "test:handoff": "tsx --test tests/*.test.ts",
     "apply:migration": "node apply-migration.mjs",
