@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryState } from 'nuqs'
 import Link from 'next/link'
 import { X } from 'lucide-react'
-import type { ContentStream } from '@/types/article'
+import { DEFAULT_STREAM, type ContentStream } from '@/types/article'
 import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
 import {
   effectiveFeedScope,
@@ -221,7 +221,7 @@ export function HeaderSearch({ utilities }: Props) {
     shallow: false,
   })
   const [stream] = useQueryState<ContentStream>('stream', {
-    defaultValue: 'standard',
+    defaultValue: DEFAULT_STREAM,
     parse: (v): ContentStream => parseContentStream(v),
     shallow: true,
   })

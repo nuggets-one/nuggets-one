@@ -13,9 +13,9 @@ export type StreamIntroCopy = {
 /** Visible intro + SEO — single source of truth for stream messaging on Home. */
 export const STREAM_INTRO_COPY: Record<ContentStream, StreamIntroCopy> = {
   standard: {
-    label: 'Nuggets',
-    shortLabel: 'Nuggets',
-    title: 'Nuggets | Curated insights across markets, macros, history & more',
+    label: 'Deep-Dives',
+    shortLabel: 'Dives',
+    title: 'Deep-Dives | Curated insights across markets, macros, history & more',
     tagline: 'Distilling high-signal intelligence into digestible insights.',
     mobileSummary:
       'Curated insights across markets, macros, history, and intelligence',
@@ -84,7 +84,7 @@ export function getStreamLabel(
 
 /** Push notification title for a newly published article. */
 export function pushNotificationTitle(stream: ContentStream): string {
-  if (stream === 'standard') return 'New Nugget'
+  if (stream === 'standard') return 'New Deep-Dive'
   return getStreamLabel(stream)
 }
 
@@ -97,6 +97,6 @@ export function parseContentStream(raw: string | null | undefined): ContentStrea
 
 export const HOME_METADATA = {
   title: 'Nuggets: The Knowledge App',
-  description: `${STREAM_INTRO_COPY.standard.tagline} Browse Nuggets, Market Pulse, Tech x VC, Leadership, and Geopolitics.`,
+  description: `${STREAM_INTRO_COPY.standard.tagline} Browse Deep-Dives, Market Pulse, Tech x VC, Leadership, and Geopolitics.`,
   ogDescription: STREAM_INTRO_COPY.standard.mobileSummary,
 } as const

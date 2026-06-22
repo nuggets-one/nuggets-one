@@ -13,7 +13,7 @@ import {
 } from '@/lib/actions/notifications'
 import type { NotificationRow } from '@/lib/queries/notifications'
 import { readResponseJson } from '@/lib/http/parse-json-response'
-import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
+import { getStreamLabel, parseContentStream, STREAM_INTRO_COPY } from '@/lib/copy/streams'
 import { buildFeedHrefForContentStream } from '@/lib/feed/scope'
 import { useScrollLock } from '@/lib/ui/use-scroll-lock'
 
@@ -284,7 +284,7 @@ function PreferencesSection({
         Notifications
       </p>
       <label className="flex items-center justify-between gap-2 cursor-pointer">
-        <span className="text-sm text-primary">Nuggets</span>
+        <span className="text-sm text-primary">{STREAM_INTRO_COPY.standard.label}</span>
         <input
           type="checkbox"
           checked={prefs.stream_standard}

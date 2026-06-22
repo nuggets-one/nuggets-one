@@ -136,7 +136,7 @@ export type ContentStream = 'standard' | 'pulse' | 'charts' | 'tech_vc' | 'geopo
 
 export const CONTENT_STREAMS = ['standard', 'pulse', 'charts', 'tech_vc', 'geopolitics', 'leadership'] as const
 
-export const DEFAULT_STREAM: ContentStream = 'standard'
+export const DEFAULT_STREAM: ContentStream = 'pulse'
 
 export const FEED_PAGE_SIZE = 24    // do not change without perf review
 

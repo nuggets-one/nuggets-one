@@ -17,6 +17,7 @@ import { FeedLoadingChrome } from '@/components/feed/feed-loading-chrome'
 import { FeedSkeleton } from '@/components/feed/feed-skeleton'
 import { FEED_VIEW_STORAGE_KEY, isSkimFeedView } from '@/lib/feed/feed-view'
 import {
+  buildHomeHref,
   effectiveFeedScope,
   isPulseChartsScope,
   isScopeEnabledStream,
@@ -30,10 +31,10 @@ import { FeedTopBar } from '@/components/feed/feed-top-bar'
 import { FeedContentPendingGate } from '@/components/feed/feed-content-pending-gate'
 import {
   getStreamLabel,
-  HOME_METADATA,
   parseContentStream,
   STREAM_INTRO_COPY,
 } from '@/lib/copy/streams'
+import { DEFAULT_STREAM } from '@/types/article'
 import { getDefaultOgImageUrl, getSiteUrl } from '@/lib/seo/site-url'
 
 const homeOgImage = getDefaultOgImageUrl()
@@ -49,18 +50,15 @@ export async function generateMetadata({
   const isPulseCharts = isPulseChartsScope(stream, scope)
   const metaStream = isPulseCharts ? 'charts' : stream
   const intro = STREAM_INTRO_COPY[metaStream]
-  const title =
-    metaStream === 'standard' ? HOME_METADATA.title : intro.title
-  const description =
-    metaStream === 'standard' ? HOME_METADATA.description : intro.tagline
-  const ogDescription =
-    metaStream === 'standard' ? HOME_METADATA.ogDescription : intro.mobileSummary
+  const title = intro.title
+  const description = intro.tagline
+  const ogDescription = intro.mobileSummary
 
-  const canonicalUrl = isPulseCharts
-    ? `${getSiteUrl()}/?stream=pulse&scope=charts`
-    : stream === 'standard'
-      ? getSiteUrl()
-      : `${getSiteUrl()}/?stream=${stream}`
+  const canonicalPath = buildHomeHref(
+    stream,
+    isPulseCharts ? 'charts' : scope !== 'global' ? scope : undefined,
+  )
+  const canonicalUrl = `${getSiteUrl()}${canonicalPath === '/' ? '' : canonicalPath}`
 
   return {
     title: { absolute: title },
@@ -125,7 +123,7 @@ function buildLegacyIndiaRedirectUrl(
   view?: string
 ): string {
   const params = new URLSearchParams()
-  if (stream !== 'standard') params.set('stream', stream)
+  if (stream !== DEFAULT_STREAM) params.set('stream', stream)
   params.set('scope', 'india')
   if (tags.length > 0) params.set('tags', tags.join(','))
   if (q) params.set('q', q)
@@ -144,6 +142,15 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       .slice(0, MAX_TAGS)
     : []
   const q = (searchParams.q ?? '').trim().slice(0, MAX_Q_LENGTH)
+
+  if (
+    searchParams.stream === 'pulse' &&
+    !searchParams.scope &&
+    !parsedTags.length &&
+    !q
+  ) {
+    redirect('/')
+  }
 
   if (stream === 'charts') {
     redirect(buildLegacyChartsRedirectUrl(parsedTags, q, searchParams.view))
