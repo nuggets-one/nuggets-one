@@ -8,8 +8,10 @@ import {
 import {
   GEOPOLITICS_TAG_SLUG,
   LEADERSHIP_TAG_SLUG,
-  inferContentStreamFromTags,
   TECH_VC_TAG_SLUGS,
+  computeSecondaryVisibleStreams,
+  computeVisibleStreams,
+  inferContentStreamFromTags,
   validateStreamTagMembership,
 } from '../../../lib/feed/stream-membership'
 import {
@@ -21,13 +23,14 @@ import {
   getScopesForStream,
 } from '../../../lib/feed/scope'
 import { STREAM_NAV_ORDER } from '../../../lib/copy/streams'
+import { topicPushWebDeepLink } from '../../../lib/notifications/push-fcm-payload'
 
-test('parseContentStream accepts all streams and defaults unknown to standard', () => {
+test('parseContentStream accepts all streams and defaults unknown to pulse', () => {
   assert.equal(parseContentStream('charts'), 'charts')
   assert.equal(parseContentStream('tech_vc'), 'tech_vc')
   assert.equal(parseContentStream('geopolitics'), 'geopolitics')
   assert.equal(parseContentStream('leadership'), 'leadership')
-  assert.equal(parseContentStream('invalid'), 'standard')
+  assert.equal(parseContentStream('invalid'), 'pulse')
 })
 
 test('STREAM_NAV_ORDER includes leadership in charts former slot', () => {
@@ -35,6 +38,8 @@ test('STREAM_NAV_ORDER includes leadership in charts former slot', () => {
 })
 
 test('getStreamLabel returns full and short labels for new streams', () => {
+  assert.equal(getStreamLabel('standard'), 'Deep-Dives')
+  assert.equal(getStreamLabel('standard', 'short'), 'Dives')
   assert.equal(getStreamLabel('tech_vc'), 'Tech x VC')
   assert.equal(getStreamLabel('tech_vc', 'short'), 'Tech')
   assert.equal(getStreamLabel('geopolitics'), 'Geopolitics')
@@ -42,8 +47,8 @@ test('getStreamLabel returns full and short labels for new streams', () => {
   assert.equal(STREAM_INTRO_COPY.geopolitics.shortLabel, 'Geo')
 })
 
-test('inferContentStreamFromTags does not auto-assign leadership', () => {
-  assert.equal(inferContentStreamFromTags([LEADERSHIP_TAG_SLUG]), null)
+test('inferContentStreamFromTags suggests leadership when leadership tag present', () => {
+  assert.equal(inferContentStreamFromTags([LEADERSHIP_TAG_SLUG]), 'leadership')
 })
 
 test('inferContentStreamFromTags prefers geopolitics over tech tags', () => {
@@ -52,6 +57,29 @@ test('inferContentStreamFromTags prefers geopolitics over tech tags', () => {
   assert.equal(
     inferContentStreamFromTags(['geopolitics', 'technology']),
     'geopolitics'
+  )
+})
+
+test('computeVisibleStreams includes primary stream and all qualifying tag streams', () => {
+  assert.deepEqual(
+    computeVisibleStreams('leadership', ['pe-vc', LEADERSHIP_TAG_SLUG]),
+    ['tech_vc', 'leadership']
+  )
+  assert.deepEqual(
+    computeVisibleStreams('pulse', ['pe-vc']),
+    ['pulse', 'tech_vc']
+  )
+  assert.deepEqual(
+    computeVisibleStreams('standard', ['geopolitics', 'ai']),
+    ['standard', 'tech_vc', 'geopolitics']
+  )
+  assert.deepEqual(computeVisibleStreams('standard', []), ['standard'])
+})
+
+test('computeSecondaryVisibleStreams excludes primary stream', () => {
+  assert.deepEqual(
+    computeSecondaryVisibleStreams('leadership', ['pe-vc', LEADERSHIP_TAG_SLUG]),
+    ['tech_vc']
   )
 })
 
@@ -90,6 +118,26 @@ test('charts scope tab only on pulse stream', () => {
 test('buildFeedHrefForContentStream routes charts under pulse', () => {
   assert.equal(buildFeedHrefForContentStream('charts'), buildChartsScopeHref())
   assert.equal(buildFeedHrefForContentStream('leadership'), '/?stream=leadership')
-  assert.equal(buildFeedHrefForContentStream('pulse'), '/?stream=pulse')
-  assert.equal(buildFeedHrefForContentStream('standard'), '/')
+  assert.equal(buildFeedHrefForContentStream('pulse'), '/')
+  assert.equal(buildFeedHrefForContentStream('standard'), '/?stream=standard')
+})
+
+test('topicPushWebDeepLink uses canonical feed URLs for stream fallbacks', () => {
+  const site = 'https://www.nuggets.one'
+  assert.equal(
+    topicPushWebDeepLink(null, null, 'pulse', site),
+    `${site}/`
+  )
+  assert.equal(
+    topicPushWebDeepLink(null, null, 'charts', site),
+    `${site}${buildChartsScopeHref()}`
+  )
+  assert.equal(
+    topicPushWebDeepLink(null, null, 'leadership', site),
+    `${site}/?stream=leadership`
+  )
+  assert.equal(
+    topicPushWebDeepLink('abc', 'my-slug', 'charts', site),
+    `${site}/nuggets/abc/my-slug`
+  )
 })

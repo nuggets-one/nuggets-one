@@ -38,11 +38,11 @@ test('partitionRecipientsByDailyCap splits at DAILY_SINGLE_CAP singles', () => {
 
 test('digestTitleForOverflow formats stream-specific copy', () => {
   assert.equal(digestTitleForOverflow('pulse', 1), '1 more Market Pulse update')
-  assert.equal(digestTitleForOverflow('standard', 3), '3 more Nuggets updates')
+  assert.equal(digestTitleForOverflow('standard', 3), '3 more Deep-Dives updates')
 })
 
 test('parseOverflowCount prefers body then title', () => {
   assert.equal(parseOverflowCount('4', null), 4)
-  assert.equal(parseOverflowCount(null, '2 more Nuggets updates'), 2)
+  assert.equal(parseOverflowCount(null, '2 more Deep-Dives updates'), 2)
   assert.equal(parseOverflowCount(null, null), 0)
 })

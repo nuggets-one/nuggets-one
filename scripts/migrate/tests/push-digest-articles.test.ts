@@ -32,7 +32,7 @@ test('isDigestWindowClosed is true at or after window end', () => {
 })
 
 test('streamPushLabel maps streams', () => {
-  assert.equal(streamPushLabel('standard'), 'Nuggets')
+  assert.equal(streamPushLabel('standard'), 'Deep-Dives')
   assert.equal(streamPushLabel('pulse'), 'Market Pulse')
   assert.equal(streamPushLabel('charts'), 'Charts of the Week')
   assert.equal(streamPushLabel('tech_vc'), 'Tech x VC')

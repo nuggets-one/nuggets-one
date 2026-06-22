@@ -10,7 +10,7 @@ test('stream tab switch shows feed skeleton before new content', async ({ page }
     const headers = request.headers()
     if (
       isRscRequest(headers) &&
-      url.includes('stream=pulse') &&
+      url.includes('stream=standard') &&
       !url.includes('/api/')
     ) {
       await new Promise((resolve) => setTimeout(resolve, 800))
@@ -21,10 +21,10 @@ test('stream tab switch shows feed skeleton before new content', async ({ page }
   await page.goto('/', { waitUntil: 'networkidle' })
   await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
 
-  const pulseTab = page.getByRole('link', { name: /Market Pulse/i }).first()
-  await expect(pulseTab).toBeVisible()
+  const deepDivesTab = page.getByRole('link', { name: /Deep-Dives/i }).first()
+  await expect(deepDivesTab).toBeVisible()
 
-  await pulseTab.click()
+  await deepDivesTab.click()
 
   const overlay = page.locator('[data-testid="feed-loading-skeleton"]')
   await expect(overlay).toBeVisible({
@@ -36,7 +36,7 @@ test('stream tab switch shows feed skeleton before new content', async ({ page }
     timeout: 15_000,
   })
 
-  await expect(page).toHaveURL(/stream=pulse/)
+  await expect(page).toHaveURL(/stream=standard/)
 })
 
 test('scope tab switch shows feed skeleton before new content', async ({ page }) => {
@@ -53,7 +53,7 @@ test('scope tab switch shows feed skeleton before new content', async ({ page })
     await route.continue()
   })
 
-  await page.goto('/?stream=pulse', { waitUntil: 'networkidle' })
+  await page.goto('/', { waitUntil: 'networkidle' })
   await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
 
   const indiaTab = page.getByRole('link', { name: /India/i }).first()
@@ -75,7 +75,7 @@ test('scope tab switch shows feed skeleton before new content', async ({ page })
 })
 
 test('pulse stream shows charts scope tab', async ({ page }) => {
-  await page.goto('/?stream=pulse', { waitUntil: 'networkidle' })
+  await page.goto('/', { waitUntil: 'networkidle' })
   await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
 
   await expect(page.getByRole('link', { name: /Charts of the Week/i }).first()).toBeVisible()
@@ -95,7 +95,7 @@ test('charts scope tab switch shows feed skeleton before new content', async ({ 
     await route.continue()
   })
 
-  await page.goto('/?stream=pulse', { waitUntil: 'networkidle' })
+  await page.goto('/', { waitUntil: 'networkidle' })
   await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
 
   const chartsTab = page.getByRole('link', { name: /Charts of the Week/i }).first()
@@ -156,7 +156,7 @@ test('tag filter apply shows feed skeleton', async ({ page }) => {
     await route.continue()
   })
 
-  await page.goto('/?stream=pulse', { waitUntil: 'networkidle' })
+  await page.goto('/', { waitUntil: 'networkidle' })
   await page.waitForSelector('[data-feed-content-version]', { state: 'attached' })
 
   const technology = page.getByRole('button', { name: 'Technology', exact: true })

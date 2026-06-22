@@ -84,8 +84,8 @@ test.describe('mobile nugget sheet scroll', () => {
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThanOrEqual(500)
 
-    await tapBottomNavItem(page, 'Market Pulse')
-    await expect(page).toHaveURL(/\/\?stream=pulse/)
+    await tapBottomNavItem(page, 'Dives')
+    await expect(page).toHaveURL(/\/\?stream=standard/)
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeLessThanOrEqual(24)
@@ -95,8 +95,11 @@ test.describe('mobile nugget sheet scroll', () => {
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThanOrEqual(500)
 
-    await tapBottomNavItem(page, 'Nuggets')
-    await expect(page).toHaveURL(/\/\?stream=standard/)
+    await tapBottomNavItem(page, 'Market Pulse')
+    await expect(page).toHaveURL((url) => {
+      const { pathname, searchParams } = new URL(url)
+      return pathname === '/' && !searchParams.has('stream')
+    })
     await expect
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeLessThanOrEqual(24)
