@@ -2,7 +2,9 @@
 
 ## Decision
 
-Broadcast push notifications use FCM topic messaging. Nugget publishes enqueue one row in `push_topic_outbox` per target stream topic, then a Supabase Edge Function sends that topic message through FCM HTTP v1.
+Broadcast push notifications use FCM topic messaging. Each publish enqueues **one** row in `push_topic_outbox` for the article's **primary** `content_stream` topic, then a Supabase Edge Function sends that topic message through FCM HTTP v1.
+
+Tag-gated `visible_streams` (secondary feeds) affect feed visibility only — notifications fan out on primary `content_stream` only.
 
 This keeps the high-volume path off Vercel cron and avoids per-device fan-out for normal broadcasts.
 
@@ -10,11 +12,12 @@ This keeps the high-volume path off Vercel cron and avoids per-device fan-out fo
 
 | Stream | FCM topic | Preference column |
 | --- | --- | --- |
-| Nuggets | `nuggets-stream-standard` | `stream_standard` |
+| Deep-Dives | `nuggets-stream-standard` | `stream_standard` |
 | Market Pulse | `nuggets-stream-pulse` | `stream_pulse` |
 | Charts of the Week | `nuggets-stream-charts` | `stream_charts` |
 | Tech x VC | `nuggets-stream-tech-vc` | `stream_tech_vc` |
 | Geopolitics | `nuggets-stream-geopolitics` | `stream_geopolitics` |
+| Leadership | `nuggets-stream-leadership` | `stream_leadership` |
 
 Device registration syncs topic membership from `notification_preferences`:
 
@@ -24,6 +27,7 @@ Device registration syncs topic membership from `notification_preferences`:
 - `stream_charts=false` unsubscribes from `nuggets-stream-charts`.
 - `stream_tech_vc=false` unsubscribes from `nuggets-stream-tech-vc`.
 - `stream_geopolitics=false` unsubscribes from `nuggets-stream-geopolitics`.
+- `stream_leadership=false` unsubscribes from `nuggets-stream-leadership`.
 - Guest installs default to all stream topics while notifications are enabled.
 
 After adding a new content stream, run a one-time topic resync so existing device tokens subscribe to the new FCM topic:
@@ -48,9 +52,10 @@ Both paths use the same visible format on device:
 
 | Field | Value |
 | --- | --- |
-| `notification.title` | Stream label (`Nuggets`, `Market Pulse`, `Charts of the Week`, `Tech x VC`, or `Geopolitics`) |
+| `notification.title` | Stream label (`Deep-Dives`, `Market Pulse`, `Charts of the Week`, `Tech x VC`, `Geopolitics`, or `Leadership`) |
 | `notification.body` | Article headline |
 | `data.articleId` / `data.slug` | Deep-link to `/nuggets/[id]/[slug]` |
+| `data.stream` | Primary `content_stream` — stream-only fallback uses canonical feed URLs (`/` for Pulse, `/?stream=pulse&scope=charts` for Charts) |
 | `android.notification.tag` | `article:{articleId}` (per-article; notifications stack instead of replacing) |
 
 Digest batching only changes **when** pushes send (digest window close), not **what** they display.

@@ -10,6 +10,21 @@ const WEB_PUSH_NOTIFICATION = {
   siteUrl: 'https://www.nuggets.one',
 } as const
 
+/** Mirrors buildFeedHrefForContentStream in lib/feed/scope.ts (Edge Function cannot import app code). */
+function feedHrefForContentStream(stream: string): string {
+  if (stream === 'charts') return '/?stream=pulse&scope=charts'
+  if (stream === 'pulse') return '/'
+  if (
+    stream === 'standard' ||
+    stream === 'tech_vc' ||
+    stream === 'geopolitics' ||
+    stream === 'leadership'
+  ) {
+    return `/?stream=${stream}`
+  }
+  return '/'
+}
+
 function topicPushWebDeepLink(
   articleId: string | null,
   slug: string | null,
@@ -17,10 +32,7 @@ function topicPushWebDeepLink(
 ): string {
   const base = WEB_PUSH_NOTIFICATION.siteUrl.replace(/\/$/, '')
   if (articleId && slug) return `${base}/nuggets/${articleId}/${slug}`
-  if (stream === 'standard' || stream === 'pulse' || stream === 'charts' || stream === 'tech_vc' || stream === 'geopolitics' || stream === 'leadership') {
-    return `${base}/?stream=${stream}`
-  }
-  return base
+  return `${base}${feedHrefForContentStream(stream)}`
 }
 
 function buildTopicWebpushBlock(row: TopicOutboxRow, imageUrl?: string) {
@@ -95,7 +107,7 @@ function streamPushLabel(stream: DigestStream): string {
   if (stream === 'tech_vc') return 'Tech x VC'
   if (stream === 'geopolitics') return 'Geopolitics'
   if (stream === 'leadership') return 'Leadership'
-  return 'Nuggets'
+  return 'Deep-Dives'
 }
 
 function parseBatchKeyWindowEnd(batchKey: string, intervalHours: number): Date | null {

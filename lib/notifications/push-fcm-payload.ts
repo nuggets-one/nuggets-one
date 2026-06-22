@@ -1,3 +1,5 @@
+import { parseContentStream } from '@/lib/copy/streams'
+import { buildFeedHrefForContentStream } from '@/lib/feed/scope'
 import { CONTENT_STREAMS } from '@/types/article'
 
 export type TopicPushKind = 'immediate' | 'digest'
@@ -44,7 +46,7 @@ export function topicPushWebDeepLink(
   const base = siteUrl.replace(/\/$/, '')
   if (articleId && slug) return `${base}/nuggets/${articleId}/${slug}`
   if ((CONTENT_STREAMS as readonly string[]).includes(stream)) {
-    return `${base}/?stream=${stream}`
+    return `${base}${buildFeedHrefForContentStream(parseContentStream(stream))}`
   }
   return base
 }

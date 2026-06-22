@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
 import { detachPushToken, registerPushToken } from '@/lib/push/register-push-token'
+import { parseContentStream } from '@/lib/copy/streams'
+import { buildFeedHrefForContentStream } from '@/lib/feed/scope'
 import { CONTENT_STREAMS } from '@/types/article'
 
 type AuthStatus = {
@@ -87,7 +89,7 @@ export function NativePushRegistration() {
 
           const stream = data?.stream
           if (typeof stream === 'string' && (CONTENT_STREAMS as readonly string[]).includes(stream)) {
-            router.push(`/?stream=${stream}`)
+            router.push(buildFeedHrefForContentStream(parseContentStream(stream)))
           }
         }
       )

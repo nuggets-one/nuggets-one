@@ -35,6 +35,22 @@ try {
   console.error('[firebase-messaging-sw] Firebase init failed:', err)
 }
 
+/** Mirrors buildFeedHrefForContentStream in lib/feed/scope.ts */
+function feedHrefForNotificationStream(stream) {
+  if (typeof stream !== 'string') return '/'
+  if (stream === 'charts') return '/?stream=pulse&scope=charts'
+  if (stream === 'pulse') return '/'
+  if (
+    stream === 'standard' ||
+    stream === 'tech_vc' ||
+    stream === 'geopolitics' ||
+    stream === 'leadership'
+  ) {
+    return `/?stream=${stream}`
+  }
+  return '/'
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
@@ -45,8 +61,8 @@ self.addEventListener('notificationclick', (event) => {
   let targetUrl = '/'
   if (typeof articleId === 'string' && typeof slug === 'string') {
     targetUrl = `/nuggets/${articleId}/${slug}`
-  } else if (data.stream === 'standard' || data.stream === 'pulse') {
-    targetUrl = `/?stream=${data.stream}`
+  } else if (data.stream) {
+    targetUrl = feedHrefForNotificationStream(data.stream)
   }
 
   event.waitUntil(

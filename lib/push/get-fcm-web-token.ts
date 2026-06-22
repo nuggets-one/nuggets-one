@@ -5,6 +5,8 @@ import {
   getFirebaseWebConfig,
   isFirebaseWebPushConfigured,
 } from '@/lib/push/firebase-web-config'
+import { parseContentStream } from '@/lib/copy/streams'
+import { buildFeedHrefForContentStream } from '@/lib/feed/scope'
 import { CONTENT_STREAMS } from '@/types/article'
 
 const SW_PATH = '/firebase-messaging-sw.js'
@@ -99,7 +101,7 @@ function resolveNotificationUrl(data: Record<string, unknown> | undefined): stri
     return `/nuggets/${articleId}/${slug}`
   }
   if (typeof data?.stream === 'string' && (CONTENT_STREAMS as readonly string[]).includes(data.stream)) {
-    return `/?stream=${data.stream}`
+    return buildFeedHrefForContentStream(parseContentStream(data.stream))
   }
   return '/'
 }

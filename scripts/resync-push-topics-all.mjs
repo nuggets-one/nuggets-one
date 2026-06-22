@@ -21,6 +21,7 @@ const ALL_PUSH_TOPICS = [
   'nuggets-stream-charts',
   'nuggets-stream-tech-vc',
   'nuggets-stream-geopolitics',
+  'nuggets-stream-leadership',
 ]
 
 function loadEnvLocal() {
@@ -62,6 +63,7 @@ function topicsForPreferences(prefs) {
   if (prefs?.stream_charts !== false) topics.push('nuggets-stream-charts')
   if (prefs?.stream_tech_vc !== false) topics.push('nuggets-stream-tech-vc')
   if (prefs?.stream_geopolitics !== false) topics.push('nuggets-stream-geopolitics')
+  if (prefs?.stream_leadership !== false) topics.push('nuggets-stream-leadership')
   return topics
 }
 
@@ -144,7 +146,7 @@ async function getPrefsForUser(userId) {
   if (prefsByUser.has(userId)) return prefsByUser.get(userId)
   const rows = await restGet(
     'notification_preferences',
-    `user_id=eq.${encodeURIComponent(userId)}&select=mute_all,stream_standard,stream_pulse,stream_charts,stream_tech_vc,stream_geopolitics`
+    `user_id=eq.${encodeURIComponent(userId)}&select=mute_all,stream_standard,stream_pulse,stream_charts,stream_tech_vc,stream_geopolitics,stream_leadership`
   )
   const prefs = rows?.[0] ?? null
   prefsByUser.set(userId, prefs)
