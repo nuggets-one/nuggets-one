@@ -170,21 +170,21 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const storedFeedView = cookieStore.get(FEED_VIEW_STORAGE_KEY)?.value ?? null
   const skimView = isSkimFeedView(searchParams.view, storedFeedView)
 
-  // Filtered or search URLs must never be served from stale ISR cache.
-  const hasFilters = !!(tags.length > 0 || q || scope === 'india' || scope === 'charts')
-  if (hasFilters) {
-    unstable_noStore()
-  }
+  // Home feed must always reflect current DB state (avoid stale ISR empty pages).
+  unstable_noStore()
 
   const feedScope: FeedScope | undefined = isScopeEnabledStream(stream)
     ? effectiveFeedScope(stream, scope)
     : undefined
+
+  let feedLoadFailed = false
 
   const [feedResult, officialTags, tagCounts, streamCounts, scopeCounts] =
     await Promise.all([
       getFeedPage({ stream, tags, q, scope: feedScope }).catch((error) => {
         const message = error instanceof Error ? error.message : String(error)
         console.error(`FeedGrid getFeedPage error: ${message}`)
+        feedLoadFailed = true
         return { articles: [], nextCursor: null, stream, totalCount: 0 }
       }),
       listOfficialTags().catch((error) => {
@@ -244,7 +244,9 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
         skimView={skimView}
       />
 
-      {articles.length === 0 ? (
+      {feedLoadFailed ? (
+          <FeedEmpty q={q} hasTags={tags.length > 0} unavailable />
+        ) : articles.length === 0 ? (
           <FeedEmpty q={q} hasTags={tags.length > 0} />
         ) : skimView ? (
           <>

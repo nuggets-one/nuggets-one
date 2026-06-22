@@ -8,12 +8,23 @@ import { useFeedPending } from '@/components/feed/feed-pending-context'
 type Props = {
   q: string
   hasTags: boolean
+  unavailable?: boolean
 }
 
-export function FeedEmpty({ q, hasTags }: Props) {
+export function FeedEmpty({ q, hasTags, unavailable = false }: Props) {
   const [, setQ] = useQueryState('q', { shallow: false })
   const [, setTags] = useQueryState('tags', { shallow: false })
   const { beginFeedTransition } = useFeedPending()
+
+  if (unavailable) {
+    return (
+      <StatusBlock heading="Feed temporarily unavailable.">
+        <p className="mt-2 text-sm text-muted">
+          We could not load articles right now. Please refresh or try again shortly.
+        </p>
+      </StatusBlock>
+    )
+  }
 
   if (q) {
     return (
