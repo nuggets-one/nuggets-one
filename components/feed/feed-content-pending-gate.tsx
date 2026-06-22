@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useFeedPending } from '@/components/feed/feed-pending-context'
 
 type Props = {
@@ -12,7 +12,9 @@ export function FeedContentPendingGate({ children, contentKey }: Props) {
   const { showFeedSkeleton, registerFeedContentKey, resolveFeedPending } =
     useFeedPending()
 
-  registerFeedContentKey(contentKey)
+  useLayoutEffect(() => {
+    registerFeedContentKey(contentKey)
+  }, [contentKey, registerFeedContentKey])
 
   const prevContentKeyRef = useRef(contentKey)
   useEffect(() => {

@@ -39,7 +39,7 @@ export function FeedPendingProvider({ children }: { children: ReactNode }) {
 
   const registerFeedContentKey = useCallback((contentKey: string) => {
     currentContentKeyRef.current = contentKey
-    setDisplayContentKey(contentKey)
+    setDisplayContentKey((prev) => (prev === contentKey ? prev : contentKey))
   }, [])
 
   const markFeedPending = useCallback(() => {
