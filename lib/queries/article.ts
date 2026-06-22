@@ -1,6 +1,7 @@
 import { getPublicClient } from '@/lib/supabase/public'
 import {
   applyFeedScopeFilter,
+  applyVisibleStreamFilter,
   effectiveFeedScope,
   resolveEffectiveContentStream,
   scopeToRpcParam,
@@ -102,7 +103,8 @@ export async function suggestArticles({
         .from('articles')
         .select('id, slug, title, content_stream, published_at')
         .eq('status', 'published')
-        .eq('content_stream', effectiveStream)
+
+      query = applyVisibleStreamFilter(query, effectiveStream)
         .textSearch('search_vector', q.trim(), {
           type: 'websearch',
           config: 'english',
@@ -291,11 +293,13 @@ export async function getRelatedArticles({
   const supabase = getPublicClient()
   const cappedLimit = Math.min(Math.max(limit, 1), 6)
 
-  const baseQuery = supabase
-    .from('articles')
-    .select('id, slug, title, excerpt, published_at, source_url')
-    .eq('status', 'published')
-    .eq('content_stream', stream)
+  const baseQuery = applyVisibleStreamFilter(
+    supabase
+      .from('articles')
+      .select('id, slug, title, excerpt, published_at, source_url')
+      .eq('status', 'published'),
+    stream
+  )
     .neq('id', articleId)
     .order('published_at', { ascending: false })
     .limit(cappedLimit)
@@ -306,11 +310,13 @@ export async function getRelatedArticles({
     return data as RelatedArticlePreview[]
   }
 
-  const { data: tagMatched, error: tagMatchError } = await supabase
-    .from('articles')
-    .select('id, slug, title, excerpt, published_at, source_url')
-    .eq('status', 'published')
-    .eq('content_stream', stream)
+  const { data: tagMatched, error: tagMatchError } = await applyVisibleStreamFilter(
+    supabase
+      .from('articles')
+      .select('id, slug, title, excerpt, published_at, source_url')
+      .eq('status', 'published'),
+    stream
+  )
     .neq('id', articleId)
     .overlaps('tag_slugs', tagSlugs)
     .order('published_at', { ascending: false })

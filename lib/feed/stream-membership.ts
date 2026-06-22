@@ -7,6 +7,16 @@ export const GEOPOLITICS_TAG_SLUG = 'geopolitics' as const
 
 export const LEADERSHIP_TAG_SLUG = 'leaders-investors-entrepreneurs' as const
 
+/** Stable sort order for visible_streams arrays. */
+export const CONTENT_STREAM_ORDER: ContentStream[] = [
+  'standard',
+  'pulse',
+  'charts',
+  'tech_vc',
+  'geopolitics',
+  'leadership',
+]
+
 export function tagsOverlapsAny(
   tagSlugs: string[],
   candidates: readonly string[]
@@ -15,11 +25,35 @@ export function tagsOverlapsAny(
   return candidates.some((slug) => set.has(slug))
 }
 
-/** Geopolitics wins when both geopolitics and Tech x VC tags are present. */
+/** Suggested primary stream from tags — does not override an explicit admin choice. */
 export function inferContentStreamFromTags(tagSlugs: string[]): ContentStream | null {
   if (tagSlugs.includes(GEOPOLITICS_TAG_SLUG)) return 'geopolitics'
+  if (tagSlugs.includes(LEADERSHIP_TAG_SLUG)) return 'leadership'
   if (tagsOverlapsAny(tagSlugs, TECH_VC_TAG_SLUGS)) return 'tech_vc'
   return null
+}
+
+/**
+ * All feeds an article appears in: primary content_stream plus tag-gated streams.
+ * Mirrors recompute_visible_streams() in Postgres.
+ */
+export function computeVisibleStreams(
+  contentStream: ContentStream,
+  tagSlugs: string[]
+): ContentStream[] {
+  const streams = new Set<ContentStream>([contentStream])
+  if (tagSlugs.includes(GEOPOLITICS_TAG_SLUG)) streams.add('geopolitics')
+  if (tagsOverlapsAny(tagSlugs, TECH_VC_TAG_SLUGS)) streams.add('tech_vc')
+  if (tagSlugs.includes(LEADERSHIP_TAG_SLUG)) streams.add('leadership')
+  return CONTENT_STREAM_ORDER.filter((stream) => streams.has(stream))
+}
+
+/** Tag-gated streams beyond the primary content_stream assignment. */
+export function computeSecondaryVisibleStreams(
+  contentStream: ContentStream,
+  tagSlugs: string[]
+): ContentStream[] {
+  return computeVisibleStreams(contentStream, tagSlugs).filter((stream) => stream !== contentStream)
 }
 
 export function validateStreamTagMembership(

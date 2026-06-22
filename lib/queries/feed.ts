@@ -1,6 +1,7 @@
 import { getPublicClient } from '@/lib/supabase/public'
 import {
   applyFeedScopeFilter,
+  applyVisibleStreamFilter,
   effectiveFeedScope,
   resolveEffectiveContentStream,
   scopeToRpcParam,
@@ -184,7 +185,8 @@ async function getFeedTotalCount({
     .from('articles')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'published')
-    .eq('content_stream', effectiveStream)
+
+  query = applyVisibleStreamFilter(query, effectiveStream)
 
   query = applyFeedScopeFilter(query, stream, scope)
 
@@ -229,7 +231,8 @@ async function getFeedPageByCursor({
       .from('articles')
       .select(selectClause)
       .eq('status', 'published')
-      .eq('content_stream', effectiveStream)
+
+    query = applyVisibleStreamFilter(query, effectiveStream)
       .order('published_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(limit)
@@ -372,7 +375,8 @@ async function getFeedPageBySearchLegacy({
       .from('articles')
       .select(selectClause)
       .eq('status', 'published')
-      .eq('content_stream', effectiveStream)
+
+    query = applyVisibleStreamFilter(query, effectiveStream)
       .textSearch('search_vector', q, {
         type: 'websearch',
         config: 'english',

@@ -1,4 +1,4 @@
-import type { ContentStream } from '@/types/article'
+import { DEFAULT_STREAM, type ContentStream } from '@/types/article'
 
 /** Official subtopic slug for India geography scope. */
 export const INDIA_SUBTOPIC_SLUG = 'india' as const
@@ -86,7 +86,7 @@ function appendScopeParam(
 
 export function buildHomeHref(stream: ContentStream, scope?: FeedScope): string {
   const params = new URLSearchParams()
-  if (stream !== 'standard') params.set('stream', stream)
+  if (stream !== DEFAULT_STREAM) params.set('stream', stream)
   appendScopeParam(params, stream, scope)
   const qs = params.toString()
   return qs ? `/?${qs}` : '/'
@@ -113,7 +113,7 @@ export function buildStreamTabHref(
 /** Deep-link from article content_stream or notification batch row. */
 export function buildFeedHrefForContentStream(stream: ContentStream): string {
   if (stream === 'charts') return buildChartsScopeHref()
-  if (stream === 'standard') return '/'
+  if (stream === DEFAULT_STREAM) return '/'
   return `/?stream=${stream}`
 }
 
@@ -169,6 +169,18 @@ export function applyFeedScopeFilter<T extends ScopeQueryable>(
     return query.contains('tag_slugs', [INDIA_SUBTOPIC_SLUG]) as T
   }
   return query.not('tag_slugs', 'cs', `{${INDIA_SUBTOPIC_SLUG}}`) as T
+}
+
+type StreamQueryable = {
+  contains(column: string, value: string[]): StreamQueryable
+}
+
+/** Filter articles visible in the effective feed stream (multi-stream membership). */
+export function applyVisibleStreamFilter<T extends StreamQueryable>(
+  query: T,
+  stream: ContentStream
+): T {
+  return query.contains('visible_streams', [stream]) as T
 }
 
 /** Scope param for search RPC — null when scope does not apply or is charts. */

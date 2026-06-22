@@ -1,11 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { CACHE_TAGS } from '@/lib/cache'
-import {
-  applyFeedScopeFilter,
-  effectiveFeedScope,
-  isPulseChartsScope,
-  resolveEffectiveContentStream,
-} from '@/lib/feed/scope'
+import { applyFeedScopeFilter, applyVisibleStreamFilter, effectiveFeedScope, isPulseChartsScope, resolveEffectiveContentStream } from '@/lib/feed/scope'
 import type { FeedScope } from '@/lib/feed/scope'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
@@ -26,7 +21,8 @@ async function fetchTagCountsForStream(
     .from('articles')
     .select('tag_slugs')
     .eq('status', 'published')
-    .eq('content_stream', effectiveStream)
+
+  query = applyVisibleStreamFilter(query, effectiveStream)
 
   query = applyFeedScopeFilter(query, stream, effectiveScope)
 

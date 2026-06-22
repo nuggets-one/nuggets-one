@@ -12,8 +12,11 @@ import { isImageUrl } from '@/lib/ui/is-image-url'
 import { convertClipboardHtmlToMarkdown } from '@/lib/markdown/html-clipboard-to-markdown'
 import { describeCardCoverPreview, resolveArticleHeroFields } from '@/lib/ui/resolve-article-hero'
 import { parseAdminMediaUrlList } from '@/lib/ui/parse-admin-media-urls'
-import { parseContentStream } from '@/lib/copy/streams'
-import { inferContentStreamFromTags, validateStreamTagMembership } from '@/lib/feed/stream-membership'
+import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
+import {
+  computeVisibleStreams,
+  validateStreamTagMembership,
+} from '@/lib/feed/stream-membership'
 import type { ContentStream, TagDimension, TagSummary } from '@/types/article'
 
 // S1-F1: moved from new/page.tsx — page files must only export the default page
@@ -94,6 +97,11 @@ export function ArticleFormFields({
   const visibleSuggestedTags = useMemo(
     () => suggestedTagSlugs.filter((slug) => !selectedTags.has(slug)),
     [suggestedTagSlugs, selectedTags],
+  )
+
+  const visibleStreams = useMemo(
+    () => computeVisibleStreams(contentStream, selectedTagSlugs),
+    [contentStream, selectedTagSlugs]
   )
 
   const applyMetadata = useCallback(
@@ -220,10 +228,7 @@ export function ArticleFormFields({
       ? [...new Set([...selectedTagSlugs, slug])]
       : selectedTagSlugs.filter((value) => value !== slug)
     setSelectedTagSlugs(next)
-    const inferred = inferContentStreamFromTags(next)
-    if (inferred) {
-      setContentStream(inferred)
-    } else if (!validateStreamTagMembership(contentStream, next)) {
+    if (!validateStreamTagMembership(contentStream, next)) {
       setContentStream('standard')
     }
   }
@@ -374,7 +379,7 @@ export function ArticleFormFields({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[11px] leading-snug text-muted">
-                Tech x VC, Leadership, and Geopolitics require matching domain tags.
+                Primary stream controls notifications. Matching tags also show this nugget in other feeds.
               </p>
               {suggestedStream && suggestedStream !== contentStream ? (
                 <button
@@ -382,10 +387,13 @@ export function ArticleFormFields({
                   onClick={applySuggestedStream}
                   className="rounded-full border border-dashed border-accent/60 px-2.5 py-0.5 text-[11px] font-medium text-primary"
                 >
-                  Suggest: {suggestedStream === 'charts' ? 'Charts' : suggestedStream}
+                  Suggest primary: {getStreamLabel(suggestedStream, 'short')}
                 </button>
               ) : null}
             </div>
+            <p className="text-[11px] leading-snug text-muted">
+              Visible in: {visibleStreams.map((stream) => getStreamLabel(stream, 'short')).join(', ')}
+            </p>
           </div>
 
           {!sourceIsYouTube ? (

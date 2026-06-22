@@ -21,7 +21,7 @@ async function fetchStreamArticleCount(stream: ContentStream): Promise<number> {
     .from('articles')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'published')
-    .eq('content_stream', stream)
+    .contains('visible_streams', [stream])
 
   if (error) {
     if (!PENDING_MIGRATION_CODES.has(error.code ?? '')) {

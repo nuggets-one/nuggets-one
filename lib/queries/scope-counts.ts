@@ -1,6 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { CACHE_TAGS } from '@/lib/cache'
-import { INDIA_SUBTOPIC_SLUG } from '@/lib/feed/scope'
+import { INDIA_SUBTOPIC_SLUG, applyVisibleStreamFilter } from '@/lib/feed/scope'
 import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
 
@@ -14,7 +14,7 @@ async function fetchChartsStreamCount(): Promise<number> {
     .from('articles')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'published')
-    .eq('content_stream', 'charts')
+    .contains('visible_streams', ['charts'])
 
   if (error && !PENDING_MIGRATION_CODES.has(error.code ?? '')) {
     console.error('fetchChartsStreamCount:', error.message)
@@ -28,11 +28,13 @@ async function fetchScopeCountsForStream(
   const supabase = getPublicClient()
 
   const base = () =>
-    supabase
-      .from('articles')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'published')
-      .eq('content_stream', stream)
+    applyVisibleStreamFilter(
+      supabase
+        .from('articles')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'published'),
+      stream
+    )
 
   const [globalResult, indiaResult] = await Promise.all([
     base().not('tag_slugs', 'cs', `{${INDIA_SUBTOPIC_SLUG}}`),

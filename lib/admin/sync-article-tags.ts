@@ -85,6 +85,13 @@ async function syncArticleTagsFallback(
     return { ok: false, code: 'tag_update_failed', message: updateError.message }
   }
 
+  const { error: recomputeError } = await db.rpc('recompute_visible_streams', {
+    p_article_id: articleId,
+  })
+  if (recomputeError && !/recompute_visible_streams/i.test(recomputeError.message ?? '')) {
+    return { ok: false, code: 'tag_update_failed', message: recomputeError.message }
+  }
+
   return { ok: true }
 }
 
