@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS articles (
   hero_video_id text,
   hero_media_id uuid,
   tag_slugs text[] NOT NULL DEFAULT '{}',
+  visible_streams text[] NOT NULL DEFAULT '{}',
   created_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   curator_display_name text,
   search_vector tsvector GENERATED ALWAYS AS (
@@ -132,8 +133,8 @@ CREATE TABLE IF NOT EXISTS user_notifications (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   article_id uuid REFERENCES articles(id) ON DELETE CASCADE,
   kind text NOT NULL CHECK (kind IN ('single','digest')),
-  content_stream text CHECK (content_stream IS NULL OR 
-    content_stream IN ('standard','pulse','charts','tech_vc','geopolitics')),
+  content_stream text CHECK (content_stream IS NULL OR
+    content_stream IN ('standard','pulse','charts','tech_vc','geopolitics','leadership')),
   title text,
   body text,
   is_read boolean NOT NULL DEFAULT false,
@@ -194,6 +195,33 @@ CREATE INDEX IF NOT EXISTS idx_articles_search_vector
 
 CREATE INDEX IF NOT EXISTS idx_articles_tag_slugs
   ON articles USING gin(tag_slugs);
+
+CREATE INDEX IF NOT EXISTS idx_articles_visible_streams
+  ON articles USING gin(visible_streams);
+
+CREATE INDEX IF NOT EXISTS idx_articles_feed_standard_visible
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND visible_streams @> ARRAY['standard']::text[];
+
+CREATE INDEX IF NOT EXISTS idx_articles_feed_pulse_visible
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND visible_streams @> ARRAY['pulse']::text[];
+
+CREATE INDEX IF NOT EXISTS idx_articles_feed_charts_visible
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND visible_streams @> ARRAY['charts']::text[];
+
+CREATE INDEX IF NOT EXISTS idx_articles_feed_tech_vc_visible
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND visible_streams @> ARRAY['tech_vc']::text[];
+
+CREATE INDEX IF NOT EXISTS idx_articles_feed_geopolitics_visible
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND visible_streams @> ARRAY['geopolitics']::text[];
+
+CREATE INDEX IF NOT EXISTS idx_articles_feed_leadership_visible
+  ON articles (published_at DESC, id DESC)
+  WHERE status = 'published' AND visible_streams @> ARRAY['leadership']::text[];
 
 CREATE INDEX IF NOT EXISTS idx_notification_prefs_standard
   ON notification_preferences (user_id)
