@@ -1,10 +1,12 @@
 import { getPublicClient } from '@/lib/supabase/public'
 import {
   applyFeedScopeFilter,
-  applyVisibleStreamFilter,
+  applyFeedStreamFilter,
   effectiveFeedScope,
+  isMissingVisibleStreamsColumnError,
   resolveEffectiveContentStream,
   scopeToRpcParam,
+  type FeedStreamFilterMode,
 } from '@/lib/feed/scope'
 import type { FeedScope } from '@/lib/feed/scope'
 import { normalizeCuratorDisplayNameOnRows } from '@/lib/queries/normalize-curator-display-name'
@@ -99,7 +101,42 @@ const LEGACY_FEED_SELECT_NO_CURATOR = `
   source_url
 `.trim()
 
-// Never add content_markdown to FEED_SELECT.
+function isMissingVisibleStreamsQueryError(error: {
+  message: string
+  code?: string | null
+}): boolean {
+  return isMissingVisibleStreamsColumnError(error.message, error.code)
+}
+
+async function withFeedStreamFilterFallback<T>(
+  run: (mode: FeedStreamFilterMode) => Promise<{ data: T; error: { message: string; code?: string | null } | null }>
+): Promise<{ data: T; error: { message: string; code?: string | null } | null }> {
+  let result = await run('visible_streams')
+  if (result.error && isMissingVisibleStreamsQueryError(result.error)) {
+    console.warn(
+      'visible_streams column unavailable; falling back to content_stream feed filter.'
+    )
+    result = await run('content_stream')
+  }
+  return result
+}
+
+async function withFeedStreamCountFallback(
+  run: (mode: FeedStreamFilterMode) => Promise<{
+    count: number | null
+    error: { message: string; code?: string | null } | null
+  }>
+): Promise<{ count: number | null; error: { message: string; code?: string | null } | null }> {
+  let result = await run('visible_streams')
+  if (result.error && isMissingVisibleStreamsQueryError(result.error)) {
+    console.warn(
+      'visible_streams column unavailable; falling back to content_stream feed filter.'
+    )
+    result = await run('content_stream')
+  }
+  return result
+}
+
 // Never add search_vector to FEED_SELECT.
 // These fields widen the RSC payload — keep cards lean.
 
@@ -181,27 +218,29 @@ async function getFeedTotalCount({
   scope?: FeedScope
 }): Promise<number> {
   const effectiveStream = resolveEffectiveContentStream(stream, scope)
-  let query = supabase
-    .from('articles')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'published')
 
-  query = applyVisibleStreamFilter(query, effectiveStream)
+  const { count, error } = await withFeedStreamCountFallback(async (mode) => {
+    let query = supabase
+      .from('articles')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
 
-  query = applyFeedScopeFilter(query, stream, scope)
+    query = applyFeedStreamFilter(query, effectiveStream, mode)
+    query = applyFeedScopeFilter(query, stream, scope)
 
-  if (tags.length > 0) {
-    query = query.contains('tag_slugs', tags)
-  }
+    if (tags.length > 0) {
+      query = query.contains('tag_slugs', tags)
+    }
 
-  if (q.trim()) {
-    query = query.textSearch('search_vector', q, {
-      type: 'websearch',
-      config: 'english',
-    })
-  }
+    if (q.trim()) {
+      query = query.textSearch('search_vector', q, {
+        type: 'websearch',
+        config: 'english',
+      })
+    }
 
-  const { count, error } = await query
+    return query
+  })
   if (error) {
     throw new Error(`getFeedTotalCount error: ${error.message}`)
   }
@@ -226,13 +265,13 @@ async function getFeedPageByCursor({
 }): Promise<FeedPage> {
   const effectiveStream = resolveEffectiveContentStream(stream, scope)
 
-  async function runQuery(selectClause: string) {
+  async function runQuery(selectClause: string, mode: FeedStreamFilterMode) {
     let query = supabase
       .from('articles')
       .select(selectClause)
       .eq('status', 'published')
 
-    query = applyVisibleStreamFilter(query, effectiveStream)
+    query = applyFeedStreamFilter(query, effectiveStream, mode)
       .order('published_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(limit)
@@ -253,7 +292,11 @@ async function getFeedPageByCursor({
     return query
   }
 
-  const { data, error } = await runFeedArticleSelectChain(runQuery)
+  async function runFeedSelect(mode: FeedStreamFilterMode) {
+    return runFeedArticleSelectChain((selectClause) => runQuery(selectClause, mode))
+  }
+
+  const { data, error } = await withFeedStreamFilterFallback(runFeedSelect)
 
   if (error) {
     throw new Error(`getFeedPage error: ${error.message}`)
@@ -370,13 +413,13 @@ async function getFeedPageBySearchLegacy({
 }): Promise<FeedPage> {
   const effectiveStream = resolveEffectiveContentStream(stream, scope)
 
-  async function runQuery(selectClause: string) {
+  async function runQuery(selectClause: string, mode: FeedStreamFilterMode) {
     let query = supabase
       .from('articles')
       .select(selectClause)
       .eq('status', 'published')
 
-    query = applyVisibleStreamFilter(query, effectiveStream)
+    query = applyFeedStreamFilter(query, effectiveStream, mode)
       .textSearch('search_vector', q, {
         type: 'websearch',
         config: 'english',
@@ -401,7 +444,11 @@ async function getFeedPageBySearchLegacy({
     return query
   }
 
-  const { data, error } = await runFeedArticleSelectChain(runQuery)
+  async function runFeedSelect(mode: FeedStreamFilterMode) {
+    return runFeedArticleSelectChain((selectClause) => runQuery(selectClause, mode))
+  }
+
+  const { data, error } = await withFeedStreamFilterFallback(runFeedSelect)
 
   if (error) {
     throw new Error(`getFeedPageBySearchLegacy error: ${error.message}`)

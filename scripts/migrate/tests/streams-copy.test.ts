@@ -21,6 +21,8 @@ import {
   buildFeedHrefForContentStream,
   buildChartsScopeHref,
   getScopesForStream,
+  isMissingVisibleStreamsColumnError,
+  applyFeedStreamFilter,
 } from '../../../lib/feed/scope'
 import { STREAM_NAV_ORDER } from '../../../lib/copy/streams'
 import { topicPushWebDeepLink } from '../../../lib/notifications/push-fcm-payload'
@@ -120,6 +122,33 @@ test('buildFeedHrefForContentStream routes charts under pulse', () => {
   assert.equal(buildFeedHrefForContentStream('leadership'), '/?stream=leadership')
   assert.equal(buildFeedHrefForContentStream('pulse'), '/')
   assert.equal(buildFeedHrefForContentStream('standard'), '/?stream=standard')
+})
+
+test('isMissingVisibleStreamsColumnError detects schema-missing errors', () => {
+  assert.equal(isMissingVisibleStreamsColumnError('column articles.visible_streams does not exist'), true)
+  assert.equal(isMissingVisibleStreamsColumnError('Could not find column', 'PGRST205'), true)
+  assert.equal(isMissingVisibleStreamsColumnError('permission denied for table articles'), false)
+})
+
+test('applyFeedStreamFilter switches between visible_streams and content_stream modes', () => {
+  const calls: string[] = []
+  const query = {
+    contains(column: string, value: string[]) {
+      calls.push(`contains:${column}:${value.join(',')}`)
+      return this
+    },
+    eq(column: string, value: string) {
+      calls.push(`eq:${column}:${value}`)
+      return this
+    },
+  }
+
+  applyFeedStreamFilter(query, 'pulse', 'visible_streams')
+  assert.deepEqual(calls, ['contains:visible_streams:pulse'])
+
+  calls.length = 0
+  applyFeedStreamFilter(query, 'pulse', 'content_stream')
+  assert.deepEqual(calls, ['eq:content_stream:pulse'])
 })
 
 test('topicPushWebDeepLink uses canonical feed URLs for stream fallbacks', () => {

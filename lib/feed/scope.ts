@@ -171,8 +171,24 @@ export function applyFeedScopeFilter<T extends ScopeQueryable>(
   return query.not('tag_slugs', 'cs', `{${INDIA_SUBTOPIC_SLUG}}`) as T
 }
 
+export const VISIBLE_STREAMS_MIGRATION_ERROR_CODES = new Set(['PGRST205', '42P01'])
+
+export function isMissingVisibleStreamsColumnError(
+  message: string,
+  code?: string | null
+): boolean {
+  if (code && VISIBLE_STREAMS_MIGRATION_ERROR_CODES.has(code)) return true
+  return (
+    /visible_streams/i.test(message) &&
+    /does not exist|could not find|schema cache|column/i.test(message)
+  )
+}
+
+export type FeedStreamFilterMode = 'visible_streams' | 'content_stream'
+
 type StreamQueryable = {
   contains(column: string, value: string[]): StreamQueryable
+  eq(column: string, value: string): StreamQueryable
 }
 
 /** Filter articles visible in the effective feed stream (multi-stream membership). */
@@ -181,6 +197,26 @@ export function applyVisibleStreamFilter<T extends StreamQueryable>(
   stream: ContentStream
 ): T {
   return query.contains('visible_streams', [stream]) as T
+}
+
+/** Legacy primary-stream filter — used when visible_streams migration is pending. */
+export function applyContentStreamFilter<T extends StreamQueryable>(
+  query: T,
+  stream: ContentStream
+): T {
+  return query.eq('content_stream', stream) as T
+}
+
+/** Apply stream visibility filter using the selected mode. */
+export function applyFeedStreamFilter<T extends StreamQueryable>(
+  query: T,
+  stream: ContentStream,
+  mode: FeedStreamFilterMode = 'visible_streams'
+): T {
+  if (mode === 'content_stream') {
+    return applyContentStreamFilter(query, stream)
+  }
+  return applyVisibleStreamFilter(query, stream)
 }
 
 /** Scope param for search RPC — null when scope does not apply or is charts. */
