@@ -26,4 +26,7 @@ export const config = {
   get supabaseServiceKey() {
     return requireEnv('SUPABASE_SERVICE_ROLE_KEY')
   },
+  get databaseUrl() {
+    return process.env.DATABASE_URL ?? ''
+  },
 }
