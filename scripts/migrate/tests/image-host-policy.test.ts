@@ -168,6 +168,21 @@ test('resolveCardPreviewDisplayUrl passthroughs McKinsey Sitecore chart CDN with
   if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
 })
 
+test('resolveCardPreviewDisplayUrl passthroughs Citadel Securities WordPress CDN without Cloudinary env', () => {
+  const prev = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  delete process.env.CLOUDINARY_CLOUD_NAME
+
+  const citadelChart =
+    'https://www.citadelsecurities.com/wp-content/uploads/sites/2/2026/06/SR28-1.png'
+
+  assert.equal(canRenderWithNextImage(citadelChart), true)
+  assert.equal(resolveCardPreviewDisplayUrl(citadelChart), citadelChart)
+  assert.equal(shouldUseNativeCardRaster(citadelChart), true)
+
+  if (prev) process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = prev
+})
+
 test('describeCardCoverPreview proxies Contentful URLs when Cloudinary is configured', () => {
   process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = 'clubstorage'
   const contentful =
