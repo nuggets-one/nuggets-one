@@ -1,4 +1,10 @@
-import { CONTENT_STREAMS, DEFAULT_STREAM, type ContentStream } from '@/types/article'
+import {
+  CONTENT_STREAMS,
+  DEFAULT_FEED_STREAM,
+  DEFAULT_STREAM,
+  type ContentStream,
+  type FeedStream,
+} from '@/types/article'
 
 export type StreamIntroCopy = {
   label: string
@@ -63,14 +69,30 @@ export const STREAM_INTRO_COPY: Record<ContentStream, StreamIntroCopy> = {
   },
 }
 
+const ALL_INTRO_COPY: StreamIntroCopy = {
+  label: 'All',
+  shortLabel: 'All',
+  title: 'All | Everything published on Nuggets',
+  tagline:
+    'Every nugget across markets, tech, leadership, and more — in one feed.',
+  mobileSummary: 'Every published nugget across all streams',
+}
+
+/** Home feed intro copy — includes virtual All stream. */
+export const FEED_INTRO_COPY: Record<FeedStream, StreamIntroCopy> = {
+  all: ALL_INTRO_COPY,
+  ...STREAM_INTRO_COPY,
+}
+
 /** Display order for stream navigation (feed tabs, bottom nav). */
 export const STREAM_NAV_ORDER = [
+  'all',
   'pulse',
   'tech_vc',
   'standard',
   'leadership',
   'geopolitics',
-] as const satisfies readonly ContentStream[]
+] as const satisfies readonly FeedStream[]
 
 export type StreamLabelVariant = 'full' | 'short'
 
@@ -82,12 +104,21 @@ export function getStreamLabel(
   return variant === 'short' ? copy.shortLabel : copy.label
 }
 
+export function getFeedStreamLabel(
+  stream: FeedStream,
+  variant: StreamLabelVariant = 'full',
+): string {
+  const copy = FEED_INTRO_COPY[stream]
+  return variant === 'short' ? copy.shortLabel : copy.label
+}
+
 /** Push notification title for a newly published article. */
 export function pushNotificationTitle(stream: ContentStream): string {
   if (stream === 'standard') return 'New Deep-Dive'
   return getStreamLabel(stream)
 }
 
+/** Parse article primary content_stream from DB (invalid → pulse). */
 export function parseContentStream(raw: string | null | undefined): ContentStream {
   if (raw && (CONTENT_STREAMS as readonly string[]).includes(raw)) {
     return raw as ContentStream
@@ -95,8 +126,17 @@ export function parseContentStream(raw: string | null | undefined): ContentStrea
   return DEFAULT_STREAM
 }
 
+/** Parse home feed stream from URL (invalid / absent → all). */
+export function parseFeedStream(raw: string | null | undefined): FeedStream {
+  if (raw === 'all') return 'all'
+  if (raw && (CONTENT_STREAMS as readonly string[]).includes(raw)) {
+    return raw as ContentStream
+  }
+  return DEFAULT_FEED_STREAM
+}
+
 export const HOME_METADATA = {
   title: 'Nuggets: The Knowledge App',
-  description: `${STREAM_INTRO_COPY.standard.tagline} Browse Deep-Dives, Market Pulse, Tech x VC, Leadership, and Geopolitics.`,
-  ogDescription: STREAM_INTRO_COPY.standard.mobileSummary,
+  description: `${ALL_INTRO_COPY.tagline} Browse All, Deep-Dives, Market Pulse, Tech x VC, Leadership, and Geopolitics.`,
+  ogDescription: ALL_INTRO_COPY.mobileSummary,
 } as const

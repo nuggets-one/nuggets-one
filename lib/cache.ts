@@ -50,6 +50,7 @@ export function revalidateArticle(id: string): void {
   revalidateTag(CACHE_TAGS.scopeCounts('standard'), HARD_BUST)
   revalidateTag(CACHE_TAGS.scopeCounts('pulse'), HARD_BUST)
   revalidateTag(CACHE_TAGS.scopeCounts('tech_vc'), HARD_BUST)
+  revalidateTag(CACHE_TAGS.scopeCounts('all'), HARD_BUST)
   revalidateTag(CACHE_TAGS.tagCounts('standard'), HARD_BUST)
   revalidateTag(CACHE_TAGS.tagCounts('standard:global'), HARD_BUST)
   revalidateTag(CACHE_TAGS.tagCounts('standard:india'), HARD_BUST)
@@ -61,6 +62,8 @@ export function revalidateArticle(id: string): void {
   revalidateTag(CACHE_TAGS.tagCounts('tech_vc:india'), HARD_BUST)
   revalidateTag(CACHE_TAGS.tagCounts('geopolitics'), HARD_BUST)
   revalidateTag(CACHE_TAGS.tagCounts('leadership'), HARD_BUST)
+  revalidateTag(CACHE_TAGS.tagCounts('all:global'), HARD_BUST)
+  revalidateTag(CACHE_TAGS.tagCounts('all:india'), HARD_BUST)
 }
 
 /**

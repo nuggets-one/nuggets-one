@@ -1,4 +1,4 @@
-import { parseContentStream } from '@/lib/copy/streams'
+import { parseFeedStream } from '@/lib/copy/streams'
 import {
   effectiveFeedScope,
   isScopeEnabledStream,
@@ -12,7 +12,7 @@ const MAX_Q_LENGTH = 200
 
 /** Mirrors feed content identity in app/(main)/page.tsx FeedGrid. */
 export function buildFeedContentKey(searchParams: URLSearchParams): string {
-  const stream = parseContentStream(searchParams.get('stream') ?? undefined)
+  const stream = parseFeedStream(searchParams.get('stream') ?? undefined)
   const tagsRaw = searchParams.get('tags') ?? ''
   const parsedTags = tagsRaw
     ? tagsRaw

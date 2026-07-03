@@ -66,7 +66,7 @@ export type FeedCursor = {
 export type FeedPage = {
   articles: ArticleCardProps[]
   nextCursor: FeedCursor | null   // null = no more pages
-  stream: ContentStream
+  stream: FeedStream
   totalCount?: number
 }
 
@@ -74,7 +74,7 @@ export type FeedPage = {
  * Parameters for getFeedPage.
  */
 export type FeedPageParams = {
-  stream: ContentStream
+  stream: FeedStream
   tags?: string[]             // tag slugs for AND filter — empty = no filter
   q?: string                  // committed search query — empty = no search
   /** Global (default) or India — only on standard/pulse; ignored on charts. */
@@ -136,7 +136,13 @@ export type ContentStream = 'standard' | 'pulse' | 'charts' | 'tech_vc' | 'geopo
 
 export const CONTENT_STREAMS = ['standard', 'pulse', 'charts', 'tech_vc', 'geopolitics', 'leadership'] as const
 
+/** Primary stream assignment on articles (admin / DB). */
 export const DEFAULT_STREAM: ContentStream = 'pulse'
+
+/** Virtual + content streams for home feed URL and queries. */
+export type FeedStream = ContentStream | 'all'
+
+export const DEFAULT_FEED_STREAM: FeedStream = 'all'
 
 export const FEED_PAGE_SIZE = 24    // do not change without perf review
 
