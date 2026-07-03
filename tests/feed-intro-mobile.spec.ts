@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { STREAM_INTRO_COPY } from '../lib/copy/streams'
+import { FEED_INTRO_COPY, STREAM_INTRO_COPY } from '../lib/copy/streams'
 
 test.describe('mobile feed intro context', () => {
   test.use({ viewport: { width: 390, height: 844 } })
@@ -13,17 +13,17 @@ test.describe('mobile feed intro context', () => {
     ).toBeVisible()
   })
 
-  test('shows Market Pulse stream summary on default home', async ({ page }) => {
+  test('shows All stream summary on default home', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main article').first()).toBeVisible()
 
     await expect(
-      page.getByText(STREAM_INTRO_COPY.pulse.mobileSummary, { exact: true }),
+      page.getByText(FEED_INTRO_COPY.all.mobileSummary, { exact: true }),
     ).toBeVisible()
   })
 
   test('shows Market Pulse stream summary on pulse stream', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    await page.goto('/?stream=pulse', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main article').first()).toBeVisible()
 
     await expect(
@@ -48,12 +48,18 @@ test.describe('mobile feed intro context', () => {
     await expect(page).toHaveURL(/\?stream=pulse&scope=charts/)
   })
 
+  test('redirects canonical all stream URL to default home', async ({ page }) => {
+    await page.goto('/?stream=all', { waitUntil: 'domcontentloaded' })
+
+    await expect(page).toHaveURL('/')
+  })
+
   test('updates intro when switching streams via bottom nav', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main article').first()).toBeVisible()
 
     await expect(
-      page.getByText(STREAM_INTRO_COPY.pulse.mobileSummary, { exact: true }),
+      page.getByText(FEED_INTRO_COPY.all.mobileSummary, { exact: true }),
     ).toBeVisible()
 
     const nav = page.getByRole('navigation', { name: 'Primary destinations' })
@@ -64,7 +70,7 @@ test.describe('mobile feed intro context', () => {
   })
 
   test('switches to Charts via pulse scope tab', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    await page.goto('/?stream=pulse', { waitUntil: 'domcontentloaded' })
 
     const chartsTab = page.getByRole('link', { name: /Charts of the Week/i }).first()
     await chartsTab.click()

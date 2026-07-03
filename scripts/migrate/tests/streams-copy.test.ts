@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   getStreamLabel,
   parseContentStream,
+  parseFeedStream,
   STREAM_INTRO_COPY,
 } from '../../../lib/copy/streams'
 import {
@@ -20,6 +21,7 @@ import {
   resolveEffectiveContentStream,
   buildFeedHrefForContentStream,
   buildChartsScopeHref,
+  buildHomeHref,
   getScopesForStream,
   isMissingVisibleStreamsColumnError,
   applyFeedStreamFilter,
@@ -27,7 +29,15 @@ import {
 import { STREAM_NAV_ORDER } from '../../../lib/copy/streams'
 import { topicPushWebDeepLink } from '../../../lib/notifications/push-fcm-payload'
 
-test('parseContentStream accepts all streams and defaults unknown to pulse', () => {
+test('parseFeedStream accepts all feed streams and defaults unknown to all', () => {
+  assert.equal(parseFeedStream('all'), 'all')
+  assert.equal(parseFeedStream('pulse'), 'pulse')
+  assert.equal(parseFeedStream('charts'), 'charts')
+  assert.equal(parseFeedStream(undefined), 'all')
+  assert.equal(parseFeedStream('invalid'), 'all')
+})
+
+test('parseContentStream accepts content streams and defaults unknown to pulse', () => {
   assert.equal(parseContentStream('charts'), 'charts')
   assert.equal(parseContentStream('tech_vc'), 'tech_vc')
   assert.equal(parseContentStream('geopolitics'), 'geopolitics')
@@ -35,8 +45,8 @@ test('parseContentStream accepts all streams and defaults unknown to pulse', () 
   assert.equal(parseContentStream('invalid'), 'pulse')
 })
 
-test('STREAM_NAV_ORDER includes leadership in charts former slot', () => {
-  assert.deepEqual(STREAM_NAV_ORDER, ['pulse', 'tech_vc', 'standard', 'leadership', 'geopolitics'])
+test('STREAM_NAV_ORDER leads with All then existing streams', () => {
+  assert.deepEqual(STREAM_NAV_ORDER, ['all', 'pulse', 'tech_vc', 'standard', 'leadership', 'geopolitics'])
 })
 
 test('getStreamLabel returns full and short labels for new streams', () => {
@@ -94,33 +104,43 @@ test('validateStreamTagMembership enforces stream tag rules', () => {
   assert.equal(validateStreamTagMembership('standard', []), true)
 })
 
-test('scope helpers include tech_vc only for India/Global streams', () => {
+test('scope helpers include all and tech_vc for India/Global streams', () => {
+  assert.equal(isScopeEnabledStream('all'), true)
   assert.equal(isScopeEnabledStream('tech_vc'), true)
   assert.equal(isScopeEnabledStream('geopolitics'), false)
   assert.equal(isScopeEnabledStream('leadership'), false)
+  assert.equal(isScopeDisabledStream('all'), false)
   assert.equal(isScopeDisabledStream('geopolitics'), true)
   assert.equal(isScopeDisabledStream('leadership'), true)
   assert.equal(isScopeDisabledStream('tech_vc'), false)
   assert.equal(isScopeDisabledStream('charts'), true)
 })
 
-test('resolveEffectiveContentStream maps pulse charts scope to charts corpus', () => {
+test('resolveEffectiveContentStream maps pulse charts scope and passes through all', () => {
+  assert.equal(resolveEffectiveContentStream('all', 'global'), 'all')
   assert.equal(resolveEffectiveContentStream('pulse', 'charts'), 'charts')
   assert.equal(resolveEffectiveContentStream('pulse', 'global'), 'pulse')
   assert.equal(resolveEffectiveContentStream('pulse', 'india'), 'pulse')
   assert.equal(resolveEffectiveContentStream('standard', 'charts'), 'standard')
 })
 
-test('charts scope tab only on pulse stream', () => {
+test('scope tabs on all, pulse, standard, and tech_vc', () => {
+  assert.deepEqual(getScopesForStream('all'), ['global', 'india'])
   assert.deepEqual(getScopesForStream('pulse'), ['global', 'india', 'charts'])
   assert.deepEqual(getScopesForStream('standard'), ['global', 'india'])
   assert.deepEqual(getScopesForStream('tech_vc'), ['global', 'india'])
 })
 
+test('buildHomeHref canonicalizes all as default home', () => {
+  assert.equal(buildHomeHref('all'), '/')
+  assert.equal(buildHomeHref('all', 'india'), '/?scope=india')
+  assert.equal(buildHomeHref('pulse'), '/?stream=pulse')
+})
+
 test('buildFeedHrefForContentStream routes charts under pulse', () => {
   assert.equal(buildFeedHrefForContentStream('charts'), buildChartsScopeHref())
   assert.equal(buildFeedHrefForContentStream('leadership'), '/?stream=leadership')
-  assert.equal(buildFeedHrefForContentStream('pulse'), '/')
+  assert.equal(buildFeedHrefForContentStream('pulse'), '/?stream=pulse')
   assert.equal(buildFeedHrefForContentStream('standard'), '/?stream=standard')
 })
 
@@ -155,7 +175,7 @@ test('topicPushWebDeepLink uses canonical feed URLs for stream fallbacks', () =>
   const site = 'https://www.nuggets.one'
   assert.equal(
     topicPushWebDeepLink(null, null, 'pulse', site),
-    `${site}/`
+    `${site}/?stream=pulse`
   )
   assert.equal(
     topicPushWebDeepLink(null, null, 'charts', site),
