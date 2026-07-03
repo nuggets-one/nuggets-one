@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getFeedPage } from '@/lib/queries/feed'
 import { effectiveFeedScope, isScopeEnabledStream, parseFeedScope } from '@/lib/feed/scope'
-import { parseContentStream } from '@/lib/copy/streams'
+import { parseFeedStream } from '@/lib/copy/streams'
 
 const MAX_Q_LENGTH = 200
 const MAX_TAGS = 5
@@ -18,7 +18,7 @@ function parseTags(raw: string | null): string[] {
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const q = (searchParams.get('q') ?? '').trim().slice(0, MAX_Q_LENGTH)
-  const stream = parseContentStream(searchParams.get('stream'))
+  const stream = parseFeedStream(searchParams.get('stream'))
   const tags = parseTags(searchParams.get('tags'))
   const scope = isScopeEnabledStream(stream)
     ? effectiveFeedScope(stream, parseFeedScope(searchParams.get('scope')))

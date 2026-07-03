@@ -22,6 +22,33 @@ async function fetchChartsStreamCount(): Promise<number> {
   return count ?? 0
 }
 
+async function fetchScopeCountsForAll(): Promise<Pick<ScopeCounts, 'global' | 'india'>> {
+  const supabase = getPublicClient()
+
+  const base = () =>
+    supabase
+      .from('articles')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+
+  const [globalResult, indiaResult] = await Promise.all([
+    base().not('tag_slugs', 'cs', `{${INDIA_SUBTOPIC_SLUG}}`),
+    base().contains('tag_slugs', [INDIA_SUBTOPIC_SLUG]),
+  ])
+
+  if (globalResult.error && !PENDING_MIGRATION_CODES.has(globalResult.error.code ?? '')) {
+    console.error('fetchScopeCountsForAll global:', globalResult.error.message)
+  }
+  if (indiaResult.error && !PENDING_MIGRATION_CODES.has(indiaResult.error.code ?? '')) {
+    console.error('fetchScopeCountsForAll india:', indiaResult.error.message)
+  }
+
+  return {
+    global: globalResult.count ?? 0,
+    india: indiaResult.count ?? 0,
+  }
+}
+
 async function fetchScopeCountsForStream(
   stream: ContentStream
 ): Promise<Pick<ScopeCounts, 'global' | 'india'>> {
@@ -53,6 +80,15 @@ async function fetchScopeCountsForStream(
     india: indiaResult.count ?? 0,
   }
 }
+
+const cachedAllScopeCounts = unstable_cache(
+  async () => {
+    const counts = await fetchScopeCountsForAll()
+    return { ...counts, charts: 0 }
+  },
+  ['scope-counts', 'all'],
+  { revalidate: 3600, tags: [CACHE_TAGS.scopeCounts('all')] }
+)
 
 const cachedChartsScopeCount = unstable_cache(
   fetchChartsStreamCount,
@@ -91,11 +127,12 @@ const cachedTechVcScopeCounts = unstable_cache(
 )
 
 /**
- * Published article totals per scope for Nuggets, Market Pulse, or Tech x VC.
+ * Published article totals per scope for All, Deep-Dives, Market Pulse, or Tech x VC.
  */
 export async function getScopeCountsForStream(
-  stream: 'standard' | 'pulse' | 'tech_vc'
+  stream: 'all' | 'standard' | 'pulse' | 'tech_vc'
 ): Promise<ScopeCounts> {
+  if (stream === 'all') return cachedAllScopeCounts()
   if (stream === 'pulse') return cachedPulseScopeCounts()
   if (stream === 'tech_vc') return cachedTechVcScopeCounts()
   return cachedStandardScopeCounts()

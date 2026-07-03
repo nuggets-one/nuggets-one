@@ -10,8 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getFeedPage } from '@/lib/queries/feed'
 import { parseFeedScope, effectiveFeedScope, isScopeEnabledStream } from '@/lib/feed/scope'
-import { parseContentStream } from '@/lib/copy/streams'
-import type { ContentStream, FeedCursor } from '@/types/article'
+import { parseFeedStream } from '@/lib/copy/streams'
+import type { FeedStream, FeedCursor } from '@/types/article'
 
 const MAX_TAGS = 5
 const MAX_Q_LENGTH = 200
@@ -45,7 +45,7 @@ function parseCursor(
 }
 
 function getCacheControl(
-  stream: ContentStream,
+  stream: FeedStream,
   hasCursor: boolean,
   hasQ: boolean
 ): string {
@@ -57,7 +57,7 @@ function getCacheControl(
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
 
-  const stream = parseContentStream(searchParams.get('stream'))
+  const stream = parseFeedStream(searchParams.get('stream'))
   const tags = parseTags(searchParams.get('tags'))
   const q = parseQ(searchParams.get('q'))
   const scope = isScopeEnabledStream(stream)

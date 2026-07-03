@@ -1,16 +1,23 @@
 import { unstable_cache } from 'next/cache'
 import { CACHE_TAGS } from '@/lib/cache'
-import { applyFeedScopeFilter, applyVisibleStreamFilter, effectiveFeedScope, isPulseChartsScope, resolveEffectiveContentStream } from '@/lib/feed/scope'
+import {
+  applyFeedScopeFilter,
+  applyVisibleStreamFilter,
+  effectiveFeedScope,
+  isFeedAllStream,
+  isPulseChartsScope,
+  resolveEffectiveContentStream,
+} from '@/lib/feed/scope'
 import type { FeedScope } from '@/lib/feed/scope'
 import { getPublicClient } from '@/lib/supabase/public'
-import type { ContentStream } from '@/types/article'
+import type { ContentStream, FeedStream } from '@/types/article'
 
 export type TagCounts = Record<string, number>
 
 const PENDING_MIGRATION_CODES = new Set(['PGRST205', '42P01'])
 
-async function fetchTagCountsForStream(
-  stream: ContentStream,
+async function fetchTagCountsForFeedStream(
+  stream: FeedStream,
   scope?: FeedScope
 ): Promise<TagCounts> {
   const supabase = getPublicClient()
@@ -22,7 +29,9 @@ async function fetchTagCountsForStream(
     .select('tag_slugs')
     .eq('status', 'published')
 
-  query = applyVisibleStreamFilter(query, effectiveStream)
+  if (!isFeedAllStream(effectiveStream)) {
+    query = applyVisibleStreamFilter(query, effectiveStream)
+  }
 
   query = applyFeedScopeFilter(query, stream, effectiveScope)
 
@@ -30,7 +39,7 @@ async function fetchTagCountsForStream(
 
   if (error) {
     if (!PENDING_MIGRATION_CODES.has(error.code ?? '')) {
-      console.error('fetchTagCountsForStream:', error.message)
+      console.error('fetchTagCountsForFeedStream:', error.message)
     }
     return {}
   }
@@ -49,60 +58,72 @@ async function fetchTagCountsForStream(
   return counts
 }
 
-function cacheKey(stream: ContentStream, scope: FeedScope | 'all'): string {
+function cacheKey(stream: FeedStream | ContentStream, scope: FeedScope | 'all'): string {
   return `tag-counts:${stream}:${scope}`
 }
 
+const cachedAllGlobalTagCounts = unstable_cache(
+  () => fetchTagCountsForFeedStream('all', 'global'),
+  [cacheKey('all', 'global')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('all:global')] }
+)
+
+const cachedAllIndiaTagCounts = unstable_cache(
+  () => fetchTagCountsForFeedStream('all', 'india'),
+  [cacheKey('all', 'india')],
+  { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('all:india')] }
+)
+
 const cachedStandardGlobalTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('standard', 'global'),
+  () => fetchTagCountsForFeedStream('standard', 'global'),
   [cacheKey('standard', 'global')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('standard:global')] }
 )
 
 const cachedStandardIndiaTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('standard', 'india'),
+  () => fetchTagCountsForFeedStream('standard', 'india'),
   [cacheKey('standard', 'india')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('standard:india')] }
 )
 
 const cachedPulseGlobalTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('pulse', 'global'),
+  () => fetchTagCountsForFeedStream('pulse', 'global'),
   [cacheKey('pulse', 'global')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('pulse:global')] }
 )
 
 const cachedPulseIndiaTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('pulse', 'india'),
+  () => fetchTagCountsForFeedStream('pulse', 'india'),
   [cacheKey('pulse', 'india')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('pulse:india')] }
 )
 
 const cachedChartsTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('charts'),
+  () => fetchTagCountsForFeedStream('charts'),
   [cacheKey('charts', 'all')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('charts')] }
 )
 
 const cachedTechVcGlobalTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('tech_vc', 'global'),
+  () => fetchTagCountsForFeedStream('tech_vc', 'global'),
   [cacheKey('tech_vc', 'global')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('tech_vc:global')] }
 )
 
 const cachedTechVcIndiaTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('tech_vc', 'india'),
+  () => fetchTagCountsForFeedStream('tech_vc', 'india'),
   [cacheKey('tech_vc', 'india')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('tech_vc:india')] }
 )
 
 const cachedGeopoliticsTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('geopolitics'),
+  () => fetchTagCountsForFeedStream('geopolitics'),
   [cacheKey('geopolitics', 'all')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('geopolitics')] }
 )
 
 const cachedLeadershipTagCounts = unstable_cache(
-  () => fetchTagCountsForStream('leadership'),
+  () => fetchTagCountsForFeedStream('leadership'),
   [cacheKey('leadership', 'all')],
   { revalidate: 3600, tags: [CACHE_TAGS.tagCounts('leadership')] }
 )
@@ -113,9 +134,15 @@ const cachedLeadershipTagCounts = unstable_cache(
  * over `articles.tag_slugs`.
  */
 export async function getTagCountsForStream(
-  stream: ContentStream,
+  stream: FeedStream,
   scope?: FeedScope
 ): Promise<TagCounts> {
+  if (stream === 'all') {
+    const effectiveScope = effectiveFeedScope(stream, scope) ?? 'global'
+    return effectiveScope === 'india'
+      ? cachedAllIndiaTagCounts()
+      : cachedAllGlobalTagCounts()
+  }
   if (stream === 'charts') return cachedChartsTagCounts()
   if (stream === 'geopolitics') return cachedGeopoliticsTagCounts()
   if (stream === 'leadership') return cachedLeadershipTagCounts()

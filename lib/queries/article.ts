@@ -3,6 +3,7 @@ import {
   applyFeedScopeFilter,
   applyVisibleStreamFilter,
   effectiveFeedScope,
+  isFeedAllStream,
   resolveEffectiveContentStream,
   scopeToRpcParam,
 } from '@/lib/feed/scope'
@@ -12,6 +13,7 @@ import {
   normalizeHeroMediaKind,
   type ArticleDetail,
   type ContentStream,
+  type FeedStream,
   type RelatedArticlePreview,
 } from '@/types/article'
 
@@ -79,7 +81,7 @@ export async function suggestArticles({
   limit = SEARCH_SUGGEST_ROW_CAP,
 }: {
   q: string
-  stream: ContentStream
+  stream: FeedStream
   scope?: FeedScope
   limit?: number
 }): Promise<SuggestionRow[]> {
@@ -104,7 +106,13 @@ export async function suggestArticles({
         .select('id, slug, title, content_stream, published_at')
         .eq('status', 'published')
 
-      query = applyVisibleStreamFilter(query, effectiveStream)
+      query = applyFeedScopeFilter(query, stream, effectiveScope)
+
+      if (!isFeedAllStream(effectiveStream)) {
+        query = applyVisibleStreamFilter(query, effectiveStream)
+      }
+
+      query = query
         .textSearch('search_vector', q.trim(), {
           type: 'websearch',
           config: 'english',
@@ -112,8 +120,6 @@ export async function suggestArticles({
         .order('published_at', { ascending: false })
         .order('id', { ascending: false })
         .limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))
-
-      query = applyFeedScopeFilter(query, stream, effectiveScope)
 
       const { data: fallbackData, error: fallbackError } = await query
 

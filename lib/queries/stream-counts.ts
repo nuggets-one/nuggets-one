@@ -4,6 +4,7 @@ import { getPublicClient } from '@/lib/supabase/public'
 import type { ContentStream } from '@/types/article'
 
 export type StreamArticleCounts = {
+  all: number
   standard: number
   pulse: number
   charts: number
@@ -13,6 +14,24 @@ export type StreamArticleCounts = {
 }
 
 const PENDING_MIGRATION_CODES = new Set(['PGRST205', '42P01'])
+
+async function fetchAllPublishedCount(): Promise<number> {
+  const supabase = getPublicClient()
+
+  const { count, error } = await supabase
+    .from('articles')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'published')
+
+  if (error) {
+    if (!PENDING_MIGRATION_CODES.has(error.code ?? '')) {
+      console.error('fetchAllPublishedCount:', error.message)
+    }
+    return 0
+  }
+
+  return count ?? 0
+}
 
 async function fetchStreamArticleCount(stream: ContentStream): Promise<number> {
   const supabase = getPublicClient()
@@ -34,7 +53,8 @@ async function fetchStreamArticleCount(stream: ContentStream): Promise<number> {
 }
 
 async function fetchStreamArticleCounts(): Promise<StreamArticleCounts> {
-  const [standard, pulse, charts, tech_vc, geopolitics, leadership] = await Promise.all([
+  const [all, standard, pulse, charts, tech_vc, geopolitics, leadership] = await Promise.all([
+    fetchAllPublishedCount(),
     fetchStreamArticleCount('standard'),
     fetchStreamArticleCount('pulse'),
     fetchStreamArticleCount('charts'),
@@ -42,7 +62,7 @@ async function fetchStreamArticleCounts(): Promise<StreamArticleCounts> {
     fetchStreamArticleCount('geopolitics'),
     fetchStreamArticleCount('leadership'),
   ])
-  return { standard, pulse, charts, tech_vc, geopolitics, leadership }
+  return { all, standard, pulse, charts, tech_vc, geopolitics, leadership }
 }
 
 const cachedStreamArticleCounts = unstable_cache(
@@ -52,8 +72,8 @@ const cachedStreamArticleCounts = unstable_cache(
 )
 
 /**
- * Published article totals per content stream (unfiltered).
- * Cached for 1h; two head-count queries on cache miss.
+ * Published article totals per feed stream (unfiltered).
+ * Cached for 1h; recomputed on cache miss.
  */
 export async function getStreamArticleCounts(): Promise<StreamArticleCounts> {
   return cachedStreamArticleCounts()

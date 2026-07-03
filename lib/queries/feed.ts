@@ -3,6 +3,7 @@ import {
   applyFeedScopeFilter,
   applyFeedStreamFilter,
   effectiveFeedScope,
+  isFeedAllStream,
   isMissingVisibleStreamsColumnError,
   resolveEffectiveContentStream,
   scopeToRpcParam,
@@ -21,6 +22,7 @@ import {
   type FeedPage,
   type FeedPageParams,
   type FeedCursor,
+  type FeedStream,
   type ContentStream,
 } from '@/types/article'
 
@@ -212,7 +214,7 @@ async function getFeedTotalCount({
   scope,
 }: {
   supabase: ReturnType<typeof getPublicClient>
-  stream: ContentStream
+  stream: FeedStream
   tags: string[]
   q: string
   scope?: FeedScope
@@ -225,7 +227,9 @@ async function getFeedTotalCount({
       .select('id', { count: 'exact', head: true })
       .eq('status', 'published')
 
-    query = applyFeedStreamFilter(query, effectiveStream, mode)
+    if (!isFeedAllStream(effectiveStream)) {
+      query = applyFeedStreamFilter(query, effectiveStream, mode)
+    }
     query = applyFeedScopeFilter(query, stream, scope)
 
     if (tags.length > 0) {
@@ -257,7 +261,7 @@ async function getFeedPageByCursor({
   scope,
 }: {
   supabase: ReturnType<typeof getPublicClient>
-  stream: ContentStream
+  stream: FeedStream
   tags: string[]
   cursor?: FeedCursor
   limit: number
@@ -271,7 +275,10 @@ async function getFeedPageByCursor({
       .select(selectClause)
       .eq('status', 'published')
 
-    query = applyFeedStreamFilter(query, effectiveStream, mode)
+    if (!isFeedAllStream(effectiveStream)) {
+      query = applyFeedStreamFilter(query, effectiveStream, mode)
+    }
+    query = query
       .order('published_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(limit)
@@ -332,7 +339,7 @@ async function getFeedPageBySearch({
   scope,
 }: {
   supabase: ReturnType<typeof getPublicClient>
-  stream: ContentStream
+  stream: FeedStream
   tags: string[]
   q: string
   cursor?: FeedCursor
@@ -404,7 +411,7 @@ async function getFeedPageBySearchLegacy({
   scope,
 }: {
   supabase: ReturnType<typeof getPublicClient>
-  stream: ContentStream
+  stream: FeedStream
   tags: string[]
   q: string
   cursor?: FeedCursor
@@ -419,7 +426,10 @@ async function getFeedPageBySearchLegacy({
       .select(selectClause)
       .eq('status', 'published')
 
-    query = applyFeedStreamFilter(query, effectiveStream, mode)
+    if (!isFeedAllStream(effectiveStream)) {
+      query = applyFeedStreamFilter(query, effectiveStream, mode)
+    }
+    query = query
       .textSearch('search_vector', q, {
         type: 'websearch',
         config: 'english',
