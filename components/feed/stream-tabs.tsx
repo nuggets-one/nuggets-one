@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { STREAM_INTRO_COPY, STREAM_NAV_ORDER } from '@/lib/copy/streams'
+import { FEED_INTRO_COPY, STREAM_NAV_ORDER } from '@/lib/copy/streams'
 import { buildStreamTabHref, type FeedScope } from '@/lib/feed/scope'
 import { useFeedPending } from '@/components/feed/feed-pending-context'
-import type { ContentStream } from '@/types/article'
+import type { FeedStream } from '@/types/article'
 import type { StreamArticleCounts } from '@/lib/queries/stream-counts'
 
 const numberFmt = new Intl.NumberFormat(undefined, {
@@ -13,7 +13,7 @@ const numberFmt = new Intl.NumberFormat(undefined, {
 })
 
 type Props = {
-  activeStream: ContentStream
+  activeStream: FeedStream
   activeScope?: FeedScope
   streamCounts: StreamArticleCounts
   /** When true, stream group sizes to content (for lg toolbar row with scope adjacent). */
@@ -90,7 +90,7 @@ export function StreamTabs({
       }`}
     >
       {STREAM_NAV_ORDER.map((value) => {
-        const { label: fullLabel, shortLabel } = STREAM_INTRO_COPY[value]
+        const { label: fullLabel, shortLabel } = FEED_INTRO_COPY[value]
         const active = activeStream === value
         const count = streamCounts[value]
         const formattedCount = numberFmt.format(count)

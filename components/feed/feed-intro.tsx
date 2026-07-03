@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
-import { STREAM_INTRO_COPY } from '@/lib/copy/streams'
+import { FEED_INTRO_COPY } from '@/lib/copy/streams'
 import { getScopeLabel, type FeedScope } from '@/lib/feed/scope'
-import type { ContentStream } from '@/types/article'
+import type { FeedStream } from '@/types/article'
 
 type Props = {
-  stream: ContentStream
+  stream: FeedStream
   scope?: FeedScope
   streamLabel: string
   shownCount: number
@@ -91,7 +91,7 @@ export function FeedIntro({
   totalCount,
   compact = false,
 }: Props) {
-  const { title, tagline, mobileSummary } = STREAM_INTRO_COPY[stream]
+  const { title, tagline, mobileSummary } = FEED_INTRO_COPY[stream]
   const shown = numberFmt.format(shownCount)
   const hasExactTotal = typeof totalCount === 'number'
   const total = hasExactTotal ? numberFmt.format(totalCount) : null

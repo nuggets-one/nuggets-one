@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useQueryState } from 'nuqs'
 import Link from 'next/link'
 import { X } from 'lucide-react'
-import { DEFAULT_STREAM, type ContentStream } from '@/types/article'
-import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
+import { DEFAULT_FEED_STREAM, type FeedStream } from '@/types/article'
+import { getStreamLabel, parseContentStream, parseFeedStream } from '@/lib/copy/streams'
 import {
   effectiveFeedScope,
   isScopeEnabledStream,
@@ -220,9 +220,9 @@ export function HeaderSearch({ utilities }: Props) {
     defaultValue: '',
     shallow: false,
   })
-  const [stream] = useQueryState<ContentStream>('stream', {
-    defaultValue: DEFAULT_STREAM,
-    parse: (v): ContentStream => parseContentStream(v),
+  const [stream] = useQueryState<FeedStream>('stream', {
+    defaultValue: DEFAULT_FEED_STREAM,
+    parse: (v): FeedStream => parseFeedStream(v),
     shallow: true,
   })
   const [scopeRaw] = useQueryState('scope', {

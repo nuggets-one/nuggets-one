@@ -6,12 +6,12 @@ import { ActiveFiltersBar } from '@/components/feed/active-filters-bar'
 import { FeedFiltersChrome } from '@/components/feed/feed-filters-chrome'
 import { isScopeEnabledStream, type FeedScope } from '@/lib/feed/scope'
 import type { ScopeCounts } from '@/lib/queries/scope-counts'
-import type { ContentStream, TagSummary } from '@/types/article'
+import type { FeedStream, TagSummary } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
 import type { StreamArticleCounts } from '@/lib/queries/stream-counts'
 
 type Props = {
-  stream: ContentStream
+  stream: FeedStream
   scope?: FeedScope
   scopeCounts: ScopeCounts | null
   tags: TagSummary[]

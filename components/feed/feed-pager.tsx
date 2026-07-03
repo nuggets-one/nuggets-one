@@ -7,13 +7,13 @@ import { ArticleCardSkeleton } from '@/components/ui/article-card-skeleton'
 import { ArticleSkimRowSkeleton } from '@/components/ui/article-skim-row-skeleton'
 import { BookmarkBatchHydrator } from '@/components/ui/bookmark-batch-hydrator'
 import { StatusBlock } from '@/components/ui/status-block'
-import type { ArticleCardProps, FeedCursor, ContentStream } from '@/types/article'
+import type { ArticleCardProps, FeedCursor, FeedStream } from '@/types/article'
 import type { FeedScope } from '@/lib/feed/scope'
 import { readResponseJson } from '@/lib/http/parse-json-response'
 
 type Props = {
   initialCursor: FeedCursor | null
-  stream: ContentStream
+  stream: FeedStream
   scope?: FeedScope
   tags: string[]
   q: string
@@ -56,7 +56,8 @@ export function FeedPager({
     abortRef.current = new AbortController()
 
     try {
-      const params = new URLSearchParams({ stream })
+      const params = new URLSearchParams()
+      if (stream !== 'all') params.set('stream', stream)
       if (scope === 'india') params.set('scope', 'india')
       if (tags.length) params.set('tags', tags.join(','))
       if (q) params.set('q', q)

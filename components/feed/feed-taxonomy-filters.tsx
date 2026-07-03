@@ -12,7 +12,7 @@ import {
 import { useQueryState } from 'nuqs'
 import { useFeedPending } from '@/components/feed/feed-pending-context'
 import type { TagSummary } from '@/types/article'
-import type { ContentStream } from '@/types/article'
+import type { FeedStream } from '@/types/article'
 import type { TagCounts } from '@/lib/queries/tag-counts'
 import {
   FEED_DIMENSION_KEYS,
@@ -28,7 +28,7 @@ import { FilterPopover } from '@/components/feed/filter-popover'
 import { FeedViewToggle } from '@/components/feed/feed-view-toggle'
 
 type Props = {
-  stream: ContentStream
+  stream: FeedStream
   tags: TagSummary[]
   counts: TagCounts
 }
@@ -73,7 +73,10 @@ export function FeedTaxonomyFilters({ stream, tags, counts }: Props) {
       if (shouldHideIndiaTagSlug(stream) && t.slug === INDIA_SUBTOPIC_SLUG) {
         return false
       }
-      return !shouldHideTagSlugForStream(stream, t.slug)
+      if (stream !== 'all' && shouldHideTagSlugForStream(stream, t.slug)) {
+        return false
+      }
+      return true
     })
   }, [tags, stream])
 

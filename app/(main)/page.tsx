@@ -30,11 +30,11 @@ import { FeedEmpty } from '@/components/feed/feed-empty'
 import { FeedTopBar } from '@/components/feed/feed-top-bar'
 import { FeedContentPendingGate } from '@/components/feed/feed-content-pending-gate'
 import {
-  getStreamLabel,
-  parseContentStream,
-  STREAM_INTRO_COPY,
+  FEED_INTRO_COPY,
+  getFeedStreamLabel,
+  parseFeedStream,
 } from '@/lib/copy/streams'
-import { DEFAULT_STREAM } from '@/types/article'
+import { DEFAULT_FEED_STREAM } from '@/types/article'
 import { getDefaultOgImageUrl, getSiteUrl } from '@/lib/seo/site-url'
 
 const homeOgImage = getDefaultOgImageUrl()
@@ -45,11 +45,10 @@ export async function generateMetadata({
   searchParams: Promise<SearchParams>
 }): Promise<Metadata> {
   const params = await searchParams
-  const stream = parseContentStream(params.stream)
+  const stream = parseFeedStream(params.stream)
   const scope = parseFeedScope(params.scope)
   const isPulseCharts = isPulseChartsScope(stream, scope)
-  const metaStream = isPulseCharts ? 'charts' : stream
-  const intro = STREAM_INTRO_COPY[metaStream]
+  const intro = isPulseCharts ? FEED_INTRO_COPY.charts : FEED_INTRO_COPY[stream]
   const title = intro.title
   const description = intro.tagline
   const ogDescription = intro.mobileSummary
@@ -117,13 +116,13 @@ function buildLegacyChartsRedirectUrl(
 }
 
 function buildLegacyIndiaRedirectUrl(
-  stream: ReturnType<typeof parseContentStream>,
+  stream: ReturnType<typeof parseFeedStream>,
   tags: string[],
   q: string,
   view?: string
 ): string {
   const params = new URLSearchParams()
-  if (stream !== DEFAULT_STREAM) params.set('stream', stream)
+  if (stream !== DEFAULT_FEED_STREAM) params.set('stream', stream)
   params.set('scope', 'india')
   if (tags.length > 0) params.set('tags', tags.join(','))
   if (q) params.set('q', q)
@@ -132,7 +131,7 @@ function buildLegacyIndiaRedirectUrl(
 }
 
 async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
-  const stream = parseContentStream(searchParams.stream)
+  const stream = parseFeedStream(searchParams.stream)
   const tagsRaw = searchParams.tags ?? ''
   const parsedTags = tagsRaw
     ? tagsRaw
@@ -144,7 +143,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const q = (searchParams.q ?? '').trim().slice(0, MAX_Q_LENGTH)
 
   if (
-    searchParams.stream === 'pulse' &&
+    searchParams.stream === 'all' &&
     !searchParams.scope &&
     !parsedTags.length &&
     !q
@@ -200,7 +199,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
       getStreamArticleCounts().catch((error) => {
         const message = error instanceof Error ? error.message : String(error)
         console.error(`FeedGrid getStreamArticleCounts error: ${message}`)
-        return { standard: 0, pulse: 0, charts: 0, tech_vc: 0, geopolitics: 0, leadership: 0 }
+        return { standard: 0, pulse: 0, charts: 0, tech_vc: 0, geopolitics: 0, leadership: 0, all: 0 }
       }),
       isScopeEnabledStream(stream)
         ? getScopeCountsForStream(stream).catch((error) => {
@@ -214,7 +213,7 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const { articles, nextCursor } = feedResult
   const totalCount =
     typeof feedResult.totalCount === 'number' ? feedResult.totalCount : undefined
-  const streamLabel = getStreamLabel(stream)
+  const streamLabel = getFeedStreamLabel(stream)
 
   const supabase = await createClient()
   const { user } = await resolveAuthUser(supabase)
