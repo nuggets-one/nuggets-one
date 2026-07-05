@@ -1,4 +1,6 @@
+import { unstable_cache } from 'next/cache'
 import { getPublicClient } from '@/lib/supabase/public'
+import { CACHE_TAGS } from '@/lib/cache'
 import {
   applyFeedScopeFilter,
   applyFeedStreamFilter,
@@ -182,6 +184,31 @@ function normalizeCuratorOnRows(rows: Record<string, unknown>[]): RawArticleRow[
   return normalizeCuratorDisplayNameOnRows(rows) as unknown as RawArticleRow[]
 }
 
+/**
+ * Attach images and tag labels concurrently, then render preview HTML.
+ * `attachImagesToRows` and `attachTagLabelsToRows` are independent DB reads
+ * keyed off the same rows in the same order, so we fan them out with
+ * `Promise.all` and merge by index instead of chaining them serially.
+ */
+async function enrichArticleRows(
+  supabase: ReturnType<typeof getPublicClient>,
+  rawRows: RawArticleRow[]
+): Promise<ArticleCardProps[]> {
+  const [rowsWithImages, rowsWithLabels] = await Promise.all([
+    attachImagesToRows(supabase, rawRows),
+    attachTagLabelsToRows(
+      supabase as unknown as SupabaseLike,
+      rawRows as unknown as TaggableRow[]
+    ),
+  ])
+  const rows = rowsWithImages.map((row, index) => ({
+    ...row,
+    tag_labels: rowsWithLabels[index].tag_labels,
+    tag_dimensions: rowsWithLabels[index].tag_dimensions,
+  })) as ArticleRowWithLabels[]
+  return attachCardPreviewHtml(rows)
+}
+
 export async function getFeedPage({
   stream,
   tags = [],
@@ -204,6 +231,44 @@ export async function getFeedPage({
   const totalCountPromise = getFeedTotalCount({ supabase, stream, tags, q: '', scope })
   const page = await getFeedPageByCursor({ supabase, stream, tags, cursor, limit, scope })
   return { ...page, totalCount: await totalCountPromise }
+}
+
+const FEED_STREAM_TAG: Record<FeedStream, string> = {
+  all: CACHE_TAGS.feedAll,
+  standard: CACHE_TAGS.feedStandard,
+  pulse: CACHE_TAGS.feedPulse,
+  charts: CACHE_TAGS.feedCharts,
+  tech_vc: CACHE_TAGS.feedTechVc,
+  geopolitics: CACHE_TAGS.feedGeopolitics,
+  leadership: CACHE_TAGS.feedLeadership,
+}
+
+/**
+ * Cached wrapper around `getFeedPage` for the first (cursorless, non-search)
+ * feed page — the payload rendered on every stream/scope/tag switch.
+ *
+ * Tagged per-stream (plus the charts bucket for pulse+charts scope) so the
+ * admin publish path (`revalidateArticle` in `lib/cache.ts`) hard-busts it
+ * immediately. Search and paginated requests bypass the cache and stay live.
+ */
+export async function getFeedPageCached(params: FeedPageParams): Promise<FeedPage> {
+  if (params.q?.trim() || params.cursor) {
+    return getFeedPage(params)
+  }
+
+  const { stream, scope, tags = [], limit = 24 } = params
+  const tagsKey = [...tags].sort().join(',')
+  const cacheKey = `${stream}:${scope ?? 'none'}:${tagsKey}:${limit}`
+
+  const cacheTags = [FEED_STREAM_TAG[stream]]
+  if (scope === 'charts') cacheTags.push(CACHE_TAGS.feedCharts)
+
+  const run = unstable_cache(
+    () => getFeedPage(params),
+    ['feed-page', cacheKey],
+    { revalidate: 60, tags: cacheTags },
+  )
+  return run()
 }
 
 async function getFeedTotalCount({
@@ -311,12 +376,7 @@ async function getFeedPageByCursor({
 
   // TODO: replace with generated DB types in later PR
   const rawRows = normalizeCuratorOnRows((data ?? []) as unknown as Record<string, unknown>[])
-  const rowsWithImages = await attachImagesToRows(supabase, rawRows)
-  const rows = await attachTagLabelsToRows(
-    supabase as unknown as SupabaseLike,
-    rowsWithImages as unknown as TaggableRow[]
-  ) as ArticleRowWithLabels[]
-  const articles = await attachCardPreviewHtml(rows)
+  const articles = await enrichArticleRows(supabase, rawRows)
 
   const nextCursor: FeedCursor | null =
     articles.length === limit
@@ -380,12 +440,7 @@ async function getFeedPageBySearch({
     return next
   })
   const rawRows = normalizeCuratorOnRows(strippedRows as unknown as Record<string, unknown>[])
-  const rowsWithImages = await attachImagesToRows(supabase, rawRows)
-  const rows = await attachTagLabelsToRows(
-    supabase as unknown as SupabaseLike,
-    rowsWithImages as unknown as TaggableRow[]
-  ) as ArticleRowWithLabels[]
-  const articles = await attachCardPreviewHtml(rows)
+  const articles = await enrichArticleRows(supabase, rawRows)
   const lastRow = rpcRows[rpcRows.length - 1]
 
   return {
@@ -465,12 +520,7 @@ async function getFeedPageBySearchLegacy({
   }
 
   const rawRows = normalizeCuratorOnRows((data ?? []) as unknown as Record<string, unknown>[])
-  const rowsWithImages = await attachImagesToRows(supabase, rawRows)
-  const rows = await attachTagLabelsToRows(
-    supabase as unknown as SupabaseLike,
-    rowsWithImages as unknown as TaggableRow[]
-  ) as ArticleRowWithLabels[]
-  const articles = await attachCardPreviewHtml(rows)
+  const articles = await enrichArticleRows(supabase, rawRows)
   const lastRow = articles[articles.length - 1]
 
   return {

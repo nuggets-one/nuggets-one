@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation'
-import { unstable_noStore } from 'next/cache'
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { Suspense } from 'react'
-import { createClient } from '@/lib/supabase/server'
-import { resolveAuthUser } from '@/lib/supabase/resolve-auth-user'
-import { getFeedPage } from '@/lib/queries/feed'
+import { getRequestUser } from '@/lib/auth/server-auth-status'
+import { getFeedPageCached } from '@/lib/queries/feed'
 import { listOfficialTags } from '@/lib/queries/tags'
 import { getTagCountsForStream } from '@/lib/queries/tag-counts'
 import { getScopeCountsForStream } from '@/lib/queries/scope-counts'
@@ -169,18 +167,15 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
   const storedFeedView = cookieStore.get(FEED_VIEW_STORAGE_KEY)?.value ?? null
   const skimView = isSkimFeedView(searchParams.view, storedFeedView)
 
-  // Home feed must always reflect current DB state (avoid stale ISR empty pages).
-  unstable_noStore()
-
   const feedScope: FeedScope | undefined = isScopeEnabledStream(stream)
     ? effectiveFeedScope(stream, scope)
     : undefined
 
   let feedLoadFailed = false
 
-  const [feedResult, officialTags, tagCounts, streamCounts, scopeCounts] =
+  const [feedResult, officialTags, tagCounts, streamCounts, scopeCounts, user] =
     await Promise.all([
-      getFeedPage({ stream, tags, q, scope: feedScope }).catch((error) => {
+      getFeedPageCached({ stream, tags, q, scope: feedScope }).catch((error) => {
         const message = error instanceof Error ? error.message : String(error)
         console.error(`FeedGrid getFeedPage error: ${message}`)
         feedLoadFailed = true
@@ -208,6 +203,13 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
             return { global: 0, india: 0, charts: 0 }
           })
         : Promise.resolve(null),
+      // Resolve auth concurrently with feed data (request-cached, deduped with
+      // the layout's auth resolution) instead of as a trailing waterfall.
+      getRequestUser().catch((error) => {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`FeedGrid getRequestUser error: ${message}`)
+        return null
+      }),
     ])
 
   const { articles, nextCursor } = feedResult
@@ -215,8 +217,6 @@ async function FeedGrid({ searchParams }: { searchParams: SearchParams }) {
     typeof feedResult.totalCount === 'number' ? feedResult.totalCount : undefined
   const streamLabel = getFeedStreamLabel(stream)
 
-  const supabase = await createClient()
-  const { user } = await resolveAuthUser(supabase)
   const isAuthenticated = !!user
   const isAdmin = user?.app_metadata?.is_admin === true
   const articleIds = articles.map((a) => a.id)
