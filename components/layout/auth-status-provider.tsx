@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { readResponseJson } from '@/lib/http/parse-json-response'
+import { subscribeAuthChanges } from '@/lib/auth/browser-auth-events'
 
 export type AuthStatusState =
   | { status: 'loading' }
@@ -32,25 +33,32 @@ export function useAuthStatus(): AuthStatusState {
   return useContext(AuthStatusContext)
 }
 
-export function AuthStatusProvider({ children }: { children: ReactNode }) {
-  const [auth, setAuth] = useState<AuthStatusState>({ status: 'loading' })
+export function AuthStatusProvider({
+  children,
+  initialStatus,
+}: {
+  children: ReactNode
+  initialStatus?: AuthStatusState
+}) {
+  const [auth, setAuth] = useState<AuthStatusState>(
+    initialStatus ?? { status: 'loading' }
+  )
+  const hydratedFromServer =
+    initialStatus != null && initialStatus.status !== 'loading'
 
   useEffect(() => {
     let cancelled = false
-    const controller = new AbortController()
-    const timeout = setTimeout(() => {
-      controller.abort()
-    }, 4000)
 
-    fetch('/api/auth/status', { cache: 'no-store', signal: controller.signal })
-      .then(async (res) => {
-        if (!res.ok) return { authenticated: false as const }
+    async function refreshFromServer() {
+      try {
+        const res = await fetch('/api/auth/status', { cache: 'no-store' })
+        if (!res.ok) {
+          if (!cancelled) setAuth({ status: 'anonymous' })
+          return
+        }
         const data = await readResponseJson<AuthStatusResponse>(res)
-        return data ?? { authenticated: false as const }
-      })
-      .then((data) => {
         if (cancelled) return
-        if (data.authenticated) {
+        if (data?.authenticated) {
           setAuth({
             status: 'authenticated',
             email: data.email ?? null,
@@ -63,20 +71,33 @@ export function AuthStatusProvider({ children }: { children: ReactNode }) {
         } else {
           setAuth({ status: 'anonymous' })
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setAuth({ status: 'anonymous' })
-      })
-      .finally(() => {
-        clearTimeout(timeout)
-      })
+      }
+    }
+
+    // Only fetch on mount if the server did not hydrate us.
+    if (!hydratedFromServer) {
+      void refreshFromServer()
+    }
+
+    // React to real auth changes (login/logout/token refresh) instead of
+    // polling. Supabase replays INITIAL_SESSION on subscribe — skip it since
+    // server hydration (or the fetch above) already set the correct state.
+    const unsubscribe = subscribeAuthChanges(({ event, authenticated }) => {
+      if (event === 'INITIAL_SESSION') return
+      if (!authenticated) {
+        setAuth({ status: 'anonymous' })
+      } else {
+        void refreshFromServer()
+      }
+    })
 
     return () => {
       cancelled = true
-      clearTimeout(timeout)
-      controller.abort()
+      unsubscribe()
     }
-  }, [])
+  }, [hydratedFromServer])
 
   return <AuthStatusContext.Provider value={auth}>{children}</AuthStatusContext.Provider>
 }

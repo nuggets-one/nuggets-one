@@ -7,11 +7,15 @@ import { Footer } from '@/components/layout/footer'
 import { FooterRouteGate } from '@/components/layout/footer-route-gate'
 import { GlobalImageLightboxHost } from '@/components/layout/global-image-lightbox-host'
 import { GlobalYouTubeMiniPlayerHost } from '@/components/layout/global-youtube-mini-player-host'
-import { AuthStatusProvider } from '@/components/layout/auth-status-provider'
+import {
+  AuthStatusProvider,
+  type AuthStatusState,
+} from '@/components/layout/auth-status-provider'
 import { Header } from '@/components/layout/header'
 import { MobileSearchProvider } from '@/components/layout/mobile-search-context'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
 import { listAccountMenuLegalLinks } from '@/lib/queries/legal-pages'
+import { getServerAuthStatus } from '@/lib/auth/server-auth-status'
 
 const FALLBACK_LEGAL_LINKS = [
   { slug: 'terms', label: 'Terms of use' },
@@ -26,18 +30,32 @@ export default async function MainLayout({
   children: React.ReactNode
   modal: React.ReactNode
 }) {
-  let legalLinks = FALLBACK_LEGAL_LINKS
-  try {
-    legalLinks = await listAccountMenuLegalLinks()
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    console.error(`MainLayout legal links fallback: ${message}`)
-  }
+  const [legalLinks, authStatus] = await Promise.all([
+    listAccountMenuLegalLinks().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`MainLayout legal links fallback: ${message}`)
+      return FALLBACK_LEGAL_LINKS
+    }),
+    getServerAuthStatus().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`MainLayout auth status fallback: ${message}`)
+      return { authenticated: false as const, email: null, displayName: null, isAdmin: false }
+    }),
+  ])
+
+  const initialAuthStatus: AuthStatusState = authStatus.authenticated
+    ? {
+        status: 'authenticated',
+        email: authStatus.email,
+        displayName: authStatus.displayName,
+        isAdmin: authStatus.isAdmin,
+      }
+    : { status: 'anonymous' }
 
   return (
     <NuqsAdapter>
       <MobileSearchProvider>
-      <AuthStatusProvider>
+      <AuthStatusProvider initialStatus={initialAuthStatus}>
       <FeedPendingProvider>
       <Suspense fallback={null}>
         <NavigationProgress />
