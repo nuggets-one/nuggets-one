@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { FEED_INTRO_COPY, STREAM_NAV_ORDER } from '@/lib/copy/streams'
 import { buildStreamTabHref, type FeedScope } from '@/lib/feed/scope'
 import { useFeedPending } from '@/components/feed/feed-pending-context'
@@ -35,7 +34,6 @@ function StreamTabLink({
   formattedCount: string
   useShortOnMobile: boolean
 }) {
-  const router = useRouter()
   const { markFeedPending } = useFeedPending()
 
   return (
@@ -43,11 +41,10 @@ function StreamTabLink({
       href={href}
       aria-current={active ? 'page' : undefined}
       aria-label={`${fullLabel}, ${formattedCount} published articles`}
-      onClick={(event) => {
-        if (active) return
-        event.preventDefault()
-        markFeedPending()
-        router.push(href)
+      onClick={() => {
+        // Let <Link> handle prefetch + client navigation; just flip on the
+        // instant skeleton overlay so the switch feels immediate.
+        if (!active) markFeedPending()
       }}
       className={`flex min-h-[44px] flex-1 items-center justify-center rounded-md px-2 text-sm tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:px-3 lg:flex-none ${
         active

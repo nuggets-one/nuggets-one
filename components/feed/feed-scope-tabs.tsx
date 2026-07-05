@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import {
   buildHomeHref,
   getScopeAriaLabel,
@@ -45,7 +44,6 @@ function ScopeTabLink({
   formattedCount: string
   useShortChartsLabel: boolean
 }) {
-  const router = useRouter()
   const { markFeedPending } = useFeedPending()
 
   return (
@@ -53,11 +51,10 @@ function ScopeTabLink({
       href={href}
       aria-current={active ? 'page' : undefined}
       aria-label={`${ariaLabel}, ${formattedCount} published articles`}
-      onClick={(event) => {
-        if (active) return
-        event.preventDefault()
-        markFeedPending()
-        router.push(href)
+      onClick={() => {
+        // Let <Link> handle prefetch + client navigation; just flip on the
+        // instant skeleton overlay so the switch feels immediate.
+        if (!active) markFeedPending()
       }}
       className={`flex min-h-[36px] flex-1 items-center justify-center rounded-md px-3 text-xs tracking-tight outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] sm:flex-none sm:min-w-[7rem] ${
         active
