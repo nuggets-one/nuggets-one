@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { subscribeForegroundWebPushMessages } from '@/lib/push/get-fcm-web-token'
+import { subscribeAuthChanges } from '@/lib/auth/browser-auth-events'
 import {
   isWebPushCapacitorNative,
   refreshWebPushRegistration,
@@ -9,18 +10,9 @@ import {
   teardownWebPushOnLogout,
 } from '@/lib/push/web-push'
 
-type AuthStatus = {
-  authenticated: boolean
-}
-
-async function fetchAuthStatus(): Promise<AuthStatus> {
-  const res = await fetch('/api/auth/status', { cache: 'no-store' })
-  if (!res.ok) return { authenticated: false }
-  return (await res.json()) as AuthStatus
-}
-
 /**
- * Passive web push lifecycle: re-register on auth/focus, teardown on logout.
+ * Passive web push lifecycle: re-register on auth change/focus, teardown on
+ * logout. Driven by Supabase auth events (no `/api/auth/status` polling).
  * Does not auto-prompt — use enableWebPush() from account/bell UI.
  */
 export function WebPushRegistration() {
@@ -41,28 +33,26 @@ export function WebPushRegistration() {
       unsubscribeForeground = unsub
     })
 
-    async function onAuthMaybeChanged() {
+    async function handleAuth(authenticated: boolean) {
       if (cancelled) return
 
-      const auth = await fetchAuthStatus()
-
-      if (!auth.authenticated && authenticatedRef.current) {
+      if (!authenticated && authenticatedRef.current) {
         await teardownWebPushOnLogout()
-      } else if (auth.authenticated) {
+      } else if (authenticated) {
         await refreshWebPushRegistration()
       }
 
-      authenticatedRef.current = auth.authenticated
+      authenticatedRef.current = authenticated
     }
 
-    void onAuthMaybeChanged()
-
-    const authPollTimer = setInterval(() => {
-      void onAuthMaybeChanged()
-    }, 5000)
+    // Fires immediately with the current session (INITIAL_SESSION), then on
+    // every login/logout/token refresh.
+    const unsubscribeAuth = subscribeAuthChanges(({ authenticated }) => {
+      void handleAuth(authenticated)
+    })
 
     const onFocus = () => {
-      void onAuthMaybeChanged()
+      if (authenticatedRef.current) void refreshWebPushRegistration()
     }
     window.addEventListener('focus', onFocus)
 
@@ -73,7 +63,7 @@ export function WebPushRegistration() {
     return () => {
       cancelled = true
       unsubscribeForeground?.()
-      clearInterval(authPollTimer)
+      unsubscribeAuth()
       window.removeEventListener('focus', onFocus)
       unsubState()
     }
