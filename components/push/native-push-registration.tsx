@@ -4,13 +4,10 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
 import { detachPushToken, registerPushToken } from '@/lib/push/register-push-token'
+import { subscribeAuthChanges } from '@/lib/auth/browser-auth-events'
 import { parseContentStream } from '@/lib/copy/streams'
 import { buildFeedHrefForContentStream } from '@/lib/feed/scope'
 import { CONTENT_STREAMS } from '@/types/article'
-
-type AuthStatus = {
-  authenticated: boolean
-}
 
 type NativePushPlatform = 'android' | 'ios'
 
@@ -34,12 +31,6 @@ function getNativePushPlatform(): NativePushPlatform | null {
   const platform = Capacitor.getPlatform()
   if (platform === 'android' || platform === 'ios') return platform
   return null
-}
-
-async function fetchAuthStatus(): Promise<AuthStatus> {
-  const res = await fetch('/api/auth/status', { cache: 'no-store' })
-  if (!res.ok) return { authenticated: false }
-  return (await res.json()) as AuthStatus
 }
 
 export function NativePushRegistration() {
@@ -131,14 +122,14 @@ export function NativePushRegistration() {
       }
     }
 
-    async function onAuthMaybeChanged() {
-      const auth = await fetchAuthStatus()
+    async function onAuthMaybeChanged(authenticated: boolean) {
+      if (cancelled) return
 
-      if (!auth.authenticated && authenticatedRef.current && tokenRef.current) {
+      if (!authenticated && authenticatedRef.current && tokenRef.current) {
         await detachPushToken(tokenRef.current)
       }
 
-      authenticatedRef.current = auth.authenticated
+      authenticatedRef.current = authenticated
 
       if (tokenRef.current) {
         await registerPushToken({ token: tokenRef.current, platform })
@@ -149,18 +140,24 @@ export function NativePushRegistration() {
 
     void setupPush()
 
-    const authPollTimer = setInterval(() => {
-      void onAuthMaybeChanged()
-    }, 5000)
+    // Auth events replace the old 5s `/api/auth/status` poll. INITIAL_SESSION
+    // fires on subscribe, covering the initial token association.
+    const unsubscribeAuth = subscribeAuthChanges(({ authenticated }) => {
+      void onAuthMaybeChanged(authenticated)
+    })
 
     const onFocus = () => {
-      void onAuthMaybeChanged()
+      if (tokenRef.current) {
+        void registerPushToken({ token: tokenRef.current, platform })
+      } else {
+        void setupPush()
+      }
     }
     window.addEventListener('focus', onFocus)
 
     return () => {
       cancelled = true
-      if (authPollTimer) clearInterval(authPollTimer)
+      unsubscribeAuth()
       window.removeEventListener('focus', onFocus)
       removeListeners?.()
     }
