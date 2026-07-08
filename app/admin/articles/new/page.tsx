@@ -6,6 +6,10 @@ import { createArticleAction } from '@/lib/actions/admin'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ArticleFormFields } from '../_components/article-form-fields'
 import { ArticleFormShell } from '../_components/article-form-shell'
+import {
+  AdminFormActionBar,
+  AdminFormBottomSpacer,
+} from '../_components/admin-form-action-bar'
 import type { TagSummary } from '@/types/article'
 import { TAG_DIMENSIONS } from '@/types/article'
 
@@ -41,16 +45,17 @@ export default async function NewArticlePage({ searchParams }: Props) {
       description="Save a draft first, then publish from the edit screen when ready."
       errorMessage={errorCode ? TAG_ERRORS[errorCode] ?? 'Something went wrong. Please try again.' : undefined}
     >
-      <form action={createArticleAction}>
+      <form action={createArticleAction} className="pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
         <ArticleFormFields tags={(tags ?? []) as unknown as TagSummary[]} />
-        <div className="sticky bottom-0 z-20 mt-6 flex items-center justify-end gap-3 rounded-t-2xl border border-border bg-surface/95 px-4 py-3 shadow-panel backdrop-blur">
+        <AdminFormBottomSpacer />
+        <AdminFormActionBar>
           <button
             type="submit"
-            className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+            className="min-h-11 w-full rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover sm:w-auto"
           >
             Save Draft
           </button>
-        </div>
+        </AdminFormActionBar>
       </form>
     </ArticleFormShell>
   )

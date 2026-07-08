@@ -9,6 +9,10 @@ import { updateArticleAction } from '@/lib/actions/admin'
 import { DeleteArticleButton } from '../_components/DeleteArticleButton'
 import { UnpublishButton } from '../_components/UnpublishButton'
 import { PublishArticleControls } from '../_components/publish-article-controls'
+import {
+  AdminFormActionBar,
+  AdminFormBottomSpacer,
+} from '../_components/admin-form-action-bar'
 import type { TagSummary } from '@/types/article'
 import { TAG_DIMENSIONS } from '@/types/article'
 
@@ -129,12 +133,21 @@ export default async function EditArticlePage({
       }
       noticeMessage={noticeCode ? PUBLISH_NOTICES[noticeCode] ?? `Notice: ${noticeCode}` : undefined}
     >
-      <form id="article-edit-form" action={updateArticleAction}>
+      <form id="article-edit-form" action={updateArticleAction} className="pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
         <ArticleFormFields defaults={defaults} tags={(tagsResult.data ?? []) as unknown as TagSummary[]} />
+        <AdminFormBottomSpacer />
       </form>
 
-      <div className="sticky bottom-0 z-20 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border border-border bg-surface/95 px-4 py-3 shadow-panel backdrop-blur">
-        <div className="flex items-center gap-2">
+      <AdminFormActionBar layout="split">
+        <button
+          type="submit"
+          form="article-edit-form"
+          className="order-1 min-h-11 w-full rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover sm:order-2 sm:w-auto"
+        >
+          Save Changes
+        </button>
+
+        <div className="order-2 flex flex-wrap items-center gap-2 sm:order-1">
           {isPublished ? (
             <UnpublishButton id={id} />
           ) : (
@@ -142,15 +155,7 @@ export default async function EditArticlePage({
           )}
           <DeleteArticleButton id={id} />
         </div>
-
-        <button
-          type="submit"
-          form="article-edit-form"
-          className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
-        >
-          Save Changes
-        </button>
-      </div>
+      </AdminFormActionBar>
     </ArticleFormShell>
   )
 }

@@ -26,7 +26,7 @@ export function ArticlesBulkBar({ collections, addAction }: Props) {
   const canSubmit = collections.length > 0 && collectionId.length > 0
 
   return (
-    <div className="sticky top-12 z-10 mb-4 rounded-xl border border-accent/30 border-l-4 border-l-accent bg-surface-raised px-3 py-2.5 shadow-sm">
+    <div className="sticky top-[calc(var(--admin-nav-height)+var(--admin-push-banner-height))] z-10 mb-4 rounded-xl border border-accent/30 border-l-4 border-l-accent bg-surface-raised px-3 py-2.5 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <div>
