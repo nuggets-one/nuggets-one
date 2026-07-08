@@ -18,8 +18,10 @@ import { readResponseJson } from '@/lib/http/parse-json-response'
 import { useMobileSearchControls } from '@/components/layout/mobile-search-context'
 import { useFeedPendingOptional } from '@/components/feed/feed-pending-context'
 import { useScrollLock } from '@/lib/ui/use-scroll-lock'
+import { isGlobalSearchEnabled } from '@/lib/search/flags'
 
 const DEBOUNCE_MS = 180
+const GLOBAL_SEARCH = isGlobalSearchEnabled()
 const SUGGESTION_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
   month: 'short',
@@ -220,14 +222,18 @@ export function HeaderSearch({ utilities }: Props) {
     defaultValue: '',
     shallow: false,
   })
-  const [stream] = useQueryState<FeedStream>('stream', {
+  const [stream, setStream] = useQueryState<FeedStream>('stream', {
     defaultValue: DEFAULT_FEED_STREAM,
     parse: (v): FeedStream => parseFeedStream(v),
     shallow: true,
   })
-  const [scopeRaw] = useQueryState('scope', {
+  const [scopeRaw, setScopeRaw] = useQueryState('scope', {
     defaultValue: '',
     shallow: true,
+  })
+  const [, setTags] = useQueryState('tags', {
+    defaultValue: '',
+    shallow: false,
   })
   const feedScope = isScopeEnabledStream(stream)
     ? effectiveFeedScope(stream, parseFeedScope(scopeRaw || null))
@@ -298,7 +304,9 @@ export function HeaderSearch({ utilities }: Props) {
 
   useEffect(() => {
     const qTrim = debouncedInput.trim()
-    const queryKey = `${stream}:${feedScope ?? 'none'}:${qTrim.toLowerCase()}`
+    const queryKey = GLOBAL_SEARCH
+      ? qTrim.toLowerCase()
+      : `${stream}:${feedScope ?? 'none'}:${qTrim.toLowerCase()}`
 
     if (qTrim.length < 2) {
       suggestAbortRef.current?.abort()
@@ -318,9 +326,11 @@ export function HeaderSearch({ utilities }: Props) {
     let cancelled = false
     setSuggestionsPending(true)
 
-    const params = new URLSearchParams({ q: qTrim, stream })
-    if (feedScope === 'india') params.set('scope', 'india')
-    if (feedScope === 'charts') params.set('scope', 'charts')
+    const params = new URLSearchParams({ q: qTrim, stream: GLOBAL_SEARCH ? 'all' : stream })
+    if (!GLOBAL_SEARCH) {
+      if (feedScope === 'india') params.set('scope', 'india')
+      if (feedScope === 'charts') params.set('scope', 'charts')
+    }
     fetch(`/api/search/suggest?${params}`, { signal: controller.signal })
       .then(async (r) => {
         if (cancelled) return
@@ -371,6 +381,15 @@ export function HeaderSearch({ utilities }: Props) {
       suggestAbortRef.current?.abort()
       suggestAbortRef.current = null
       const applyCommit = () => {
+        // Global-by-default: committing a search drops the active section facets
+        // so results span every stream/scope/tag. Facets can be re-applied after.
+        // stream/scope default to shallow:true at the hook level; force a full
+        // navigation here so the batched commit re-runs the feed RSC.
+        if (GLOBAL_SEARCH && trimmedValue) {
+          setStream(null, { shallow: false })
+          setScopeRaw(null, { shallow: false })
+          setTags(null)
+        }
         setCommittedQ(trimmedValue || null)
       }
       if (feedPending) {
@@ -385,7 +404,7 @@ export function HeaderSearch({ utilities }: Props) {
       setIsFocused(false)
       setIsExpanded(false)
     },
-    [feedPending, setCommittedQ]
+    [feedPending, setCommittedQ, setStream, setScopeRaw, setTags]
   )
 
   const handleInputChange = useCallback((next: string) => {

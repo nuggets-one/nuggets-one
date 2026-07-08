@@ -8,6 +8,7 @@ import {
   scopeToRpcParam,
 } from '@/lib/feed/scope'
 import type { FeedScope } from '@/lib/feed/scope'
+import { isGlobalSearchEnabled } from '@/lib/search/flags'
 import { notFound } from 'next/navigation'
 import {
   normalizeHeroMediaKind,
@@ -87,16 +88,21 @@ export async function suggestArticles({
 }): Promise<SuggestionRow[]> {
   if (!q || q.trim().length < 2) return []
 
+  // Global-by-default: suggestions search across every stream/scope so users
+  // discover nuggets regardless of the section they are currently viewing.
+  const global = isGlobalSearchEnabled()
+
   const supabase = getPublicClient()
   const rpcClient = supabase as unknown as RpcClient
-  const effectiveScope = effectiveFeedScope(stream, scope)
-  const effectiveStream = resolveEffectiveContentStream(stream, scope)
+  const effectiveScope = global ? undefined : effectiveFeedScope(stream, scope)
+  const effectiveStream = global ? 'all' : resolveEffectiveContentStream(stream, scope)
+  const rpcScope = global ? null : scopeToRpcParam(stream, effectiveScope)
 
   const { data, error } = await rpcClient.rpc('search_suggestions_ranked', {
     p_stream: effectiveStream,
     p_q: q.trim(),
     p_limit: Math.min(limit, SEARCH_SUGGEST_ROW_CAP),
-    p_scope: scopeToRpcParam(stream, effectiveScope),
+    p_scope: rpcScope,
   })
 
   if (error) {
@@ -106,10 +112,12 @@ export async function suggestArticles({
         .select('id, slug, title, content_stream, published_at')
         .eq('status', 'published')
 
-      query = applyFeedScopeFilter(query, stream, effectiveScope)
+      if (!global) {
+        query = applyFeedScopeFilter(query, stream, effectiveScope)
 
-      if (!isFeedAllStream(effectiveStream)) {
-        query = applyVisibleStreamFilter(query, effectiveStream)
+        if (!isFeedAllStream(effectiveStream)) {
+          query = applyVisibleStreamFilter(query, effectiveStream)
+        }
       }
 
       query = query

@@ -598,13 +598,13 @@ Implemented via **`generateMetadata`** on **`/nuggets/[id]/[slug]`** (Next).
 | Topic | Decision |
 |-------|-----------|
 | **Scope** | **Articles / nuggets only** — **no** community collections in search results |
-| **Default scope** | **Current tab/stream only** — searching on Market Pulse searches Pulse; on Nuggets searches Standard |
-| **Ranking** | **Relevance-first** for **both** streams — **do not** bias Pulse by recency vs Standard (**blueprint §6.2a**) |
+| **Default scope** | **Global by default** when **`NEXT_PUBLIC_SEARCH_GLOBAL`** is enabled — search spans **all streams/scopes** so users find a nugget regardless of the section they are viewing (e.g. searching "NPCI" from Tech×VC/India still returns matches elsewhere). `stream`/`scope`/`tags` are **optional narrowing facets**; committing a search clears the active section facets. Flag **off** → legacy behavior: **current tab/stream only**. |
+| **Ranking** | **Relevance-first** for **both** streams — **do not** bias Pulse by recency vs Standard (**blueprint §6.2a**). Weights: title (A) > excerpt (B) > tag_slugs (C) > body (D) via generated `search_vector`; `websearch_to_tsquery` + `ts_rank_cd`. **pg_trgm** similarity is a **zero-result fallback only** (typo/partial tolerance), never blended into the FTS fast path. |
 | **Shareable URL** | **Yes** — committed **`q`** lives on **`/`** next to **`stream`** + **`tags`** (bookmarkable, refresh-safe). *Marketing shares* still typically point at **`/nuggets/...`** detail URLs (**§7**). |
 | **Suggestions** | **Yes** — live dropdown in the header while typing. **Debounce 180ms**, **min query length 2 chars**, **cap 8 rows** (frozen — `BLUEPRINT` §6.2a / §2.a) |
 | **Committed results** | **Yes** — **Enter** or explicit **Search** runs full result set on **Home** and commits **`q`** |
 | **Suggestion pick** | **Navigates** to **Nugget page** — **does not** commit **`q`** (§0.5) |
-| **Filter combo with tags** | `tags` + `stream` stay in URL; **search applies within** that slice. Multi-tag AND uses denormalized `articles.tag_slugs[]` GIN index — `BLUEPRINT` §2.a |
+| **Filter combo with tags** | Global-by-default: committing a search runs across all sections; `stream`/`scope`/`tags` re-narrow only when the user applies them **after** results (optional facets). When the flag is off, `tags` + `stream` stay in URL and **search applies within** that slice. Multi-tag AND uses denormalized `articles.tag_slugs[]` GIN index — `BLUEPRINT` §2.a |
 | **Suggest endpoint rate limit** | LRU sliding window **30 req / 30s** per anon-IP / `user.sub` (`BLUEPRINT` §5.5 / §2.a) |
 
 ### 11.1 Filter chrome architecture (frozen — replaces v1 sidebar pattern)

@@ -42,35 +42,62 @@ async function benchmarkQuery(q) {
       if (error) throw error
       return Array.isArray(data) ? data.length : 0
     })
+    // Global-by-default path: no stream/scope filter.
+    const globalSample = await timeCall('search_articles_ranked (global)', async () => {
+      const { data, error } = await supabase.rpc('search_articles_ranked', {
+        p_stream: 'all',
+        p_tags: [],
+        p_q: q,
+        p_limit: 24,
+      })
+      if (error) throw error
+      return Array.isArray(data) ? data.length : 0
+    })
     const suggestSample = await timeCall('search_suggestions_ranked', async () => {
       const { data, error } = await supabase.rpc('search_suggestions_ranked', {
-        p_stream: STREAM,
+        p_stream: 'all',
         p_q: q,
         p_limit: 8,
       })
       if (error) throw error
       return Array.isArray(data) ? data.length : 0
     })
+    // Trigram fallback path (typo/partial tolerance). Tolerate absence of the
+    // RPC so the benchmark still runs before migration 039 is applied.
+    const trigramSample = await timeCall('search_articles_trigram', async () => {
+      const { data, error } = await supabase.rpc('search_articles_trigram', {
+        p_stream: 'all',
+        p_tags: [],
+        p_q: q,
+        p_limit: 24,
+      })
+      if (error) return null
+      return Array.isArray(data) ? data.length : 0
+    })
     samples.push({
       iteration: i + 1,
       searchMs: searchSample.elapsedMs,
+      globalMs: globalSample.elapsedMs,
       suggestMs: suggestSample.elapsedMs,
+      trigramMs: trigramSample.elapsedMs,
       searchRows: searchSample.result,
+      globalRows: globalSample.result,
       suggestRows: suggestSample.result,
+      trigramRows: trigramSample.result,
     })
   }
 
-  const searchAvgMs =
-    Number((samples.reduce((sum, sample) => sum + sample.searchMs, 0) / samples.length).toFixed(2))
-  const suggestAvgMs =
-    Number((samples.reduce((sum, sample) => sum + sample.suggestMs, 0) / samples.length).toFixed(2))
+  const avg = (key) =>
+    Number((samples.reduce((sum, sample) => sum + sample[key], 0) / samples.length).toFixed(2))
 
   return {
     q,
     stream: STREAM,
     iterations: ITERATIONS,
-    searchAvgMs,
-    suggestAvgMs,
+    searchAvgMs: avg('searchMs'),
+    globalAvgMs: avg('globalMs'),
+    suggestAvgMs: avg('suggestMs'),
+    trigramAvgMs: avg('trigramMs'),
     samples,
   }
 }

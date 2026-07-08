@@ -168,8 +168,15 @@ auto-animate, @vercel/og, @sentry/react, @sentry/nextjs
 - q commits on Enter or explicit submit only
 - Selecting a suggestion navigates to detail — does not commit q
 - Escape closes suggestions, restores input to last committed q
-- stream param required on both suggest and search endpoints
-- No global cross-stream search
+- Search is global by default across all streams/scopes when `NEXT_PUBLIC_SEARCH_GLOBAL`
+  is enabled — stream/scope/tags become optional narrowing facets, not the search
+  boundary. Committing a search clears the active section facets. When the flag is
+  off, legacy stream-scoped behavior is preserved (stream param required on both
+  endpoints; no cross-stream search).
+- Ranking weights: title (A) > excerpt/summary (B) > tag_slugs (C) > body (D) via the
+  generated `search_vector`; `websearch_to_tsquery` for user queries; `ts_rank_cd`.
+- Trigram (pg_trgm) similarity is a fallback only — runs when FTS returns zero
+  first-page rows (typo/partial tolerance). Never blend it into the FTS fast path.
 
 ---
 
