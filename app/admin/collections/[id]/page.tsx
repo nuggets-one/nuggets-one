@@ -12,6 +12,7 @@ import {
   searchPublishedArticlesForPicker,
 } from '@/lib/queries/collections-admin'
 import { CollectionFormFields } from '@/app/admin/collections/_components/CollectionFormFields'
+import { CollectionEntriesMobile } from '@/app/admin/collections/_components/collection-entries-mobile'
 import { getStreamLabel, parseContentStream } from '@/lib/copy/streams'
 import { DeleteCollectionButton } from '@/app/admin/collections/_components/DeleteCollectionButton'
 
@@ -198,7 +199,9 @@ export default async function AdminCollectionEditPage({ params, searchParams }: 
         {collection.entries.length === 0 ? (
           <p className="text-sm text-muted">No nuggets in this collection yet.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <>
+            <CollectionEntriesMobile collectionId={id} entries={collection.entries} />
+            <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
             <table className="w-full min-w-[720px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface-raised text-xs font-semibold uppercase tracking-wide text-muted">
@@ -266,6 +269,7 @@ export default async function AdminCollectionEditPage({ params, searchParams }: 
               </tbody>
             </table>
           </div>
+          </>
         )}
       </section>
 

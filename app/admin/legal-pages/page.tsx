@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { listLegalPagesAdmin } from '@/lib/queries/legal-pages-admin'
 import { reorderLegalPageAction, updateLegalPageRowFlagsAction } from '@/lib/actions/legal-pages'
+import { LegalPagesListMobile } from '@/app/admin/legal-pages/_components/legal-pages-list-mobile'
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
@@ -37,7 +38,9 @@ export default async function AdminLegalPagesListPage() {
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <>
+          <LegalPagesListMobile rows={rows} />
+          <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
           <table className="w-full min-w-[960px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-raised text-xs font-semibold uppercase tracking-wide text-muted">
@@ -133,6 +136,7 @@ export default async function AdminLegalPagesListPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   )

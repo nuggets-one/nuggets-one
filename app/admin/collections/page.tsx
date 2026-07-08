@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { listCollectionsAdmin } from '@/lib/queries/collections-admin'
 import { DeleteCollectionButton } from '@/app/admin/collections/_components/DeleteCollectionButton'
+import { CollectionsListMobile } from '@/app/admin/collections/_components/collections-list-mobile'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +39,9 @@ export default async function AdminCollectionsPage() {
           No collections yet. Create one or run the Mongo ETL migration.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <>
+          <CollectionsListMobile rows={rows} />
+          <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
           <table className="w-full min-w-[880px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-raised text-xs font-semibold uppercase tracking-wide text-muted">
@@ -96,6 +99,7 @@ export default async function AdminCollectionsPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   )
