@@ -18,6 +18,7 @@ import {
   validateStreamTagMembership,
 } from '@/lib/feed/stream-membership'
 import type { ContentStream, TagDimension, TagSummary } from '@/types/article'
+import { CONTENT_STREAMS } from '@/types/article'
 
 // S1-F1: moved from new/page.tsx — page files must only export the default page
 // component plus Next.js-approved named exports (metadata, generateMetadata, etc.).
@@ -73,6 +74,9 @@ export function ArticleFormFields({
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [suggestedTagSlugs, setSuggestedTagSlugs] = useState<string[]>([])
   const [suggestedStream, setSuggestedStream] = useState<ContentStream | null>(null)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const pendingLinkSelectionRef = useRef<{ start: number; end: number; text: string } | null>(null)
   const lastFetchedUrlRef = useRef<string | null>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const mediaPreviewUrls = useMemo(() => parseUrls(mediaUrlsValue), [mediaUrlsValue])
@@ -369,7 +373,19 @@ export function ArticleFormFields({
 
           <div className="flex flex-col gap-1.5 lg:col-span-2">
             <span className="text-xs font-bold uppercase tracking-wide text-muted">Stream</span>
-            <div className="flex min-h-[42px] w-fit flex-wrap items-center gap-1 rounded-xl border border-border bg-rail/60 p-1">
+            <select
+              name="content_stream"
+              value={contentStream}
+              onChange={(event) => setContentStream(parseContentStream(event.target.value))}
+              className="w-full rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30 md:hidden"
+            >
+              {CONTENT_STREAMS.map((stream) => (
+                <option key={stream} value={stream}>
+                  {getStreamLabel(stream, 'short')}
+                </option>
+              ))}
+            </select>
+            <div className="hidden min-h-[42px] w-fit flex-wrap items-center gap-1 rounded-xl border border-border bg-rail/60 p-1 md:flex">
               <SegmentedRadio name="content_stream" value="standard" label="Standard" checked={contentStream === 'standard'} onSelect={setContentStream} />
               <SegmentedRadio name="content_stream" value="pulse" label="Pulse" checked={contentStream === 'pulse'} onSelect={setContentStream} />
               <SegmentedRadio name="content_stream" value="charts" label="Charts" checked={contentStream === 'charts'} onSelect={setContentStream} />
@@ -424,7 +440,7 @@ export function ArticleFormFields({
       <section className="overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface px-3 py-2 text-sm text-muted">
           <span className="text-xs font-semibold uppercase tracking-wide">Markdown Body</span>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
             <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted">
               <input
                 type="checkbox"
@@ -434,15 +450,16 @@ export function ArticleFormFields({
               />
               Pre-fill body template from source
             </label>
-            <div className="flex flex-wrap items-center gap-1">
-            <ToolbarButton label="B" title="Bold" onClick={() => applyMarkdown('bold')} />
-            <ToolbarButton label="I" title="Italic" onClick={() => applyMarkdown('italic')} />
-            <ToolbarButton label="H1" title="Heading 1" onClick={() => applyMarkdown('h1')} />
-            <ToolbarButton label="H2" title="Heading 2" onClick={() => applyMarkdown('h2')} />
-            <ToolbarButton label="List" title="Bullet list" onClick={() => applyMarkdown('list')} />
-            <ToolbarButton label="Quote" title="Quote" onClick={() => applyMarkdown('quote')} />
-            <ToolbarButton label="Code" title="Inline code" onClick={() => applyMarkdown('code')} />
-            <ToolbarButton label="Link" title="Link" onClick={() => applyMarkdown('link')} />
+            <details className="group sm:hidden">
+              <summary className="min-h-11 cursor-pointer list-none rounded-md border border-border px-3 py-2 text-xs font-medium text-primary [&::-webkit-details-marker]:hidden">
+                Formatting
+              </summary>
+              <div className="mt-2 flex flex-wrap items-center gap-1">
+                <MarkdownToolbarButtons onFormat={applyMarkdown} onLink={openLinkDialog} />
+              </div>
+            </details>
+            <div className="hidden flex-wrap items-center gap-1 sm:flex">
+              <MarkdownToolbarButtons onFormat={applyMarkdown} onLink={openLinkDialog} />
             </div>
           </div>
         </div>
@@ -454,9 +471,59 @@ export function ArticleFormFields({
           value={body}
           onChange={(event) => setBody(event.target.value)}
           onPaste={handleBodyPaste}
-          className="min-h-[min(50vh,36rem)] max-h-[75vh] w-full resize-y overflow-y-auto border-0 bg-surface-raised px-4 py-4 font-mono text-sm text-primary outline-none placeholder:text-muted focus:ring-0"
+          className="min-h-[40vh] max-h-[75vh] w-full resize-y overflow-y-auto border-0 bg-surface-raised px-4 py-4 font-mono text-sm text-primary outline-none placeholder:text-muted focus:ring-0 sm:min-h-[min(50vh,36rem)]"
         />
       </section>
+
+      {linkDialogOpen ? (
+        <dialog
+          open
+          className="fixed inset-0 z-50 m-0 flex h-full w-full max-h-none max-w-none items-end justify-center border-0 bg-scrim p-0 sm:items-center sm:p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setLinkDialogOpen(false)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setLinkDialogOpen(false)
+          }}
+        >
+          <form
+            method="dialog"
+            className="w-full max-w-md rounded-t-2xl border border-border bg-surface p-4 shadow-panel sm:rounded-2xl"
+            onSubmit={(event) => {
+              event.preventDefault()
+              insertLinkFromDialog()
+            }}
+          >
+            <h3 className="mb-3 text-sm font-semibold text-primary">Insert link</h3>
+            <label className="mb-4 flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted">URL</span>
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(event) => setLinkUrl(event.target.value)}
+                placeholder="https://example.com"
+                autoFocus
+                className="min-h-11 rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+              />
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setLinkDialogOpen(false)}
+                className="min-h-11 flex-1 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="min-h-11 flex-1 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground"
+              >
+                Insert
+              </button>
+            </div>
+          </form>
+        </dialog>
+      ) : null}
 
       {pasteStatus && (
         <p className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">{pasteStatus}</p>
@@ -498,17 +565,19 @@ export function ArticleFormFields({
                         type="button"
                         disabled={index === 0}
                         onClick={() => moveMediaUrl(index, -1)}
-                        className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted disabled:opacity-40"
+                        aria-label="Move image left"
+                        className="flex min-h-11 min-w-11 items-center justify-center rounded border border-border text-xs text-muted disabled:opacity-40"
                       >
-                        Left
+                        ←
                       </button>
                       <button
                         type="button"
                         disabled={index === mediaPreviewUrls.length - 1}
                         onClick={() => moveMediaUrl(index, 1)}
-                        className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted disabled:opacity-40"
+                        aria-label="Move image right"
+                        className="flex min-h-11 min-w-11 items-center justify-center rounded border border-border text-xs text-muted disabled:opacity-40"
                       >
-                        Right
+                        →
                       </button>
                     </div>
                   </div>
@@ -604,6 +673,45 @@ export function ArticleFormFields({
     })
   }
 
+  function openLinkDialog() {
+    const textarea = bodyRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selected = body.slice(start, end)
+    pendingLinkSelectionRef.current = {
+      start,
+      end,
+      text: selected || placeholderFor('link'),
+    }
+    setLinkUrl('')
+    setLinkDialogOpen(true)
+  }
+
+  function insertLinkFromDialog() {
+    const pending = pendingLinkSelectionRef.current
+    const textarea = bodyRef.current
+    if (!pending || !textarea) {
+      setLinkDialogOpen(false)
+      return
+    }
+
+    const href = linkUrl.trim() || 'https://example.com'
+    const markdown = `[${pending.text}](${href})`
+    const next = `${body.slice(0, pending.start)}${markdown}${body.slice(pending.end)}`
+    setBody(next)
+    setLinkDialogOpen(false)
+
+    requestAnimationFrame(() => {
+      const cursorStart = pending.start + 1
+      const cursorEnd = pending.start + 1 + pending.text.length
+      textarea.selectionStart = cursorStart
+      textarea.selectionEnd = cursorEnd
+      textarea.focus()
+    })
+  }
+
   function moveMediaUrl(index: number, delta: -1 | 1) {
     const nextUrls = [...mediaPreviewUrls]
     const target = index + delta
@@ -635,9 +743,7 @@ function formatMarkdown(format: MarkdownFormat, selectedText: string): MarkdownR
   if (format === 'list') return prefixLines(text, '- ')
   if (format === 'quote') return prefixLines(text, '> ')
 
-  const url = typeof window !== 'undefined' ? window.prompt('Paste URL')?.trim() : ''
-  const href = url || 'https://example.com'
-  return withSelection(`[${text}](${href})`, 1, 1 + text.length)
+  return withSelection(`[${text}](https://example.com)`, 1, 1 + text.length)
 }
 
 function prefixLines(text: string, prefix: string): MarkdownReplacement {
@@ -655,6 +761,27 @@ function placeholderFor(format: MarkdownFormat): string {
   if (format === 'quote') return 'Quote'
   if (format === 'code') return 'code'
   return 'text'
+}
+
+function MarkdownToolbarButtons({
+  onFormat,
+  onLink,
+}: {
+  onFormat: (format: MarkdownFormat) => void
+  onLink: () => void
+}) {
+  return (
+    <>
+      <ToolbarButton label="B" title="Bold" onClick={() => onFormat('bold')} />
+      <ToolbarButton label="I" title="Italic" onClick={() => onFormat('italic')} />
+      <ToolbarButton label="H1" title="Heading 1" onClick={() => onFormat('h1')} />
+      <ToolbarButton label="H2" title="Heading 2" onClick={() => onFormat('h2')} />
+      <ToolbarButton label="List" title="Bullet list" onClick={() => onFormat('list')} />
+      <ToolbarButton label="Quote" title="Quote" onClick={() => onFormat('quote')} />
+      <ToolbarButton label="Code" title="Inline code" onClick={() => onFormat('code')} />
+      <ToolbarButton label="Link" title="Link" onClick={onLink} />
+    </>
+  )
 }
 
 function ToolbarButton({
@@ -677,7 +804,7 @@ function ToolbarButton({
       title={title}
       onMouseDown={handleMouseDown}
       onClick={onClick}
-      className="rounded-md px-2 py-0.5 text-xs font-medium transition-colors hover:bg-surface-raised hover:text-primary"
+      className="min-h-11 rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:bg-surface-raised hover:text-primary"
     >
       {label}
     </button>
@@ -700,7 +827,7 @@ function TagGroup({
   return (
     <div className="rounded-xl border border-border bg-surface-raised px-3 py-2">
       <p className={`mb-1.5 text-[10px] font-bold uppercase tracking-wide ${labelClassName}`}>{label}</p>
-      <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto pr-1">
+      <div className="flex max-h-none flex-wrap gap-1.5 overflow-y-auto pr-1 sm:max-h-20">
         {tags.map((tag) => (
           <label key={tag.id} className="cursor-pointer">
             <input

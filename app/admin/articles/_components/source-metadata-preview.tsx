@@ -19,7 +19,7 @@ export function SourceMetadataPreview({
 
   return (
     <div className="rounded-xl border border-border bg-surface-raised p-3">
-      <div className="flex flex-wrap items-start gap-3">
+      <div className="flex flex-col gap-3 max-sm:items-stretch sm:flex-row sm:flex-wrap sm:items-start">
         {metadata.imageUrl ? (
           <div className="h-16 w-28 shrink-0 overflow-hidden rounded-lg border border-border bg-surface">
             <AdminCardImagePreview url={metadata.imageUrl} />
@@ -38,18 +38,18 @@ export function SourceMetadataPreview({
             <p className="line-clamp-2 text-xs text-muted">{description}</p>
           ) : null}
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2 max-sm:w-full">
           <button
             type="button"
             onClick={onApply}
-            className="rounded-lg border border-accent bg-chip-active-bg px-3 py-1.5 text-xs font-semibold text-chip-active-text transition hover:opacity-90"
+            className="min-h-11 flex-1 rounded-lg border border-accent bg-chip-active-bg px-3 py-1.5 text-xs font-semibold text-chip-active-text transition hover:opacity-90 sm:flex-none"
           >
             {applyEmptyOnly ? 'Apply to empty fields' : 'Apply'}
           </button>
           <button
             type="button"
             onClick={onReplaceAll}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface hover:text-primary"
+            className="min-h-11 flex-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:bg-surface hover:text-primary sm:flex-none"
           >
             Replace all
           </button>

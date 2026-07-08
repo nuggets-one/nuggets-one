@@ -7,13 +7,14 @@ export function PublishArticleControls({ id }: { id: string }) {
   return (
     <form action={publishArticleAction} className="flex flex-wrap items-center gap-3">
       <input type="hidden" name="id" value={id} />
-      <label className="flex items-center gap-2 text-sm text-muted">
+      <label className="flex items-center gap-2 text-sm text-muted" title="Send push immediately (skip digest)">
         <input
           type="checkbox"
           name="push_notify_immediately"
           className="size-4 rounded border-border"
         />
-        Send push immediately (skip digest)
+        <span className="sm:hidden">Push now</span>
+        <span className="hidden sm:inline">Send push immediately (skip digest)</span>
       </label>
       <AdminSubmitButton
         label="Publish Nugget"
