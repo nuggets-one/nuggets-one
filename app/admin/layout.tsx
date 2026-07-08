@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
 import { getPushHealthSnapshot } from '@/lib/notifications/push-health'
+import { AdminNav } from '@/app/admin/_components/admin-nav'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Per admin CLAUDE.md: always call getUser() — never trust session alone.
@@ -26,31 +26,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div
+      className="min-h-screen overflow-x-hidden bg-bg"
+      data-admin-push-banner={pushHealthBanner ? 'true' : undefined}
+    >
       {pushHealthBanner && (
         <div
           role="status"
-          className="border-b border-amber-500/40 bg-amber-500/10 px-6 py-2 text-sm text-amber-900 dark:text-amber-100"
+          className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-900 sm:px-6 dark:text-amber-100"
         >
           {pushHealthBanner}
         </div>
       )}
-      <nav className="flex h-12 items-center gap-6 border-b border-border bg-header px-6 backdrop-blur-sm">
-        <span className="font-semibold text-sm text-primary">Admin</span>
-        <Link href="/admin/articles" className="text-sm text-muted hover:text-primary transition-colors">Articles</Link>
-        <Link href="/admin/tags" className="text-sm text-muted hover:text-primary transition-colors">Tags</Link>
-        <Link href="/admin/collections" className="text-sm text-muted hover:text-primary transition-colors">Collections</Link>
-        <Link href="/admin/legal-pages" className="text-sm text-muted hover:text-primary transition-colors">Legal pages</Link>
-        <Link href="/admin/site-copy" className="text-sm text-muted hover:text-primary transition-colors">Site copy</Link>
-        <Link
-          href="/admin/articles/new"
-          className="text-sm text-muted hover:text-primary transition-colors"
-        >
-          Create nugget
-        </Link>
-        <Link href="/" className="ml-auto text-sm text-muted hover:text-primary transition-colors">← Site</Link>
-      </nav>
-      <main className="mx-auto w-full max-w-screen-2xl px-6 py-6">
+      <AdminNav />
+      <main className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6">
         {children}
       </main>
     </div>

@@ -5,6 +5,8 @@
 :root {
   /* Layout */
   --header-height: calc(56px + env(safe-area-inset-top, 0px)); /* h-14 + top inset */
+  --admin-nav-height: calc(3rem + env(safe-area-inset-top, 0px)); /* h-12 + top inset */
+  --admin-push-banner-height: 0px;
 
   /* Background */
   --color-bg: theme('colors.slate.50');
@@ -85,6 +87,10 @@
   /* S9-F1: Pulse stream chip — token table §3.2 */
   --color-pulse-chip-bg: theme('colors.primary.100');
   --color-pulse-chip-fg: theme('colors.primary.700');
+}
+
+[data-admin-push-banner='true'] {
+  --admin-push-banner-height: 2.5rem;
 }
 
 .dark {
