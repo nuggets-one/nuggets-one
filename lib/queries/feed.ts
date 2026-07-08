@@ -434,12 +434,15 @@ async function getFeedPageBySearch({
   }
 
   const rpcRows = (data ?? []) as unknown as SearchRpcRow[]
-  const strippedRows = rpcRows.map((row) => {
-    const next = { ...row } as RawArticleRow & { search_rank?: number }
-    delete next.search_rank
-    return next
-  })
-  const rawRows = normalizeCuratorOnRows(strippedRows as unknown as Record<string, unknown>[])
+
+  // Typo/partial fallback: when FTS matches nothing on the first page, try a
+  // trigram similarity pass (e.g. "NCPI" -> "NPCI"). Only first page, so the
+  // common (non-empty) path never pays for the extra query.
+  if (rpcRows.length === 0 && !cursor) {
+    const trigramPage = await getFeedPageByTrigram({ supabase, stream, tags, q, limit, scope })
+    if (trigramPage) return trigramPage
+  }
+  const rawRows = stripSearchRankRows(rpcRows)
   const articles = await enrichArticleRows(supabase, rawRows)
   const lastRow = rpcRows[rpcRows.length - 1]
 
@@ -454,6 +457,60 @@ async function getFeedPageBySearch({
       : null,
     stream,
   }
+}
+
+function stripSearchRankRows(rpcRows: SearchRpcRow[]): RawArticleRow[] {
+  const strippedRows = rpcRows.map((row) => {
+    const next = { ...row } as RawArticleRow & { search_rank?: number }
+    delete next.search_rank
+    return next
+  })
+  return normalizeCuratorOnRows(strippedRows as unknown as Record<string, unknown>[])
+}
+
+/**
+ * Trigram (pg_trgm) fallback used only when FTS returns zero first-page rows.
+ * Single page (no cursor continuation). Returns null on RPC error or empty
+ * result so the caller can fall through to the normal empty-state path.
+ */
+async function getFeedPageByTrigram({
+  supabase,
+  stream,
+  tags,
+  q,
+  limit,
+  scope,
+}: {
+  supabase: ReturnType<typeof getPublicClient>
+  stream: FeedStream
+  tags: string[]
+  q: string
+  limit: number
+  scope?: FeedScope
+}): Promise<FeedPage | null> {
+  const effectiveStream = resolveEffectiveContentStream(stream, scope)
+  const rpcClient = supabase as unknown as RpcClient
+
+  const { data, error } = await rpcClient.rpc('search_articles_trigram', {
+    p_stream: effectiveStream,
+    p_tags: tags,
+    p_q: q,
+    p_limit: limit,
+    p_scope: scopeToRpcParam(stream, scope),
+  })
+
+  if (error) {
+    console.warn(`search_articles_trigram fallback unavailable: ${error.message}`)
+    return null
+  }
+
+  const rpcRows = (data ?? []) as unknown as SearchRpcRow[]
+  if (rpcRows.length === 0) return null
+
+  const rawRows = stripSearchRankRows(rpcRows)
+  const articles = await enrichArticleRows(supabase, rawRows)
+
+  return { articles, nextCursor: null, stream }
 }
 
 async function getFeedPageBySearchLegacy({
