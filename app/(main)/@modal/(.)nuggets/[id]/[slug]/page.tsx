@@ -27,7 +27,7 @@ export default async function NuggetDetailSheetRoute({ params }: Props) {
 
   return (
     <Sheet ariaLabel="Nugget detail">
-      <Suspense fallback={<ArticleDetailSkeleton />}>
+      <Suspense fallback={<ArticleDetailSkeleton inSheet />}>
         <ArticleContent id={id} inSheet />
       </Suspense>
     </Sheet>
