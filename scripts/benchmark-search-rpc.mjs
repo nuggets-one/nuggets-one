@@ -102,6 +102,91 @@ async function benchmarkQuery(q) {
   }
 }
 
+async function countGlobalSearch(q) {
+  const { data, error } = await supabase.rpc('search_articles_ranked', {
+    p_stream: 'all',
+    p_tags: [],
+    p_q: q,
+    p_limit: 24,
+  })
+  if (error) throw error
+  return Array.isArray(data) ? data.length : 0
+}
+
+async function countSuggestions(q) {
+  const { data, error } = await supabase.rpc('search_suggestions_ranked', {
+    p_stream: 'all',
+    p_q: q,
+    p_limit: 8,
+  })
+  if (error) throw error
+  return Array.isArray(data) ? data.length : 0
+}
+
+// Introduce a plausible typo: swap two adjacent chars of the first long word.
+function typoVariant(text) {
+  const words = text.trim().split(/\s+/)
+  const idx = words.findIndex((w) => w.length >= 4)
+  if (idx === -1) return text
+  const w = words[idx]
+  const mid = Math.floor(w.length / 2)
+  words[idx] = w.slice(0, mid - 1) + w[mid] + w[mid - 1] + w.slice(mid + 1)
+  return words.join(' ')
+}
+
+// Build recall cases from a real title so we exercise the three failure modes
+// the migration fixes: full paste (AND cliff), partial prefix, and typo.
+function buildRecallCases() {
+  const title = process.env.SEARCH_BENCH_TITLE?.trim()
+  if (!title) return []
+  const words = title.split(/\s+/).filter(Boolean)
+  const firstWord = words[0] ?? title
+  const prefix = firstWord.slice(0, Math.max(3, firstWord.length - 2))
+  const fragment = words.slice(0, 3).join(' ')
+  return [
+    { kind: 'pasted-title', q: title },
+    { kind: 'fragment (3 words)', q: fragment },
+    { kind: 'prefix (partial word)', q: prefix },
+    { kind: 'typo', q: typoVariant(title) },
+  ]
+}
+
+async function runRecallCases() {
+  const cases = buildRecallCases()
+  if (cases.length === 0) {
+    console.log('Recall cases skipped (set SEARCH_BENCH_TITLE to a real nugget title to enable).')
+    return { cases: [], zeroResultRate: null }
+  }
+
+  const results = []
+  for (const testCase of cases) {
+    const searchSample = await timeCall('recall.search', () => countGlobalSearch(testCase.q))
+    const suggestSample = await timeCall('recall.suggest', () => countSuggestions(testCase.q))
+    results.push({
+      kind: testCase.kind,
+      q: testCase.q,
+      searchRows: searchSample.result,
+      suggestRows: suggestSample.result,
+      searchMs: searchSample.elapsedMs,
+      suggestMs: suggestSample.elapsedMs,
+    })
+  }
+
+  const zeros = results.filter((r) => r.searchRows === 0 || r.suggestRows === 0)
+  const zeroResultRate = Number((zeros.length / results.length).toFixed(2))
+
+  console.log('\n--- Recall cases (global path) ---')
+  for (const r of results) {
+    const flag = r.searchRows === 0 || r.suggestRows === 0 ? 'ZERO' : 'ok'
+    console.log(
+      `  [${flag}] ${r.kind}: search=${r.searchRows} (${r.searchMs}ms), suggest=${r.suggestRows} (${r.suggestMs}ms) — "${r.q}"`
+    )
+  }
+  console.log(`Zero-result rate: ${zeroResultRate}`)
+
+  return { cases: results, zeroResultRate }
+}
+
 async function main() {
   const results = []
   for (const query of QUERIES) {
@@ -109,13 +194,24 @@ async function main() {
     results.push(await benchmarkQuery(query))
   }
 
+  const recall = await runRecallCases()
+
   const timestamp = Date.now()
   const outputDir = join(process.cwd(), 'scripts', 'benchmark-output')
   mkdirSync(outputDir, { recursive: true })
   const outputPath = join(outputDir, `search-rpc-benchmark.${timestamp}.json`)
-  writeFileSync(outputPath, JSON.stringify({ generatedAt: new Date().toISOString(), results }, null, 2))
+  writeFileSync(
+    outputPath,
+    JSON.stringify({ generatedAt: new Date().toISOString(), results, recall }, null, 2)
+  )
 
   console.log(`Search benchmark complete: ${outputPath}`)
+
+  // Opt-in gate for CI: fail if any recall case returned zero rows.
+  if (process.env.SEARCH_BENCH_ASSERT === '1' && recall.zeroResultRate) {
+    console.error(`Recall assertion failed: zero-result rate ${recall.zeroResultRate} > 0.`)
+    process.exit(1)
+  }
 }
 
 main().catch((error) => {
