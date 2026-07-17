@@ -19,6 +19,7 @@
     "android:preflight": "node scripts/android-release-preflight.mjs",
     "db:apply-push-migration": "node scripts/apply-push-migration.mjs",
     "db:apply-visible-streams-migration": "node scripts/apply-visible-streams-migration.mjs",
+    "db:apply-search-relevance": "node scripts/apply-search-relevance-migration.mjs",
     "db:verify-visible-streams": "npm exec tsx scripts/migrate/verify-visible-streams.ts",
     "deploy:push-topic-outbox": "node scripts/deploy-push-topic-outbox.mjs",
     "push:audit": "node scripts/audit-push-digest.mjs",
