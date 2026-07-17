@@ -64,10 +64,7 @@ CREATE TABLE IF NOT EXISTS articles (
   search_vector tsvector GENERATED ALWAYS AS (
     setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
     setweight(to_tsvector('english', coalesce(excerpt, '')), 'B') ||
-    setweight(
-      to_tsvector('english', coalesce(replace(array_to_string(tag_slugs, ' '), '-', ' '), '')),
-      'C'
-    ) ||
+    setweight(to_tsvector('english', public.tag_slugs_to_text(tag_slugs)), 'C') ||
     setweight(to_tsvector('english', coalesce(content_markdown, '')), 'D')
   ) STORED,
   created_at timestamptz DEFAULT now(),
