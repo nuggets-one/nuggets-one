@@ -277,12 +277,12 @@ Sections below are **top to bottom**.
 - **Pre:** raised background, `rounded-xl`, border.  
 - **Images in markdown:** Custom `BodyImage` — see below.
 
-**Figures (BodyImage):**
+**Figures (BodyImage):** — matches `BLUEPRINT` §9.1 (column-bounded, preserve aspect ratio; no crop)
 
-- **Figure:** `my-6 w-full max-w-prose`  
-- **Cloudinary images:** wrapper `relative w-full aspect-video overflow-hidden rounded-lg`, lazy `Image`  
-- **Other URLs:** plain `<img className="w-full rounded-lg" loading="lazy" decoding="async">`  
-- **Caption:** `mt-2 text-center text-xs text-muted`  
+- **Figure:** `my-6 w-full max-w-prose`
+- **Cloudinary images:** lazy `next/image` with `width={720}`, `height={0}`, `sizes="(max-width: 768px) 100vw, 720px"`, `className="h-auto w-full rounded-lg"` (no `aspect-video` / `object-cover`)
+- **Other URLs:** plain `<img className="h-auto w-full rounded-lg" loading="lazy" decoding="async">`
+- **Caption:** `mt-2 text-center text-xs text-muted`
 
 ---
 

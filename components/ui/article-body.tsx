@@ -37,17 +37,16 @@ function BodyImage({
   if (isCloudinary) {
     return (
       <figure className="my-6 w-full max-w-prose">
-        <div className="relative w-full aspect-video overflow-hidden rounded-lg">
-          <Image
-            src={src}
-            alt={alt ?? ''}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 720px"
-            quality={75}
-            loading="lazy"
-          />
-        </div>
+        <Image
+          src={src}
+          alt={alt ?? ''}
+          width={720}
+          height={0}
+          sizes="(max-width: 768px) 100vw, 720px"
+          quality={75}
+          loading="lazy"
+          className="h-auto w-full rounded-lg"
+        />
         {alt && (
           <figcaption className="mt-2 text-center text-xs text-muted">
             {alt}
@@ -65,7 +64,7 @@ function BodyImage({
         alt={alt ?? ''}
         loading="lazy"
         decoding="async"
-        className="w-full rounded-lg"
+        className="h-auto w-full rounded-lg"
       />
       {alt && (
         <figcaption className="mt-2 text-center text-xs text-muted">
