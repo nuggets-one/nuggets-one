@@ -1,8 +1,8 @@
 /**
- * Apply search-relevance migrations (037 -> 040) to the linked Supabase project.
+ * Apply search-relevance migrations (037 -> 041) to the linked Supabase project.
  * Requires DATABASE_URL in .env.local (direct Postgres connection).
  *
- * These make search recall-friendly (prefix + OR-relaxed + trigram fuzzy) and
+ * These make search recall-friendly (prefix FTS + trigram fallback-only) and
  * were previously authored but never deployed. Idempotent: each step verifies
  * whether it is already applied before running.
  *
@@ -95,6 +95,26 @@ const MIGRATIONS = [
         `SELECT prosrc FROM pg_proc WHERE proname = 'search_articles_ranked' LIMIT 1`
       )
       return helper.rows.length > 0 && (ranked.rows[0]?.prosrc ?? '').includes('search_prefix_tsquery')
+    },
+  },
+  {
+    version: '20240001000041',
+    name: 'search_fts_first_trigram_fallback',
+    file: 'supabase/migrations/20240001000041_search_fts_first_trigram_fallback.sql',
+    verify: async (client) => {
+      const suggestTrigram = await client.query(
+        `SELECT 1 FROM pg_proc WHERE proname = 'search_suggestions_trigram' LIMIT 1`
+      )
+      const ranked = await client.query(
+        `SELECT prosrc FROM pg_proc WHERE proname = 'search_suggestions_ranked' LIMIT 1`
+      )
+      const src = ranked.rows[0]?.prosrc ?? ''
+      // FTS-only hot path: prefix match present, blended title % removed.
+      return (
+        suggestTrigram.rows.length > 0 &&
+        src.includes('search_prefix_tsquery') &&
+        !src.includes('title %')
+      )
     },
   },
 ]
