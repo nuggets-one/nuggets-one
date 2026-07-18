@@ -72,8 +72,107 @@ function isMissingSuggestRpcFunctionError(message: string): boolean {
   )
 }
 
+function isMissingSuggestTrigramRpcError(message: string): boolean {
+  return (
+    /could not find the function/i.test(message) &&
+    /search_suggestions_trigram/i.test(message)
+  )
+}
+
+/** Thrown when suggest RPCs fail after fallbacks — route maps this to 502/503. */
+export class SuggestUnavailableError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'SuggestUnavailableError'
+  }
+}
+
 /** PMF cap — `docs/NUGGETS_V2_BLUEPRINT.md` §6.2a · `docs/NUGGETS_V2_PRODUCT_BEHAVIOR_AND_UI.md` §11 */
 export const SEARCH_SUGGEST_ROW_CAP = 8
+
+async function suggestArticlesLegacyTextSearch({
+  supabase,
+  q,
+  stream,
+  effectiveStream,
+  effectiveScope,
+  global,
+  limit,
+}: {
+  supabase: ReturnType<typeof getPublicClient>
+  q: string
+  stream: FeedStream
+  effectiveStream: ContentStream | 'all'
+  effectiveScope: FeedScope | undefined
+  global: boolean
+  limit: number
+}): Promise<SuggestionRow[] | null> {
+  let query = supabase
+    .from('articles')
+    .select('id, slug, title, content_stream, published_at')
+    .eq('status', 'published')
+
+  if (!global) {
+    query = applyFeedScopeFilter(query, stream, effectiveScope)
+
+    if (!isFeedAllStream(effectiveStream)) {
+      query = applyVisibleStreamFilter(query, effectiveStream)
+    }
+  }
+
+  query = query
+    .textSearch('search_vector', q, {
+      type: 'websearch',
+      config: 'english',
+    })
+    .order('published_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit)
+
+  const { data, error } = await query
+  if (error || !data) {
+    console.error('suggestArticles legacy textSearch error:', error?.message)
+    return null
+  }
+  return withSuggestionPublishedAt(supabase, data as SuggestionRow[])
+}
+
+async function suggestArticlesTrigram({
+  rpcClient,
+  supabase,
+  q,
+  effectiveStream,
+  rpcScope,
+  limit,
+}: {
+  rpcClient: RpcClient
+  supabase: ReturnType<typeof getPublicClient>
+  q: string
+  effectiveStream: ContentStream | 'all'
+  rpcScope: string | null
+  limit: number
+}): Promise<SuggestionRow[] | null> {
+  const { data, error } = await rpcClient.rpc('search_suggestions_trigram', {
+    p_stream: effectiveStream,
+    p_q: q,
+    p_limit: limit,
+    p_scope: rpcScope,
+  })
+
+  if (error) {
+    if (isMissingSuggestTrigramRpcError(error.message)) {
+      console.warn(
+        'search_suggestions_trigram RPC missing in schema cache; skipping trigram fallback.'
+      )
+      return null
+    }
+    console.warn(`search_suggestions_trigram fallback unavailable: ${error.message}`)
+    return null
+  }
+
+  if (!data) return null
+  return withSuggestionPublishedAt(supabase, data as SuggestionRow[])
+}
 
 export async function suggestArticles({
   q,
@@ -97,57 +196,88 @@ export async function suggestArticles({
   const effectiveScope = global ? undefined : effectiveFeedScope(stream, scope)
   const effectiveStream = global ? 'all' : resolveEffectiveContentStream(stream, scope)
   const rpcScope = global ? null : scopeToRpcParam(stream, effectiveScope)
+  const cappedLimit = Math.min(limit, SEARCH_SUGGEST_ROW_CAP)
+  const trimmedQ = q.trim()
 
   const { data, error } = await rpcClient.rpc('search_suggestions_ranked', {
     p_stream: effectiveStream,
-    p_q: q.trim(),
-    p_limit: Math.min(limit, SEARCH_SUGGEST_ROW_CAP),
+    p_q: trimmedQ,
+    p_limit: cappedLimit,
     p_scope: rpcScope,
   })
 
   if (error) {
     if (isMissingSuggestRpcFunctionError(error.message)) {
-      let query = supabase
-        .from('articles')
-        .select('id, slug, title, content_stream, published_at')
-        .eq('status', 'published')
+      console.warn(
+        'search_suggestions_ranked RPC missing in schema cache; using legacy textSearch.'
+      )
+      const legacy = await suggestArticlesLegacyTextSearch({
+        supabase,
+        q: trimmedQ,
+        stream,
+        effectiveStream,
+        effectiveScope,
+        global,
+        limit: cappedLimit,
+      })
+      if (legacy && legacy.length > 0) return legacy
 
-      if (!global) {
-        query = applyFeedScopeFilter(query, stream, effectiveScope)
-
-        if (!isFeedAllStream(effectiveStream)) {
-          query = applyVisibleStreamFilter(query, effectiveStream)
-        }
-      }
-
-      query = query
-        .textSearch('search_vector', q.trim(), {
-          type: 'websearch',
-          config: 'english',
-        })
-        .order('published_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(Math.min(limit, SEARCH_SUGGEST_ROW_CAP))
-
-      const { data: fallbackData, error: fallbackError } = await query
-
-      if (fallbackError || !fallbackData) {
-        console.error('suggestArticles fallback error:', fallbackError?.message)
-        return []
-      }
-
-      return withSuggestionPublishedAt(supabase, fallbackData as SuggestionRow[])
+      const trigramAfterLegacy = await suggestArticlesTrigram({
+        rpcClient,
+        supabase,
+        q: trimmedQ,
+        effectiveStream,
+        rpcScope,
+        limit: cappedLimit,
+      })
+      if (trigramAfterLegacy) return trigramAfterLegacy
+      if (legacy) return legacy
+      throw new SuggestUnavailableError(error.message)
     }
+
     console.error('suggestArticles error:', error.message)
-    return []
+    const trigramOnError = await suggestArticlesTrigram({
+      rpcClient,
+      supabase,
+      q: trimmedQ,
+      effectiveStream,
+      rpcScope,
+      limit: cappedLimit,
+    })
+    if (trigramOnError) return trigramOnError
+    throw new SuggestUnavailableError(error.message)
   }
 
   if (!data) {
     console.error('suggestArticles error: empty RPC response data')
-    return []
+    const trigramOnEmpty = await suggestArticlesTrigram({
+      rpcClient,
+      supabase,
+      q: trimmedQ,
+      effectiveStream,
+      rpcScope,
+      limit: cappedLimit,
+    })
+    if (trigramOnEmpty) return trigramOnEmpty
+    throw new SuggestUnavailableError('empty RPC response data')
   }
 
-  return withSuggestionPublishedAt(supabase, data as SuggestionRow[])
+  const ftsRows = data as SuggestionRow[]
+  if (ftsRows.length > 0) {
+    return withSuggestionPublishedAt(supabase, ftsRows)
+  }
+
+  // FTS returned zero — typo/partial fallback (never blended into the FTS path).
+  const trigramRows = await suggestArticlesTrigram({
+    rpcClient,
+    supabase,
+    q: trimmedQ,
+    effectiveStream,
+    rpcScope,
+    limit: cappedLimit,
+  })
+  if (trigramRows) return trigramRows
+  return []
 }
 
 const DETAIL_SELECT = `
