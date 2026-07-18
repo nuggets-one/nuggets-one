@@ -105,8 +105,10 @@ function SearchField({
 
         <input
           ref={inputRef}
-          type="search"
+          type="text"
           role="combobox"
+          autoComplete="off"
+          spellCheck={false}
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={onKeyDown}
@@ -149,6 +151,7 @@ type SuggestionsListProps = {
   listId: string
   suggestPanelOpen: boolean
   suggestionsPending: boolean
+  suggestError: 'rate_limited' | 'suggest_unavailable' | null
   trimmed: string
   suggestions: SuggestionRow[]
   activeIndex: number
@@ -160,6 +163,7 @@ function SuggestionsList({
   listId,
   suggestPanelOpen,
   suggestionsPending,
+  suggestError,
   trimmed,
   suggestions,
   activeIndex,
@@ -173,13 +177,24 @@ function SuggestionsList({
       {suggestionsPending ? (
         <li className="px-4 py-3 text-sm text-muted">Searching…</li>
       ) : null}
-      {!suggestionsPending && trimmed.length >= 2 && suggestions.length === 0 ? (
+      {!suggestionsPending && trimmed.length >= 2 && suggestError ? (
+        <li className="px-4 py-3 text-sm text-muted">
+          {suggestError === 'rate_limited'
+            ? 'Too many searches — press Enter to run a full-page search.'
+            : 'Suggestions unavailable — press Enter to search.'}
+        </li>
+      ) : null}
+      {!suggestionsPending &&
+      trimmed.length >= 2 &&
+      !suggestError &&
+      suggestions.length === 0 ? (
         <li className="px-4 py-3 text-sm text-muted">
           No suggestions. Press Enter to run a full-page search.
         </li>
       ) : null}
       {!suggestionsPending &&
         trimmed.length >= 2 &&
+        !suggestError &&
         suggestions.map((s, i) => {
           const streamLabel = getStreamLabel(parseContentStream(s.content_stream))
           const publishedAtLabel = formatSuggestionDate(s.published_at)
@@ -242,6 +257,9 @@ export function HeaderSearch({ utilities }: Props) {
   const [draftValue, setDraftValue] = useState(committedQ)
   const [suggestions, setSuggestions] = useState<SuggestionRow[]>([])
   const [suggestionsPending, setSuggestionsPending] = useState(false)
+  const [suggestError, setSuggestError] = useState<
+    'rate_limited' | 'suggest_unavailable' | null
+  >(null)
   const [isFocused, setIsFocused] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -271,6 +289,7 @@ export function HeaderSearch({ utilities }: Props) {
     setDraftValue(committedQ)
     setSuggestions([])
     setSuggestionsPending(false)
+    setSuggestError(null)
     setActiveIndex(-1)
     inputRef.current?.blur()
   }, [committedQ])
@@ -312,6 +331,7 @@ export function HeaderSearch({ utilities }: Props) {
       suggestAbortRef.current?.abort()
       suggestAbortRef.current = null
       lastSuggestQueryRef.current = ''
+      setSuggestError(null)
       return
     }
 
@@ -319,12 +339,12 @@ export function HeaderSearch({ utilities }: Props) {
       return
     }
 
-    lastSuggestQueryRef.current = queryKey
     suggestAbortRef.current?.abort()
     const controller = new AbortController()
     suggestAbortRef.current = controller
     let cancelled = false
     setSuggestionsPending(true)
+    setSuggestError(null)
 
     const params = new URLSearchParams({ q: qTrim, stream: GLOBAL_SEARCH ? 'all' : stream })
     if (!GLOBAL_SEARCH) {
@@ -333,29 +353,42 @@ export function HeaderSearch({ utilities }: Props) {
     }
     fetch(`/api/search/suggest?${params}`, { signal: controller.signal })
       .then(async (r) => {
-        if (cancelled) return
+        if (cancelled || controller.signal.aborted) return
         if (!r.ok) {
+          lastSuggestQueryRef.current = ''
           setSuggestions([])
           setActiveIndex(-1)
+          setSuggestError(r.status === 429 ? 'rate_limited' : 'suggest_unavailable')
           return
         }
-        const data = await readResponseJson<{ suggestions?: SuggestionRow[] }>(r)
-        if (cancelled || !data) {
+        const data = await readResponseJson<{
+          suggestions?: SuggestionRow[]
+          error?: string
+        }>(r)
+        if (cancelled || controller.signal.aborted) return
+        if (!data) {
+          lastSuggestQueryRef.current = ''
           setSuggestions([])
           setActiveIndex(-1)
+          setSuggestError('suggest_unavailable')
           return
         }
+        lastSuggestQueryRef.current = queryKey
         setSuggestions(data.suggestions ?? [])
+        setSuggestError(null)
         setActiveIndex(-1)
       })
       .catch(() => {
-        if (!cancelled && !controller.signal.aborted) {
-          setSuggestions([])
-          setActiveIndex(-1)
-        }
+        if (cancelled || controller.signal.aborted) return
+        lastSuggestQueryRef.current = ''
+        setSuggestions([])
+        setActiveIndex(-1)
+        setSuggestError('suggest_unavailable')
       })
       .finally(() => {
-        if (!cancelled) setSuggestionsPending(false)
+        if (!cancelled && !controller.signal.aborted) {
+          setSuggestionsPending(false)
+        }
       })
 
     return () => {
@@ -400,6 +433,7 @@ export function HeaderSearch({ utilities }: Props) {
       setDraftValue(trimmedValue)
       setSuggestions([])
       setSuggestionsPending(false)
+      setSuggestError(null)
       setActiveIndex(-1)
       setIsFocused(false)
       setIsExpanded(false)
@@ -412,6 +446,7 @@ export function HeaderSearch({ utilities }: Props) {
     if (next.trim().length < 2) {
       setSuggestions([])
       setSuggestionsPending(false)
+      setSuggestError(null)
       setActiveIndex(-1)
     }
   }, [])
@@ -419,6 +454,7 @@ export function HeaderSearch({ utilities }: Props) {
   const handleClearInput = useCallback(() => {
     suggestAbortRef.current?.abort()
     suggestAbortRef.current = null
+    lastSuggestQueryRef.current = ''
     const applyClear = () => {
       setCommittedQ(null)
     }
@@ -430,6 +466,7 @@ export function HeaderSearch({ utilities }: Props) {
     setDraftValue('')
     setSuggestions([])
     setSuggestionsPending(false)
+    setSuggestError(null)
     setIsFocused(true)
     inputRef.current?.focus()
   }, [feedPending, setCommittedQ])
@@ -480,7 +517,14 @@ export function HeaderSearch({ utilities }: Props) {
     onInputChange: handleInputChange,
     onKeyDown: handleKeyDown,
     onFocus: () => {
-      setDraftValue(committedQ)
+      // Only sync draft from committed URL when the user has not already typed
+      // a different in-progress draft (avoids clobbering mid-edit on re-focus).
+      setDraftValue((current) => {
+        const committed = committedQ.trim()
+        const draft = current.trim()
+        if (draft.length === 0 || draft === committed) return committedQ
+        return current
+      })
       setIsFocused(true)
     },
     suggestPanelOpen,
@@ -493,6 +537,7 @@ export function HeaderSearch({ utilities }: Props) {
     listId: SEARCH_SUGGESTIONS_LIST_ID,
     suggestPanelOpen,
     suggestionsPending,
+    suggestError,
     trimmed,
     suggestions,
     activeIndex,
